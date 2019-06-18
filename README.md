@@ -1,6 +1,6 @@
 # Audible
 
-**Interface for internal Audible API written in pure Python.** Support is limited to US and german accounts at this moment.
+**Interface for internal Audible API written in pure Python.** Support is limited to US, UK, french and german accounts at this moment.
 
 Code including this README is forked from omarroth‘s fantastic [audible.cr](https://github.com/omarroth/audible.cr) API written in crystal.
 
@@ -29,6 +29,10 @@ import audible
 client = audible.Client("EMAIL", "PASSWORD", local="us")
 # for german accounts
 client = audible.Client("EMAIL", "PASSWORD", local="de")
+# for Uk accounts - not tested enough
+client = audible.Client("EMAIL", "PASSWORD", local="uk")
+# for french accounts - not tested enough
+client = audible.Client("EMAIL", "PASSWORD", local="fr")
 
 
 # save session after initializing
@@ -37,8 +41,16 @@ client = audible.Client("EMAIL", "PASSWORD", local="us", filename="FILENAME")
 # restore session from file
 client = audible.Client(local="us", filename="FILENAME")
 
+# get library
 library = client.get("library", num_results=99, response_groups="media, sample")
 print(library)
+
+# specify a api_version on request
+# default is api_version="1.0"
+# get deprecated version of library
+library = client.get("library/books", api_version="0.0", purchaseAfterDate="01/01/1970", sortInAscendingOrder="true")
+print(library)
+
 ```
 
 Client session can be saved any time using `to_json_file("FILENAME")` and `from_json_file("FILENAME")`, like so:

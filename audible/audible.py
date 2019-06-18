@@ -31,6 +31,26 @@ localization = {
         "openid_assoc_handle": "amzn_audible_ios_us",
         "oauth_lang": "en-US",
         "auth_register_domain": ".amazon.com"
+    },
+    "uk": {
+        "AMAZON_LOGIN": urlparse("https://www.amazon.co.uk"),
+        "AMAZON_API": urlparse("https://api.amazon.co.uk"),
+        "AUDIBLE_API": urlparse("https://api.audible.co.uk"),
+        "Accept-Language": "en-GB",
+        "marketPlaceId": "A2I9A3Q2GNFNGQ",
+        "openid_assoc_handle": "amzn_audible_ios_uk",
+        "oauth_lang": "en-GB",
+        "auth_register_domain": ".amazon.co.uk"
+    },
+    "fr": {
+        "AMAZON_LOGIN": urlparse("https://www.amazon.fr"),
+        "AMAZON_API": urlparse("https://api.amazon.fr"),
+        "AUDIBLE_API": urlparse("https://api.audible.fr"),
+        "Accept-Language": "fr-FR",
+        "marketPlaceId": "A2728XDNODOQ8T",
+        "openid_assoc_handle": "amzn_audible_ios_fr",
+        "oauth_lang": "fr-FR",
+        "auth_register_domain": ".amazon.fr"
     }
 }
 
@@ -48,6 +68,7 @@ class Client:
 
         if (username and password):
             self.initialize(username, password)
+            self.auth_register()
             if filename:
                 self.to_json_file(filename)
 
@@ -203,7 +224,6 @@ class Client:
             self.access_token = map_landing["openid.oa2.access_token"][0]
             for cookie in session.cookies:
                 self.login_cookies[cookie.name] = cookie.value
-            self.auth_register()
         else:
             raise Exception("Unable to login")
 
@@ -271,7 +291,7 @@ class Client:
 
     def auth_deregister(self):
         json_object = {
-            "deregister_all_existing_accounts": 'true'
+            "deregister_all_existing_accounts": "true"
         }
         headers = {
             "Host": self._local["AMAZON_API"].netloc,
