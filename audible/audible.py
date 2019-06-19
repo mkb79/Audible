@@ -86,7 +86,7 @@ class Client:
         self.access_token = body["access_token"]
         self.refresh_token = body["refresh_token"]
         self.device_private_key = body["device_private_key"]
-        self.expires = datetime.strptime(body["expires"], "%Y-%m-%dT%H:%M:%S.%f")
+        self.expires = datetime.fromtimestamp(body["expires"])
 
     def to_json_file(self, filename=None, indent=4):
         filename = filename or self.filename
@@ -97,7 +97,7 @@ class Client:
         body["access_token"] = self.access_token
         body["refresh_token"] = self.refresh_token
         body["device_private_key"] = self.device_private_key
-        body["expires"] = self.expires.isoformat()
+        body["expires"] = self.expires.timestamp()
 
         with open(filename, "w") as outfile:
             json.dump(body, outfile, indent=indent)
