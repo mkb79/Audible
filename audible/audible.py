@@ -1,7 +1,6 @@
 from datetime import datetime, timedelta
 import io
 import json
-from urllib.parse import urlparse
 import urllib.request
 
 from bs4 import BeautifulSoup
@@ -9,100 +8,88 @@ from PIL import Image
 import requests
 
 from .crypto import encrypt_metadata, meta_audible_app, CertAuth
-
-
-localization = {
-    "de": {
-        "AMAZON_LOGIN": urlparse("https://www.amazon.de"),
-        "AMAZON_API": urlparse("https://api.amazon.de"),
-        "AUDIBLE_API": urlparse("https://api.audible.de"),
-        "Accept-Language": "de-DE",
-        "marketPlaceId": "AN7V1F1VY261K",
-        "openid_assoc_handle": "amzn_audible_ios_de",
-        "oauth_lang": "de-DE",
-        "auth_register_domain": ".amazon.de"
-    },
-    "us": {
-        "AMAZON_LOGIN": urlparse("https://www.amazon.com"),
-        "AMAZON_API": urlparse("https://api.amazon.com"),
-        "AUDIBLE_API": urlparse("https://api.audible.com"),
-        "Accept-Language": "en-US",
-        "marketPlaceId": "AF2M0KC94RCEA",
-        "openid_assoc_handle": "amzn_audible_ios_us",
-        "oauth_lang": "en-US",
-        "auth_register_domain": ".amazon.com"
-    },
-    "uk": {
-        "AMAZON_LOGIN": urlparse("https://www.amazon.co.uk"),
-        "AMAZON_API": urlparse("https://api.amazon.co.uk"),
-        "AUDIBLE_API": urlparse("https://api.audible.co.uk"),
-        "Accept-Language": "en-GB",
-        "marketPlaceId": "A2I9A3Q2GNFNGQ",
-        "openid_assoc_handle": "amzn_audible_ios_uk",
-        "oauth_lang": "en-GB",
-        "auth_register_domain": ".amazon.co.uk"
-    },
-    "fr": {
-        "AMAZON_LOGIN": urlparse("https://www.amazon.fr"),
-        "AMAZON_API": urlparse("https://api.amazon.fr"),
-        "AUDIBLE_API": urlparse("https://api.audible.fr"),
-        "Accept-Language": "fr-FR",
-        "marketPlaceId": "A2728XDNODOQ8T",
-        "openid_assoc_handle": "amzn_audible_ios_fr",
-        "oauth_lang": "fr-FR",
-        "auth_register_domain": ".amazon.fr"
-    }
-}
+from .localization import localization
 
 
 class Client:
     def __init__(self, username=None, password=None, filename=None, local="us"):
         self._local = localization.get(local)
 
-        self.login_cookies = {}
-        self.adp_token = str()
-        self.access_token = str()
-        self.refresh_token = str()
-        self.device_private_key = str()
-        self.expires = datetime(1990, 1, 1)
+        self._login_cookies = {}
+        self._adp_token = str()
+        self._access_token = str()
+        self._refresh_token = str()
+        self._device_private_key = str()
+        self._expires = 0
 
         if (username and password):
-            self.initialize(username, password)
+            self.init_session(username, password)
             self.auth_register()
             if filename:
                 self.to_json_file(filename)
+                self.filename = filename
 
         elif filename:
             self.from_json_file(filename)
             self.filename = filename   
 
+    @property
+    def login_cookies(self):
+        return self._login_cookies
+
+    @property
+    def adp_token(self):
+        return self._adp_token
+
+    @property
+    def access_token(self):
+        return self._access_token
+
+    @property
+    def refresh_token(self):
+        return self._refresh_token
+
+    @property
+    def device_private_key(self):
+        return self._device_private_key
+
+    @property
+    def expires(self):
+        return datetime.fromtimestamp(self._expires) - datetime.utcnow()
+
+    def expired(self):
+        if datetime.fromtimestamp(self._expires) <= datetime.utcnow():
+            return True
+        else:
+            return False
+   
     def from_json_file(self, filename=None):
         filename = filename or self.filename
         with open(filename, "r") as infile:
             body = json.load(infile)
 
-        self.login_cookies = body["login_cookies"]
-        self.adp_token = body["adp_token"]
-        self.access_token = body["access_token"]
-        self.refresh_token = body["refresh_token"]
-        self.device_private_key = body["device_private_key"]
-        self.expires = datetime.fromtimestamp(body["expires"])
+        self._login_cookies = body["login_cookies"]
+        self._adp_token = body["adp_token"]
+        self._access_token = body["access_token"]
+        self._refresh_token = body["refresh_token"]
+        self._device_private_key = body["device_private_key"]
+        self._expires = body["expires"]
 
     def to_json_file(self, filename=None, indent=4):
         filename = filename or self.filename
 
         body = {}
-        body["login_cookies"] = self.login_cookies
-        body["adp_token"] = self.adp_token
-        body["access_token"] = self.access_token
-        body["refresh_token"] = self.refresh_token
-        body["device_private_key"] = self.device_private_key
-        body["expires"] = self.expires.timestamp()
+        body["login_cookies"] = self._login_cookies
+        body["adp_token"] = self._adp_token
+        body["access_token"] = self._access_token
+        body["refresh_token"] = self._refresh_token
+        body["device_private_key"] = self._device_private_key
+        body["expires"] = self._expires
 
         with open(filename, "w") as outfile:
             json.dump(body, outfile, indent=indent)
 
-    def initialize(self, username, password):
+    def init_session(self, username, password):
         timeout = 30
         session = requests.Session()
         session.headers.update(
@@ -221,16 +208,16 @@ class Client:
 
         if response.status_code == 404:
             map_landing = urllib.parse.parse_qs(response.url)
-            self.access_token = map_landing["openid.oa2.access_token"][0]
+            self._access_token = map_landing["openid.oa2.access_token"][0]
             for cookie in session.cookies:
-                self.login_cookies[cookie.name] = cookie.value
+                self._login_cookies[cookie.name] = cookie.value
         else:
             raise Exception("Unable to login")
 
     def auth_register(self):
         json_cookies = []
         request_cookies = {}
-        for key, val in self.login_cookies.items():
+        for key, val in self._login_cookies.items():
             json_cookies.append({
                 "Name": key,
                 "Value": val.replace(r'"', r'')
@@ -254,7 +241,7 @@ class Client:
                 "app_name": "Audible"
             },
             "auth_data": {
-                "access_token": self.access_token
+                "access_token": self._access_token
             },
             "requested_extensions": ["device_info", "customer_info"]
         }
@@ -278,16 +265,16 @@ class Client:
 
         tokens = body["response"]["success"]["tokens"]
 
-        self.adp_token = tokens["mac_dms"]["adp_token"]
-        self.device_private_key = tokens["mac_dms"]["device_private_key"]
+        self._adp_token = tokens["mac_dms"]["adp_token"]
+        self._device_private_key = tokens["mac_dms"]["device_private_key"]
 
-        self.access_token = tokens["bearer"]["access_token"]
-        self.refresh_token = tokens["bearer"]["refresh_token"]
-        self.expires = datetime.utcnow() + timedelta(seconds=int(tokens["bearer"]["expires_in"]))
+        self._access_token = tokens["bearer"]["access_token"]
+        self._refresh_token = tokens["bearer"]["refresh_token"]
+        self._expires = (datetime.utcnow() + timedelta(seconds=int(tokens["bearer"]["expires_in"]))).timestamp()
 
         website_cookies = tokens["website_cookies"]
         for cookie in website_cookies:
-            self.login_cookies[cookie["Name"]] = cookie["Value"]
+            self._login_cookies[cookie["Name"]] = cookie["Value"]
 
     def auth_deregister(self):
         json_object = {
@@ -301,11 +288,11 @@ class Client:
             "Accept": "application/json",
             "User-Agent": "AmazonWebView/Audible/3.7/iOS/12.3.1/iPhone",
             "Accept-Language": self._local["Accept-Language"],
-            "Authorization": f"Bearer {self.access_token}"
+            "Authorization": f"Bearer {self._access_token}"
         }        
 
         request_cookies = {}
-        for key, val in self.login_cookies.items():
+        for key, val in self._login_cookies.items():
             request_cookies[key] = val.replace(r'"', r'')
 
         url = self._local["AMAZON_API"].geturl() + "/auth/deregister"
@@ -314,15 +301,15 @@ class Client:
         body = response.json()
         if response.status_code != 200:
             raise Exception(body)
-        self.adp_token = str()
-        self.refresh_token = str()
-        self.expires = datetime(1990, 1, 1)
+        self._adp_token = str()
+        self._refresh_token = str()
+        self._expires = 0
 
     def refresh_access_token(self):
         body = {
             "app_name": "Audible",
             "app_version": "3.7",
-            "source_token": self.refresh_token,
+            "source_token": self._refresh_token,
             "requested_token_type": "access_token",
             "source_token_type": "refresh_token"
         }
@@ -338,8 +325,8 @@ class Client:
         body = response.json()
         if response.status_code != 200:
             raise Exception(body)
-        self.access_token = body["access_token"]
-        self.expires = datetime.utcnow() + timedelta(seconds=int(body["expires_in"]))
+        self._access_token = body["access_token"]
+        self._expires = (datetime.utcnow() + timedelta(seconds=int(body["expires_in"]))).timestamp()
 
     def user_profile(self):
         headers = {
@@ -347,11 +334,11 @@ class Client:
             "Accept-Charset": "utf-8",
             "User-Agent": "AmazonWebView/Audible/3.7/iOS/12.3.1/iPhone",
             "Accept-Language": self._local["Accept-Language"],
-            "Authorization": f"Bearer {self.access_token}"
+            "Authorization": f"Bearer {self._access_token}"
         }
 
         request_cookies = {}
-        for key, val in self.login_cookies.items():
+        for key, val in self._login_cookies.items():
             request_cookies[key] = val.replace(r'"', r'')
 
         url = self._local["AMAZON_API"].geturl() + "/user/profile"
@@ -375,7 +362,7 @@ class Client:
             "Accept": 'application/json',
             'Content-Type': 'application/json'
         }
-        auth = CertAuth(self.adp_token, self.device_private_key)
+        auth = CertAuth(self._adp_token, self._device_private_key)
         resp = requests.request(
             method, url, json=json_data, params=params, headers=headers, auth=auth, cookies=cookies
         )
