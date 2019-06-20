@@ -305,28 +305,29 @@ class Client:
         self._refresh_token = str()
         self._expires = 0
 
-    def refresh_access_token(self):
-        body = {
-            "app_name": "Audible",
-            "app_version": "3.7",
-            "source_token": self._refresh_token,
-            "requested_token_type": "access_token",
-            "source_token_type": "refresh_token"
-        }
-
-        headers = {
-            "Content-Type": "application/x-www-form-urlencoded",
-            "x-amzn-identity-auth-domain": self._local["AMAZON_API"].netloc
-        }
-
-        url = self._local["AMAZON_API"].geturl() + "/auth/token"
-        response = requests.post(url, data=body, headers=headers)
-
-        body = response.json()
-        if response.status_code != 200:
-            raise Exception(body)
-        self._access_token = body["access_token"]
-        self._expires = (datetime.utcnow() + timedelta(seconds=int(body["expires_in"]))).timestamp()
+    def refresh_access_token(self, force=False):
+        if force or self.expired():
+            body = {
+                "app_name": "Audible",
+                "app_version": "3.7",
+                "source_token": self._refresh_token,
+                "requested_token_type": "access_token",
+                "source_token_type": "refresh_token"
+            }
+    
+            headers = {
+                "Content-Type": "application/x-www-form-urlencoded",
+                "x-amzn-identity-auth-domain": self._local["AMAZON_API"].netloc
+            }
+    
+            url = self._local["AMAZON_API"].geturl() + "/auth/token"
+            response = requests.post(url, data=body, headers=headers)
+    
+            body = response.json()
+            if response.status_code != 200:
+                raise Exception(body)
+            self._access_token = body["access_token"]
+            self._expires = (datetime.utcnow() + timedelta(seconds=int(body["expires_in"]))).timestamp()
 
     def user_profile(self):
         headers = {
@@ -346,9 +347,9 @@ class Client:
 
         return response.json()
 
-    def refresh_or_register(self):
+    def refresh_or_register(self, force=False):
         try:
-            self.refresh_access_token()
+            self.refresh_access_token(force=force)
         except:
             try:
                 self.auth_deregister()

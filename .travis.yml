@@ -1,0 +1,11 @@
+language: python
+python:
+  - "3.6"
+install:
+  - pip install -r requirements.txt
+deploy:
+  provider: pypi
+  user: "mkb79"
+  password:
+    secure: "FMtZyysEmWU/akMbpvMsdIwg3fFnWvsMXBuofm8V8mBRH03KfrHB1toEkJAiJAqB4K/9K3orvCVHnbebL8V6qObBut/1oWUuhVDUEv3u3I7N3zh5bMNqSsHoZUQhBS/bbKNhs5esMewO4N4thjDNNAHH8ZYe4V1WOBy86e0ec1ekuPohE8cZ77vfi23vbZoMPKSxrZ8x+UahlLSsqHgvfwYSwjuk6PCcyc++EPs52hT4yoogsuhESI/QGuTjMs1hi4lfRN/MXzLKlCDOZsheQWyD7/qkgVpV8wEOgVhoLWka7aovf+rNFMnBQQtpg6UoNbL5MOp9yZQcVlJD9DIursRfDYi78zhRQP/bgCx4kpUa61mIVodRiq9jOxTUbncqDI4JwcBRm4odEsMDnZkEfBy2xzE6Dsvd1suLndmdXWAfzJXSF1JlEinIUHptL1f5FUOonT5VMZCAmokl8UUvQ+EK+1U73MZrodtm1gz2NeHbfi5ZTXYmLDiqmHQP31dlCXOs1M4FhVa7ky1iYkoiGIocucOT7r+EFvYE0BRPMAgO+v0Ma+2vAtfwb5FTCtEl3r5U9UYDGnzQZ+ZiETtKzTbEn28A55vQQtEdfNPhqgP5z6eFEBtyYgHgruLbgyndOlmP2eL6Zvn5arBtWPOx4+Wl0KkkBatBpbSrvVN4cOo="
+  distributions: "sdist bdist_wheel"

@@ -11,14 +11,15 @@ This package is written with Pythonista for iOS.
 
 - Python >= 3.6
 - depends on following packages:
-	- 	bs4
-	- 	pillow
+	- 	beautifulsoup4
+	- 	Pillow
 	- 	requests,
 	- 	rsa 
 
 ## Installation
 
-`pip install git+https://github.com/mkb79/audible.git@master`
+- `pip install audible` or
+- `pip install git+https://github.com/mkb79/audible.git@master`
 
 ## Usage
 

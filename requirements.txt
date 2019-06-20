@@ -1,4 +1,4 @@
-bs4
-pillow
+beautifulsoup4
+Pillow
 requests
 rsa

@@ -15,14 +15,14 @@ from setuptools import find_packages, setup, Command
 NAME = 'audible'
 DESCRIPTION = 'Interface for internal Audible API..'
 URL = 'https://github.com/mkb79/audible'
-EMAIL = 'me@example.com'
+EMAIL = 'mkb79@hackitall.de'
 AUTHOR = 'mkb79'
 REQUIRES_PYTHON = '>=3.6.0'
-VERSION = '0.1.1'
+VERSION = '0.1.2'
 
 # What packages are required for this module to be executed?
 REQUIRED = [
-     'bs4', 'pillow', 'requests', 'rsa',
+     'beautifulsoup4', 'Pillow', 'requests', 'rsa',
 ]
 
 # What packages are optional?
@@ -117,7 +117,7 @@ setup(
     classifiers=[
         # Trove classifiers
         # Full list: https://pypi.python.org/pypi?%3Aaction=list_classifiers
-        'License :: OSI Approved :: AGPL License',
+        'License :: OSI Approved :: GNU General Public License v3 (GPLv3)',
         'Programming Language :: Python',
         'Programming Language :: Python :: 3',
         'Programming Language :: Python :: 3.6',
