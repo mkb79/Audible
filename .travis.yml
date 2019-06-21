@@ -1,8 +1,10 @@
+sudo: false
 language: python
 python:
 - '3.6'
 install:
 - pip install -r requirements.txt
+- pip install -U pip wheel setuptools
 script:
 - python test.py
 deploy:
@@ -11,5 +13,6 @@ deploy:
   password:
     secure: PxQFntYYb45T2n/Ofm2qGzeoE7rS/F0mEeKjtuLs3ngyVxOvGQ/lnSIoP/1GAjJLaeR0FulQqsrFg0O3+eOWRMCRXd7CMnAMBKxyXElNqBIrW4o35x8uJsGNdweRg6eaC6fv+BeVQUDZi5X6XP/i3z0NBz0kpo3lU1QhuOiJ/Nhz1FGvrC4kvL8wSWPcfiEc8AARobiltSrLVqYZFokeJhkX0Gb7SzyupVHGnPUiMIvvLeEfkAEKw5gl1Wl0DihByF6CxC2FcsBFRQd2bK7Mb4QHeM3q9RfepUl1LiAiOi02b0TqBac4/OO2zLeg4YLD9NDbP42T5xW1+TIsk8OGTLQVujR6HTgcXzve0KnQt96DbbhQpnhCQSZgLn7bmCqX5aZb56NF9/1ShpyB0LdB6BW9kUwNzH3zEEyzKqtXlmCwRKqPB2gJJuH2gNQoJrLt8cBgZCOgf5GvkObblwNdNkxa3n0xidrRzEARDIUPgqwOX2xIK6+yUyMLKta1FdZpFazaW7t2WLBE+qk9lELo3Nf9LrIKQJr1kiLBSQ7kHRcX6swsxfvA0xBDnTz2DI5U6aQMRmW7Azektf54lDnNEPt0VcrfeeQmQH8qGlbJREw984yFVwgN+k1qWJDH9dZlE/oQRQH6lrIu/LFI5lyB+sPUsPt+tjgcZn4795fR8H4=
   on:
-    distributions: sdist bdist_wheel
+    distributions: "sdist bdist_wheel"
     repo: mkb79/Audible
+    tags: true
