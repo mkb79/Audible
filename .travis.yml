@@ -4,15 +4,14 @@ python:
 - '3.6'
 install:
 - pip install -r requirements.txt
-- pip install -U pip wheel setuptools
 script:
 - python test.py
 deploy:
   provider: pypi
   user: mkb79
   password:
-    secure: PxQFntYYb45T2n/Ofm2qGzeoE7rS/F0mEeKjtuLs3ngyVxOvGQ/lnSIoP/1GAjJLaeR0FulQqsrFg0O3+eOWRMCRXd7CMnAMBKxyXElNqBIrW4o35x8uJsGNdweRg6eaC6fv+BeVQUDZi5X6XP/i3z0NBz0kpo3lU1QhuOiJ/Nhz1FGvrC4kvL8wSWPcfiEc8AARobiltSrLVqYZFokeJhkX0Gb7SzyupVHGnPUiMIvvLeEfkAEKw5gl1Wl0DihByF6CxC2FcsBFRQd2bK7Mb4QHeM3q9RfepUl1LiAiOi02b0TqBac4/OO2zLeg4YLD9NDbP42T5xW1+TIsk8OGTLQVujR6HTgcXzve0KnQt96DbbhQpnhCQSZgLn7bmCqX5aZb56NF9/1ShpyB0LdB6BW9kUwNzH3zEEyzKqtXlmCwRKqPB2gJJuH2gNQoJrLt8cBgZCOgf5GvkObblwNdNkxa3n0xidrRzEARDIUPgqwOX2xIK6+yUyMLKta1FdZpFazaW7t2WLBE+qk9lELo3Nf9LrIKQJr1kiLBSQ7kHRcX6swsxfvA0xBDnTz2DI5U6aQMRmW7Azektf54lDnNEPt0VcrfeeQmQH8qGlbJREw984yFVwgN+k1qWJDH9dZlE/oQRQH6lrIu/LFI5lyB+sPUsPt+tjgcZn4795fR8H4=
+    secure: Gg0QfyBVYyqBH+BtocTY4nDn+FzNV/QW/p1l0UKzOUqmE7dxzh6trDXyRYlqobmY0ppqf/uMC+Rd3Ra04aHToJpUZc6ifeoCBMYSQXjJv89DifIGEZuSCZBiYoMA4kI3iLEM0hs5aUawecvnwMqyQ23UrJjhRmDd4D7X2H8Dm1j+4aILsL1TiI9Rvo/ZUBkcgR+0Ae/+N3QHOhcXR3ySnofaLf4I0TjGRUi3XSVhSGhYwswnSfXL/zexgxz9JX0pLgEqt9+KeS74ZcWQR6tHrK6AK24jx2PXOKH5iq9ba9tB9etZF361i9JnFm+0MiYZ8toyxfo8dxwlMcdpYdvd3YVVgxs1tJK/smMt6ZlT+F9hFNHmmuW/fW6wXHTSH9KtxeQvlT0udBmo5JPXJfHj6v0fTUlCEjPgSRTtt3sCrr+XKRobXpZkPzAjjMbFVyGZvfn4vSX2Q8yI3P+2EelBjLQtLI/0GbS9pfUWsXH6JeTAiA4oqCyxxEXm69M71CamUN/Z77PI8xev+wh5yOSpZxSjJ9AiB4rfS0q/yhZo+BzPFrAOEhoOFq0KaKUe4QbFeYVetVBn1rGGDUYImL/lFYLQ1P8Q2yLZL7GBIIx0bz381Q3JVL6j08CdnTSG379rx7t4d5M4fJDTt9+PgEbaOEHzdIF7Q+YA0YJcGS+XXMc=
   on:
-    distributions: "sdist bdist_wheel"
-    repo: mkb79/Audible
     tags: true
+    distributions: sdist bdist_wheel
+    repo: mkb79/Audible

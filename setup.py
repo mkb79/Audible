@@ -1,16 +1,18 @@
 from os import path
 from setuptools import setup, find_packages
-from audible import __version__
 
 
 dirname = path.abspath(path.dirname(__file__))
 with open(path.join(dirname, 'README.md')) as f:
     long_description = f.read()
 
+version = {}
+with open(path.join(dirname,'audible/__version__.py')) as f:
+    exec(f.read(), version)
 
 setup(
     name='audible',
-    version=__version__,
+    version=version['__version__'],
     packages=find_packages(exclude=["tests", "*.tests", "*.tests.*", "tests.*"]),
     description='Interface for internal Audible API',
     url='https://github.com/mkb79/audible',
