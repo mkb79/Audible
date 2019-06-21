@@ -1,11 +1,6 @@
-language: python
-python:
-  - "3.6"
-install:
-  - pip install -r requirements.txt
 deploy:
   provider: pypi
-  user: "mkb79"
+  user: mkb79
   password:
-    secure: fmONemS+G/JrvI9hVSkrS6hXRbQOwWKLjEvXYt5M4wEgW/nfmcaDrAX2rhcPDCByE7aZe0frt9BVAp0HJeQTh/BC4O0AGs84Vg987geNT1h5bzVxX3/l0z2lke4Mre//VlO9Mwy0bAUsc4oj3EoFncycnbab6/SKrDKqP5reHQtGfKgQiLM2j2V/3FXIyKvMf19jl0QLJM1dZ0nMONQ5vkrCzqEAvGT16iNQvgSmv8RiUYufl5Yntt96MgGzwU9xs6ExTtyEnM4cF9akf9M85UvhF1viNHEKUe/W7CLl7yIlr5WriqnR6Mvagopie7RXmmVUnlNrWjExOjlxvOdjMpkr5B4t+hhpQ3l/wmc/D5DXdoICKrWruztu5pgOXHd1WxYLSYB9cEdvmpKr0WWM/cTC5BN39YDnIVRuQwm5HIXP/K/D8GlxtZjNOXNUvdlkYQH9bkeWDFpVnmKZRVq54cwhWVhrJxNs/EgccVE3ZT+lgba7wduX2fNUv0vuB++CMLEyiqqFCDbtHb6H6nXrh8wUTM83ltdujkV9UY7EnuIqMMdVqGg5hVCkskcws+hZyWWaIq+zQ81nfRqOkxQFvzPo+jmctIEvQEZfz/D6D0SmkMkPOdyIk/C8in0OHCrI1ffCEXPHggUIpTlz0nVI8tbpFLLMouOchkiiLcD9J88=
-  distributions: "sdist bdist_wheel"
+    secure: tcqwr1k58KgDg98DVdm1wRCVJvf8cf398XJJtw6b+iYsexa5BdwcxMahE/NgdH8vbOe4AW3SKReoLUqcVaaj+NmHIef97n8KQWfnCVjRlldPLGM+m7YR3prgnBWtkz573c4FKW2lPfx7+uNJ2v6L7uOinDArBF6O7tyTUmcZPQtVPrW0hwitiXDBViUYbskUoqGBsYXoLSajlA2Q7TIiqOAHW9+38+SjLQqba56nA0Rg+H00gOdyCRIVcLceQIOTvurDscFMkRAAtcsF4n4o/7blD6e8by0ZAb+4Nf9fg2wcmNyJzaNj2X+lzr2wqmcEbnhzhLFOxLqtcFpoQ4+y3EzRcTn61rfZxgEWJtIjNHZpNHwngDmS2E6KPAPRoEqy4DyQplra3fkdDzHifP+jeCMj+4FQHKvgA8VevskNs5NAUTfOEhNT/nT2uZSHMqiBuDUVwSX5N/Am0lF342gSnwSNXi0cJM6Kff0u5zV5lSa/OXeodXf36fJOVHwf58QIzqHcarGWlGmi9Bf8JjpHJMkr6QzQGZEpoZh2ev5cT4lIxNKAZoHNvl85oUQylvBd1Gqgr+7cuyi3koCMRshzUhf2T4yEkbtP9AbogjWGr+pboDFPfWxFmv5NGTX1zwCqeIbBgYVJA5VMeXiCAklWEazZhjvfMnowBzAC68cI7Co=
+  distributions: sdist bdist_wheel
