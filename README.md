@@ -66,9 +66,45 @@ client = audible.Client(local="us")
 client.from_json_file("FILENAME")
 # short alternate
 client = audible.Client(local="us", filename="FILENAME")
+
+# if restore session with client = audible.Client(local="us", filename="FILENAME")
+# simply insert
+client.to_json_file()  # no filename needed
 ```
 
-Logging in currently requires answering a CAPTCHA.
+Logging in currently requires answering a CAPTCHA. By default Pillow is used to show captcha and user prompt will be provided using `input`, which looks like:
+```
+Answer for CAPTCHA:
+```
+If Pillow can't display the captcha, the captcha url will be printed.
+
+A custom callback can be provided (for example submitting the CAPTCHA to an external service), like so:
+```
+def custom_captcha_callback(captcha_url):
+    
+    # Do some things with the captcha_url ... 
+    # maybe you can call webbrowser.open(captcha_url)
+
+    return "My answer for CAPTCHA"
+
+client = audible.Client("EMAIL", "PASSWORD", local="us", captcha_callback=custom_captcha_callback)
+```
+
+If activated 2-factor-authentication by default a user prompt will be provided using `input`, which looks like:
+```
+"OTP Code: "
+```
+
+A custom callback can be provided, like so:
+```
+def custom_otp_callback():
+    
+    # Do some things to insert otp code
+
+    return "My answer for otp code"
+
+client = audible.Client("EMAIL", "PASSWORD", local="us", otp_callback=custom_otp_callback)
+```
 
 ## Authentication
 
@@ -87,6 +123,19 @@ x-adp-token: {enc:...}
 As reference for other implementations, a client **must** store cookies from a successful Amazon login and a working `access_token` in order to renew `refresh_token`, `adp_token`, etc from `/auth/register`.
 
 An `access_token` can be renewed by making a request to `/auth/token`. `access_token`s are valid for 1 hour.
+To renew access_token with client call:
+```
+# refresh access_token if token already expired
+# if token valid nothing will be refreshed.
+client.refresh_token()
+
+# to force renew of access_token if token is valid
+client.refresh_token(force=true)
+
+# if you saved your session before don't forget to save again
+
+```
+
 
 ## Documentation:
 

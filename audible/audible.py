@@ -12,7 +12,7 @@ from .localization import localization
 
 
 class Client:
-    def __init__(self, username=None, password=None, filename=None, local="us"):
+    def __init__(self, username=None, password=None, filename=None, local="us", captcha_callback=None, otp_callback=None):
         self._local = localization.get(local)
 
         self._login_cookies = {}
@@ -23,7 +23,7 @@ class Client:
         self._expires = 0
 
         if (username and password):
-            self.init_session(username, password)
+            self.init_session(username, password, captcha_callback=captcha_callback, otp_callback=otp_callback)
             self.auth_register()
             if filename:
                 self.to_json_file(filename)
@@ -89,7 +89,7 @@ class Client:
         with open(filename, "w") as outfile:
             json.dump(body, outfile, indent=indent)
 
-    def init_session(self, username, password):
+    def init_session(self, username, password, captcha_callback=None, otp_callback=None):
         timeout = 30
         session = requests.Session()
         session.headers.update(
@@ -153,18 +153,11 @@ class Client:
         captcha = body.find("img", alt=lambda x: x and "CAPTCHA" in x)
 
         while captcha:
-            with urllib.request.urlopen(captcha["src"]) as url:
-                f = io.BytesIO(url.read())
-
-            # on error print captcha url instead of display captcha
-            try:
-                img = Image.open(f)
-                img.show()
-            except:
-                print(captcha["src"])
-
-            guess = input("Answer for CAPTCHA: ")
-            guess = str(guess).strip().lower()
+            captcha_url = captcha["src"]
+            if captcha_callback is None:
+                guess = default_captcha_callback(captcha_url)
+            else:
+                guess = captcha_callback(captcha_url)
 
             inputs = {}
             for node in body.select("input[type=hidden]"):
@@ -178,9 +171,33 @@ class Client:
             inputs["password"] = password
 
             response = session.post(self._local["AMAZON_LOGIN"].geturl() + "/ap/signin", data=inputs, timeout=timeout)
-        
+
             body = BeautifulSoup(response.text, "html.parser")
             captcha = body.find("img", alt=lambda x: x and "CAPTCHA" in x)
+
+
+        # check for 2FA
+        body = BeautifulSoup(response.text, "html.parser")
+        mfa = body.find("form", id=lambda x: x and "auth-mfa-form" in x)
+
+        while mfa:
+            if otp_callback is None:
+                otp_code = default_otp_callback()
+            else:
+                otp_code = otp_callback()
+
+            inputs = {}
+            for node in body.select("input[type=hidden]"):
+                if node["name"] and node["value"]:
+                    inputs[node["name"]] = node["value"]
+            inputs["otpCode"] = otp_code
+            inputs["mfaSubmit"] = "Submit"
+            inputs["rememberDevice"] = "false"
+
+            response = session.post(self._local["AMAZON_LOGIN"].geturl() + "/ap/signin", data=inputs, timeout=timeout)
+
+            body = BeautifulSoup(response.text, "html.parser")
+            mfa = body.find("form", id=lambda x: x and "auth-mfa-form" in x)
 
         # check for cvf identity check
         body = BeautifulSoup(response.text, "html.parser")
@@ -384,3 +401,26 @@ class Client:
     def delete(self, path, **params):
         return self._api_request("DELETE", path, **params)
 
+
+def default_captcha_callback(captcha_url):
+    with urllib.request.urlopen(captcha_url) as url:
+        f = io.BytesIO(url.read())
+
+    # on error print captcha url instead of display captcha
+    try:
+        img = Image.open(f)
+        img.show()
+    except:
+        print(captcha_url)
+
+    guess = input("Answer for CAPTCHA: ")
+    guess = str(guess).strip().lower()
+
+    return guess
+
+
+def default_otp_callback():
+    guess = input("OTP Code: ")
+    guess = str(guess).strip().lower()
+
+    return guess
