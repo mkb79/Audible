@@ -156,8 +156,12 @@ class Client:
             with urllib.request.urlopen(captcha["src"]) as url:
                 f = io.BytesIO(url.read())
 
-            img = Image.open(f)
-            img.show()
+            # on error print captcha url instead of display captcha
+            try:
+                img = Image.open(f)
+                img.show()
+            except:
+                print(captcha["src"])
 
             guess = input("Answer for CAPTCHA: ")
             guess = str(guess).strip().lower()
@@ -206,13 +210,13 @@ class Client:
             inputs["code"] = input("Code: ")
             response = session.post(self._local["AMAZON_LOGIN"].geturl() + "/ap/cvf/verify", headers=headers, data=inputs, timeout=timeout)
 
-        if response.status_code == 404:
-            map_landing = urllib.parse.parse_qs(response.url)
-            self._access_token = map_landing["openid.oa2.access_token"][0]
-            for cookie in session.cookies:
-                self._login_cookies[cookie.name] = cookie.value
-        else:
+        if response.status_code != 404:
             raise Exception("Unable to login")
+
+        map_landing = urllib.parse.parse_qs(response.url)
+        self._access_token = map_landing["openid.oa2.access_token"][0]
+        for cookie in session.cookies:
+            self._login_cookies[cookie.name] = cookie.value
 
     def auth_register(self):
         json_cookies = []

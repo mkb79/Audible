@@ -18,8 +18,7 @@ This package is written with Pythonista for iOS.
 
 ## Installation
 
-- `pip install audible` or
-- `pip install git+https://github.com/mkb79/audible.git@master`
+`pip install audible`
 
 ## Usage
 
