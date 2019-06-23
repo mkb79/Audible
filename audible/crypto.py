@@ -145,6 +145,18 @@ class CertAuth(AuthBase):
         return r
 
 
+class AccessTokenAuth(AuthBase):
+    def __init__(self, access_token, client_id=0):
+        self.access_token = access_token
+        self.client_id = client_id
+
+    def __call__(self, r):
+        r.headers["Authorization"] = f"Bearer {self.access_token}"
+        r.headers["client-id"] = self.client_id
+
+        return r
+
+
 def sign_request(url: str, method: str, body: str, adp_token: str,
                  private_key: str) -> dict:
     """

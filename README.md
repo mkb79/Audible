@@ -22,18 +22,13 @@ This package is written with Pythonista for iOS.
 
 ## Usage
 
+### Basis Examples
+
 ```python
 import audible
 
 # for US accounts
 client = audible.Client("EMAIL", "PASSWORD", local="us")
-# for german accounts
-client = audible.Client("EMAIL", "PASSWORD", local="de")
-# for Uk accounts - not tested enough
-client = audible.Client("EMAIL", "PASSWORD", local="uk")
-# for french accounts - not tested enough
-client = audible.Client("EMAIL", "PASSWORD", local="fr")
-
 
 # save session after initializing
 client = audible.Client("EMAIL", "PASSWORD", local="us", filename="FILENAME")
@@ -52,6 +47,37 @@ library = client.get("library/books", api_version="0.0", purchaseAfterDate="01/0
 print(library)
 
 ```
+
+### Localizations
+
+At this moment this api supports 5 countrys.
+
+- USA (local="us")
+- Germany (local="de")
+- United Kingdom (local="uk")
+- France (local="fr")
+- Canada (local="ca")
+
+You can provide a custom local with this code:
+
+```python
+import audible
+
+# example for germany
+custom_local = audible.custom_local(
+    amazon_login="https://www.amazon.de",
+    amazon_api="https://api.amazon.de",
+    audible_api="https://api.audible.de",
+    accept_language="de-DE",
+    marketPlaceId="AN7V1F1VY261K",
+    openid_assoc_handle="amzn_audible_ios_de",
+    oauth_lang="de-DE",
+    auth_register_domain=".amazon.de")
+
+client = audible.Client(..., local=custom_local)
+```
+
+### Load and Save sessions
 
 Client session can be saved any time using `to_json_file("FILENAME")` and `from_json_file("FILENAME")`, like so:
 
@@ -72,6 +98,8 @@ client = audible.Client(local="us", filename="FILENAME")
 client.to_json_file()  # no filename needed
 ```
 
+### CAPTCHA
+
 Logging in currently requires answering a CAPTCHA. By default Pillow is used to show captcha and user prompt will be provided using `input`, which looks like:
 ```
 Answer for CAPTCHA:
@@ -90,7 +118,9 @@ def custom_captcha_callback(captcha_url):
 client = audible.Client("EMAIL", "PASSWORD", local="us", captcha_callback=custom_captcha_callback)
 ```
 
-If activated 2-factor-authentication by default a user prompt will be provided using `input`, which looks like:
+### 2FA
+
+If 2-factor-authentication by default is activated a user prompt will be provided using `input`, which looks like:
 ```
 "OTP Code: "
 ```
@@ -124,6 +154,7 @@ As reference for other implementations, a client **must** store cookies from a s
 
 An `access_token` can be renewed by making a request to `/auth/token`. `access_token`s are valid for 1 hour.
 To renew access_token with client call:
+
 ```
 # refresh access_token if token already expired
 # if token valid nothing will be refreshed.
@@ -135,7 +166,6 @@ client.refresh_token(force=true)
 # if you saved your session before don't forget to save again
 
 ```
-
 
 ## Documentation:
 

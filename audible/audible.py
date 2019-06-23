@@ -13,7 +13,10 @@ from .localization import localization
 
 class Client:
     def __init__(self, username=None, password=None, filename=None, local="us", captcha_callback=None, otp_callback=None):
-        self._local = localization.get(local)
+        if isinstance(local, str):
+            self._local = localization.get(local)
+        elif isinstance(local, dict):
+            self._local = local
 
         self._login_cookies = {}
         self._adp_token = str()
@@ -424,3 +427,4 @@ def default_otp_callback():
     guess = str(guess).strip().lower()
 
     return guess
+

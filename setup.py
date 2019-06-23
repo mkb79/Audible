@@ -2,9 +2,12 @@ from os import path
 from setuptools import setup, find_packages
 
 
-dirname = path.abspath(path.dirname(__file__))
-with open(path.join(dirname, 'README.md')) as f:
-    long_description = f.read()
+try:
+    dirname = path.abspath(path.dirname(__file__))
+    with open(path.join(dirname, 'README.md')) as f:
+        long_description = f.read()
+except:
+    long_description = None
 
 version = {}
 with open(path.join(dirname,'audible/__version__.py')) as f:
@@ -30,6 +33,6 @@ setup(
     python_requires='>=3.6',
     keywords='Audible, API',
     include_package_data=True,
-    long_description=long_description,
+    long_description=long_description or description,
     long_description_content_type='text/markdown',
 )

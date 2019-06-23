@@ -54,3 +54,17 @@ localization = {
     }
 }
 
+
+def custom_local(amazon_login, amazon_api, audible_api, accept_language, marketPlaceId,
+                 openid_assoc_handle, oauth_lang, auth_register_domain):
+    return {
+        "AMAZON_LOGIN": urlparse(amazon_login),
+        "AMAZON_API": urlparse(amazon_api),
+        "AUDIBLE_API": urlparse(audible_api),
+        "Accept-Language": accept_language,
+        "marketPlaceId": marketPlaceId,
+        "openid_assoc_handle": openid_assoc_handle,
+        "oauth_lang": oauth_lang,
+        "auth_register_domain": auth_register_domain
+    }
+
