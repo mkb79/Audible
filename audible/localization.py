@@ -41,6 +41,16 @@ localization = {
         "openid_assoc_handle": "amzn_audible_ios_fr",
         "oauth_lang": "fr-FR",
         "auth_register_domain": ".amazon.fr"
+    },
+    "ca": {
+        "AMAZON_LOGIN": urlparse("https://www.amazon.ca"),
+        "AMAZON_API": urlparse("https://api.amazon.ca"),
+        "AUDIBLE_API": urlparse("https://api.audible.ca"),
+        "Accept-Language": "en-CA",
+        "marketPlaceId": "A2CQZ5RBY40XE",
+        "openid_assoc_handle": "amzn_audible_ios_ca",
+        "oauth_lang": "en-CA",
+        "auth_register_domain": ".amazon.ca"
     }
 }
 
