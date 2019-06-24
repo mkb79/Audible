@@ -1,6 +1,15 @@
 # Audible
 
-**Interface for internal Audible API written in pure Python.** Support is limited to US, UK, french and german accounts at this moment.
+[![image](https://img.shields.io/pypi/v/audible.svg)](https://pypi.org/project/audible/)
+[![image](https://img.shields.io/pypi/l/audible.svg)](https://pypi.org/project/audible/)
+[![image](https://img.shields.io/pypi/pyversions/audible.svg)](https://pypi.org/project/audible/)
+[![image](https://img.shields.io/pypi/status/audible.svg)](https://pypi.org/project/audible/)
+[![image](https://img.shields.io/pypi/wheel/audible.svg)](https://pypi.org/project/audible/)
+[![Travis](https://img.shields.io/travis/mkb79/audible/master.svg?logo=travis)](https://travis-ci.org/mkb79/audible)
+[![image](https://img.shields.io/pypi/implementation/audible.svg)](https://pypi.org/project/audible/)
+[![image](https://img.shields.io/pypi/dm/audible.svg)](https://pypi.org/project/audible/)
+
+**Interface for internal Audible API written in pure Python.**
 
 Code including this README is forked from omarroth‘s fantastic [audible.cr](https://github.com/omarroth/audible.cr) API written in crystal.
 
@@ -50,7 +59,7 @@ print(library)
 
 ### Localizations
 
-At this moment this api supports 5 countrys.
+At this moment api supports 5 countrys natively.
 
 - USA (local="us")
 - Germany (local="de")
