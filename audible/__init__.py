@@ -1,8 +1,11 @@
-from .audible import Client
+from .client import Client
 from .__version__ import __version__
-from .crypto import encrypt_metadata, decrypt_metadata, CertAuth, AccessTokenAuth
-from .localization import custom_local
+from .auth import CertAuth, AccessTokenAuth
+from .crypto import encrypt_metadata, decrypt_metadata
+from .localization import custom_market, Markets
 
-
-__all__ = ["Client", "custom_local", "encrypt_metadata", "decrypt_metadata", "CertAuth", "AccessTokenAuth", "__version__"]
+__all__ = [
+    "Client", "custom_market", "Markets", "encrypt_metadata",
+    "decrypt_metadata", "CertAuth", "AccessTokenAuth", "__version__"
+]
 

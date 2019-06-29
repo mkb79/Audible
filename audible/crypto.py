@@ -3,15 +3,12 @@ import binascii
 import ctypes
 from datetime import datetime
 import math
-from urllib.parse import urlparse
-
-from requests.auth import AuthBase
-import rsa
 
 
 def encrypt_metadata(metadata: str) -> str:
     """
-    This function encrypt given metadata. Encrypted metadata are required for login to amazon.
+    This function encrypt given metadata. Encrypted metadata are required \
+    for login to amazon.
 
     :param metadata: plaintext metadata
     :type metadata: str
@@ -66,7 +63,8 @@ def encrypt_metadata(metadata: str) -> str:
 
 def decrypt_metadata(metadata: str) -> str:
     """
-    This function decrypt given metadata. Decrypt metadata is for testing purposes only.
+    This function decrypt given metadata. Decrypt metadata is for testing \
+    purposes only.
 
     :param metadata: encrypted metadata
     :type metadata: str
@@ -122,78 +120,6 @@ def decrypt_metadata(metadata: str) -> str:
     object_bytes = "".join(object_bytes)
 
     return object_bytes[9:]
-
-
-class CertAuth(AuthBase):
-    def __init__(self, adp_token, device_cert):
-        self.adp_token = adp_token
-        self.device_cert = device_cert
-
-    def __call__(self, r):
-        url_parsed = urlparse(r.url)
-        path = url_parsed[2]
-        query = url_parsed[4]
-
-        url = path[:]
-        if query:
-            url += f"?{query}"
-
-        headers = sign_request(url, r.method, r.body, self.adp_token, self.device_cert)
-        for item in headers:
-            r.headers[item] = headers[item]
-
-        return r
-
-
-class AccessTokenAuth(AuthBase):
-    def __init__(self, access_token, client_id=0):
-        self.access_token = access_token
-        self.client_id = client_id
-
-    def __call__(self, r):
-        r.headers["Authorization"] = f"Bearer {self.access_token}"
-        r.headers["client-id"] = self.client_id
-
-        return r
-
-
-def sign_request(url: str, method: str, body: str, adp_token: str,
-                 private_key: str) -> dict:
-    """
-    Helper function who create a signed header params.
-
-    :param url: the requested url
-    :param method: the request method (GET, POST, DELETE, ...)
-    :param body: the http message body
-    :param adp_token: the token is obtained after register as device
-    :param private_key: the rsa key obtained after register as device
-    :type url: str
-    :type method: str
-    :type body: str
-    :type adp_token: str
-    :type private_key: str
-    :return:
-    :rtype: dict
-    """
-    date = datetime.utcnow().isoformat("T") + "Z"
-
-    data = f"{method}\n{url}\n{date}\n"
-    if body:
-        data += body
-    data += "\n"
-    data += adp_token
-
-    key = rsa.PrivateKey.load_pkcs1(private_key)
-    cipher = rsa.pkcs1.sign(data.encode(), key, "SHA-256")
-    signed_encoded = base64.b64encode(cipher)
-
-    signature = f"{signed_encoded.decode()}:{date}"
-
-    return {
-        "x-adp-token": adp_token,
-        "x-adp-alg": "SHA256withRSA:1.0",
-        "x-adp-signature": signature
-    }
 
 
 def now_to_unix_ms() -> int:

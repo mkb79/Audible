@@ -13,7 +13,11 @@
 
 Code including this README is forked from omarroth‘s fantastic [audible.cr](https://github.com/omarroth/audible.cr) API written in crystal.
 
-This package is written with Pythonista for iOS. 
+This package is written with Pythonista for iOS.
+
+This version is still in development and contains many proof of concepts and some need still testing. Feel free to participate.
+
+**The last stable release is v0.1.5**. 
 
 
 ## Requirements
@@ -22,12 +26,14 @@ This package is written with Pythonista for iOS.
 - depends on following packages:
 	- 	beautifulsoup4
 	- 	Pillow
-	- 	requests,
+	- 	python-box
+	- 	requests
 	- 	rsa 
 
 ## Installation
 
 `pip install audible`
+ˋpip install git+https://github.com/mkb79/audible.git@developing´
 
 ## Usage
 
@@ -37,13 +43,18 @@ This package is written with Pythonista for iOS.
 import audible
 
 # for US accounts
-client = audible.Client("EMAIL", "PASSWORD", local="us")
+client = audible.Client.from_login("EMAIL", "PASSWORD", market="us")
 
 # save session after initializing
-client = audible.Client("EMAIL", "PASSWORD", local="us", filename="FILENAME")
+client = audible.Client.from_login("EMAIL", "PASSWORD", market="us", filename="FILENAME")
+client.to_json_file()
 
 # restore session from file
-client = audible.Client(local="us", filename="FILENAME")
+# since this version market(local) are stored in file
+# restoring session from file uses this market
+# to specify an other market please use ˋmarket="us"ˋ
+client = audible.Client.from_json_file(filename="FILENAME")
+client =Client.from_json_file(filename="FILENAME", market="us")
 
 # get library
 library = client.get("library", num_results=99, response_groups="media, sample")
@@ -61,19 +72,19 @@ print(library)
 
 At this moment api supports 5 countrys natively.
 
-- USA (local="us")
-- Germany (local="de")
-- United Kingdom (local="uk")
-- France (local="fr")
-- Canada (local="ca")
+- USA (market="us")
+- Germany (market="de")
+- United Kingdom (market="uk")
+- France (market="fr")
+- Canada (market="ca")
 
 You can provide a custom local with this code:
 
-```python
+```Python
 import audible
 
 # example for germany
-custom_local = audible.custom_local(
+custom_market = audible.Markets(
     amazon_login="https://www.amazon.de",
     amazon_api="https://api.amazon.de",
     audible_api="https://api.audible.de",
@@ -83,27 +94,24 @@ custom_local = audible.custom_local(
     oauth_lang="de-DE",
     auth_register_domain=".amazon.de")
 
-client = audible.Client(..., local=custom_local)
+client = audible.Client.from_login(..., market=custom_market)
 ```
 
 ### Load and Save sessions
 
-Client session can be saved any time using `to_json_file("FILENAME")` and `from_json_file("FILENAME")`, like so:
+Client session can be saved any time using `to_json_file("FILENAME")` like so:
 
 ```python
 import audible
 
-client = audible.Client("EMAIL", "PASSWORD", local="us")
+client = audible.Client.from_login("EMAIL", "PASSWORD", market="us")
 client.to_json_file("FILENAME")
 
 # Sometime later...
-client = audible.Client(local="us")
-client.from_json_file("FILENAME")
-# short alternate
-client = audible.Client(local="us", filename="FILENAME")
+client = audible.Client.from_json_file(filename="FILENAME")
 
-# if restore session with client = audible.Client(local="us", filename="FILENAME")
-# simply insert
+# if restore session with client = audible.Client.from_json_file(filename="FILENAME")
+# simply run
 client.to_json_file()  # no filename needed
 ```
 
@@ -124,7 +132,7 @@ def custom_captcha_callback(captcha_url):
 
     return "My answer for CAPTCHA"
 
-client = audible.Client("EMAIL", "PASSWORD", local="us", captcha_callback=custom_captcha_callback)
+client = audible.Client.from_login("EMAIL", "PASSWORD", market="us", captcha_callback=custom_captcha_callback)
 ```
 
 ### 2FA
@@ -142,7 +150,7 @@ def custom_otp_callback():
 
     return "My answer for otp code"
 
-client = audible.Client("EMAIL", "PASSWORD", local="us", otp_callback=custom_otp_callback)
+client = audible.Client.from_login("EMAIL", "PASSWORD", market="us", otp_callback=custom_otp_callback)
 ```
 
 ## Authentication
@@ -316,6 +324,7 @@ For a succesful request, returns JSON body with `content_url`.
 
 ### GET /1.0/content/%{asin}/metadata
 
+- response_groups: [chapter_info]
 - acr:
 
 ### GET /1.0/customer/information
