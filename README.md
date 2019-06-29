@@ -32,8 +32,8 @@ This version is still in development and contains many proof of concepts and som
 
 ## Installation
 
-`pip install audible`
-ˋpip install git+https://github.com/mkb79/audible.git@developing´
+~~`pip install audible`~~
+ˋpip install git+https://github.com/mkb79/audible.git@developing`
 
 ## Usage
 
