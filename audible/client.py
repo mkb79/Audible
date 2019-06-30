@@ -38,8 +38,8 @@ class Client:
             username,
             password,
             data.market,
-            captcha_callback=None,
-            otp_callback=None
+            captcha_callback=captcha_callback,
+            otp_callback=otp_callback
         )
         if register:
             response = auth_register(**response, market=data.market)
@@ -112,8 +112,7 @@ class Client:
                 market=self.market
             )
     
-            self.access_token = refresh_data["access_token"]
-            self.expires = refresh_data["expires"]
+            self._data.update_data(**refresh_data)
         else:
             print("Access Token not expired. No refresh nessessary. To force refresh please use force=True")
 
