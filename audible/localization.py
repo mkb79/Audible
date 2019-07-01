@@ -1,3 +1,9 @@
+from bs4 import BeautifulSoup
+import re
+import requests
+from urllib.parse import parse_qs, urlparse
+
+
 class Markets:
     def __init__(self, amazon_login, amazon_api, audible_api, accept_language,
                  marketPlaceId, openid_assoc_handle, oauth_lang,
@@ -135,3 +141,37 @@ def custom_market(amazon_login, amazon_api, audible_api, accept_language,
         "auth_register_domain": auth_register_domain
     }
     return Markets(**market)
+
+
+def autodetect_market(tld: str):
+    """
+    Try to autodetect marketsettings. 
+    Needs the Top Level Domain for the audible page in your country.
+    e.g. co.uk, co.jp, ...
+    """
+    response = requests.get(f"https://www.audible.{tld}")    
+    soup = BeautifulSoup(response.text, "html.parser")
+
+    login_link = soup.find("a", class_="ui-it-sign-in-link")["href"]
+    parsed_link = urlparse(login_link)
+    query_string = parsed_link[4]
+    marketPlaceId = parse_qs(query_string)['marketPlaceId'][0]
+    assoc_handle = parse_qs(query_string)['pageId'][0].split("amzn_audible_")[-1]
+    
+    
+    lang = soup.find_all("script", type="text/javascript")
+    for x in lang:
+        search = re.search('language_of_preference\:\"(.*?)\"', x.text)
+        if search:
+            pref_lang = search.group(1)
+
+    return {
+        "amazon_login": f"https://www.amazon.{tld}",
+        "amazon_api": f"https://api.amazon.{tld}",
+        "audible_api": f"https://api.audible.{tld}",
+        "accept_language": pref_lang,
+        "marketPlaceId": marketPlaceId,
+        "openid_assoc_handle": f"amzn_audible_ios_{assoc_handle}",
+        "oauth_lang": pref_lang,
+        "auth_register_domain": f".amazon.{tld}"
+    }

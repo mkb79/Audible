@@ -95,7 +95,29 @@ custom_market = audible.Markets(
     auth_register_domain=".amazon.de")
 
 client = audible.Client.from_login(..., market=custom_market)
+
 ```
+
+You can try to autodetect market settings like so:
+
+```Python
+import audible
+
+# needs the Top Level Domain for the audible page in your country
+# example for uk
+market_settings = audible.autodetect_market("co.uk")
+
+# look if everything is fine
+print(market_settings)
+
+# create Market with market settings
+custom_market = audible.Markets(**market_settings)
+
+# create client
+client = audible.Client.from_login(..., market=custom_market)
+
+```
+
 
 ### Load and Save sessions
 
