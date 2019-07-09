@@ -2,6 +2,8 @@ import base64
 from datetime import datetime, timedelta
 import io
 import logging
+import random
+import string
 from typing import Any, Dict, Union
 from urllib.parse import parse_qs, urlparse
 
@@ -225,7 +227,7 @@ def auth_register(access_token: str, login_cookies: dict,
         "registration_data": {
             "domain": "Device",
             "app_version": "3.7",
-            "device_serial": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+            "device_serial": get_random_device_serial(),
             "device_type": "A2CZJZGLK2JJVM",
             "device_name": ("%FIRST_NAME%%FIRST_NAME_POSSESSIVE_STRING%%DUPE_"
                             "STRATEGY_1ST%Audible for iPhone"),
@@ -309,7 +311,8 @@ def auth_deregister(access_token: str, login_cookies: dict,
 
 def refresh_access_token(refresh_token: str, market: Markets) -> Dict[str, Any]:
     """
-    Refresh access token with refresh token. Access tokens are valid for 60 mins.
+    Refresh access token with refresh token.
+    Access tokens are valid for 60 mins.
     
     """
     
@@ -354,6 +357,10 @@ def user_profile(access_token: str, login_cookies: dict,
     response.raise_for_status()
 
     return response.json()
+
+
+def get_random_device_serial() -> str:
+    return ''.join(random.choices(string.ascii_uppercase + string.digits, k=40))
 
 
 class CertAuth(AuthBase):
