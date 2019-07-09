@@ -202,6 +202,7 @@ audible.set_file_logger("filename", "level")
 ```
 
 Following levels will be accepted:
+
 - debug
 - info
 - warn (or warning)
@@ -209,6 +210,7 @@ Following levels will be accepted:
 - critical
 
 You can use numeric levels too:
+
 - 10 (debug)
 - 20 (info)
 - 30 (warn)
