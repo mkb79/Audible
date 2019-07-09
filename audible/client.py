@@ -1,5 +1,6 @@
 from datetime import datetime
 import json
+import logging
 
 import requests
 
@@ -9,10 +10,13 @@ from .auth import (auth_login, auth_register, auth_deregister,
                    CertAuth, refresh_access_token, user_profile)
 
 
+_client_logger = logging.getLogger('audible.client')
+
+
 class Client:
     def __init__(self, **kwargs):
         self._data = kwargs.get("data", None) or Storage(**kwargs)
-        # rejected_kwargs = self._data.last_rejected_data
+        # discarded_kwargs = self._data.last_discarded_data()
 
     def __getattr__(self, attr):
         try:
@@ -34,13 +38,11 @@ class Client:
                    register=True, captcha_callback=None, otp_callback=None):
         data = Storage(market=market, filename=filename)
 
-        response = auth_login(
-            username,
-            password,
-            data.market,
-            captcha_callback=captcha_callback,
-            otp_callback=otp_callback
-        )
+        response = auth_login(username,
+                              password,
+                              data.market,
+                              captcha_callback=captcha_callback,
+                              otp_callback=otp_callback)
         if register:
             response = auth_register(**response, market=data.market)
 
@@ -55,6 +57,8 @@ class Client:
         json_data = json.loads(data.filename.read_text())
 
         data.update_data(**json_data)
+        _client_logger.info((f"loaded data from file {filename} for "
+                             f"market {data.market.market_code}"))
 
         return cls(data=data)
 
@@ -66,44 +70,37 @@ class Client:
         else:
             raise ValueError("No filename provided")
 
-        body = {
-            "login_cookies": self.login_cookies,
-            "adp_token": self.adp_token,
-            "access_token": self.access_token,
-            "refresh_token": self.refresh_token,
-            "device_private_key": self.device_private_key,
-            "expires": self.expires,
-            "market_code": self.market.market_code
-        }
+        body = {"login_cookies": self.login_cookies,
+                "adp_token": self.adp_token,
+                "access_token": self.access_token,
+                "refresh_token": self.refresh_token,
+                "device_private_key": self.device_private_key,
+                "expires": self.expires,
+                "market_code": self.market.market_code}
         filename.write_text(json.dumps(body, indent=indent))
 
     def re_login(self, username, password, captcha_callback=None,
                  otp_callback=None):
-        login = auth_login(
-            username,
-            password,
-            self.market,
-            captcha_callback=captcha_callback,
-            otp_callback=otp_callback
-        )
+
+        login = auth_login(username,
+                           password,
+                           self.market,
+                           captcha_callback=captcha_callback,
+                           otp_callback=otp_callback)
 
         self._data.update_data(**login)
 
     def register_device(self):
-        register = auth_register(
-            access_token=self.access_token,
-            login_cookies=self.login_cookies,
-            market=self.market
-        )
+        register = auth_register(access_token=self.access_token,
+                                 login_cookies=self.login_cookies,
+                                 market=self.market)
 
         self._data.update_data(**register)
 
     def deregister_device(self):
-        return auth_deregister(
-            access_token=self.access_token,
-            login_cookies=self.login_cookies,
-            market=self.market
-        )
+        return auth_deregister(access_token=self.access_token,
+                               login_cookies=self.login_cookies,
+                               market=self.market)
 
     def refresh_access_token(self, force=False):
         if force or self.access_token_expired:
@@ -114,7 +111,8 @@ class Client:
     
             self._data.update_data(**refresh_data)
         else:
-            print("Access Token not expired. No refresh nessessary. To force refresh please use force=True")
+            print("Access Token not expired. No refresh nessessary. "
+                  "To force refresh please use force=True")
 
     def refresh_or_register(self, force=False):
         try:
@@ -127,11 +125,9 @@ class Client:
                 raise Exception("Could not refresh client.")
 
     def user_profile(self):
-        return user_profile(
-            access_token=self.access_token,
-            login_cookies=self.login_cookies,
-            market=self.market
-        )
+        return user_profile(access_token=self.access_token,
+                            login_cookies=self.login_cookies,
+                            market=self.market)
 
     @property
     def access_token_expires(self):
@@ -147,20 +143,16 @@ class Client:
     def _api_request(self, method, path, api_version="1.0", json_data=None,
                      auth=None, cookies=None, **params):
         url = "/".join((self.market.audible_api, api_version, path))
-        headers = {
-            "Accept": 'application/json',
-            'Content-Type': 'application/json'
-        }
+        headers = {"Accept": "application/json",
+                   "Content-Type": "application/json"}
         auth = auth or CertAuth(self.adp_token, self.device_private_key)
-        resp = requests.request(
-            method,
-            url,
-            json=json_data,
-            params=params,
-            headers=headers,
-            auth=auth,
-            cookies=cookies
-        )
+        resp = requests.request(method,
+                                url,
+                                json=json_data,
+                                params=params,
+                                headers=headers,
+                                auth=auth,
+                                cookies=cookies)
         resp.raise_for_status()
 
         return resp.json()

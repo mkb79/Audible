@@ -1,6 +1,8 @@
 import base64
 from datetime import datetime, timedelta
 import io
+import logging
+from typing import Any, Dict, Union
 from urllib.parse import parse_qs, urlparse
 
 from bs4 import BeautifulSoup
@@ -14,51 +16,62 @@ from .crypto import encrypt_metadata, meta_audible_app
 from .localization import Markets
 
 
+_auth_logger = logging.getLogger('audible.auth')
+
+
 def auth_login(username: str, password: str, market: Markets,
-               captcha_callback=None, otp_callback=None, timeout=30):
+               captcha_callback=None, otp_callback=None) -> Dict[str, Any]:
+    """
+    Login to amazon oauth service simulating audible app for iOS.
+    Returns access token and cookies needed for ``auth_register``.
+    """
+
     session = requests.Session()
-    headers = {
-        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-        "Accept-Charset": "utf-8",
-        "Accept-Language": market.accept_language,
-        "Host": urlparse(market.amazon_login).netloc,
-        "Origin": market.amazon_login,
-        "User-Agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 12_3_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148"
-    }
+    headers = {"Accept": ("text/html,application/xhtml+xml,"
+                          "application/xml;q=0.9,*/*;q=0.8"),
+               "Accept-Charset": "utf-8",
+               "Accept-Language": market.accept_language,
+               "Host": urlparse(market.amazon_login).netloc,
+               "Origin": market.amazon_login,
+               "User-Agent": ("Mozilla/5.0 (iPhone; CPU iPhone OS 12_3_1 "
+                              "like Mac OS X) AppleWebKit/605.1.15 "
+                              "(KHTML, like Gecko) Mobile/15E148")}
     session.headers.update(headers)
 
     while "session-token" not in session.cookies:
         session.get(market.amazon_login)
 
-    oauth_params = {
-        'openid.oa2.response_type': 'token',
-        'openid.return_to': market.amazon_login + '/ap/maplanding',
-        'openid.assoc_handle': market.openid_assoc_handle,
-        'openid.identity': 'http://specs.openid.net/auth/2.0/identifier_select',
-        'pageId': 'amzn_audible_ios',
-        'accountStatusPolicy': 'P1',
-        'openid.claimed_id': 'http://specs.openid.net/auth/2.0/identifier_select',
-        'openid.mode': 'checkid_setup',
-        'openid.ns.oa2': 'http://www.amazon.com/ap/ext/oauth/2',
-        'openid.oa2.client_id': 'device:6a52316c62706d53427a5735505a76477a45375959566674327959465a6374424a53497069546d45234132435a4a5a474c4b324a4a564d',
-        'language': market.oauth_lang,
-        'openid.ns.pape': 'http://specs.openid.net/extensions/pape/1.0',
-        'marketPlaceId': market.marketPlaceId,
-        'openid.oa2.scope': 'device_auth_access',
-        'forceMobileLayout': 'true',
-        'openid.ns': 'http://specs.openid.net/auth/2.0',
-        'openid.pape.max_auth_age': '0'
-    }
-    response = session.get(
-        market.amazon_login + "/ap/signin",
-        params=oauth_params
-    )
-    oauth_url = response.request.url
+    oauth_params = {"openid.oa2.response_type": "token",
+                    "openid.return_to": market.amazon_login + "/ap/maplanding",
+                    "openid.assoc_handle": market.openid_assoc_handle,
+                    "openid.identity": ("http://specs.openid.net/auth/2.0/"
+                                        "identifier_select"),
+                    "pageId": "amzn_audible_ios",
+                    "accountStatusPolicy": "P1",
+                    "openid.claimed_id": ("http://specs.openid.net/auth/2.0/"
+                                          "identifier_select"),
+                    "openid.mode": "checkid_setup",
+                    "openid.ns.oa2": "http://www.amazon.com/ap/ext/oauth/2",
+                    "openid.oa2.client_id": ("device:6a52316c62706d53427a57355"
+                                             "05a76477a45375959566674327959465"
+                                             "a6374424a53497069546d45234132435"
+                                             "a4a5a474c4b324a4a564d"),
+                    "language": market.oauth_lang,
+                    "openid.ns.pape": ("http://specs.openid.net/extensions/"
+                                       "pape/1.0"),
+                    "marketPlaceId": market.marketPlaceId,
+                    "openid.oa2.scope": "device_auth_access",
+                    "forceMobileLayout": "true",
+                    "openid.ns": "http://specs.openid.net/auth/2.0",
+                    "openid.pape.max_auth_age": "0"}
 
-    inputs = {}
+    response = session.get(market.amazon_login + "/ap/signin",
+                           params=oauth_params)
+    oauth_url = response.request.url
 
     body = BeautifulSoup(response.text, "html.parser")
 
+    inputs = {}
     for node in body.select("input[type=hidden]"):
         if node["name"] and node["value"]:
             inputs[node["name"]] = node["value"]
@@ -69,10 +82,8 @@ def auth_login(username: str, password: str, market: Markets,
     inputs["metadata1"] = encrypt_metadata(metadata)
 
     session.headers.update(
-        {
-            "Referer": oauth_url,
-            "Content-Type": "application/x-www-form-urlencoded"
-        }
+        {"Referer": oauth_url,
+         "Content-Type": "application/x-www-form-urlencoded"}
     )
     response = session.post(market.amazon_login + "/ap/signin", data=inputs)
 
@@ -98,10 +109,8 @@ def auth_login(username: str, password: str, market: Markets,
         inputs["email"] = username
         inputs["password"] = password
 
-        response = session.post(
-            market.amazon_login + "/ap/signin",
-            data=inputs
-        )
+        response = session.post(market.amazon_login + "/ap/signin",
+                                data=inputs)
 
         body = BeautifulSoup(response.text, "html.parser")
         captcha = body.find("img", alt=lambda x: x and "CAPTCHA" in x)
@@ -124,10 +133,8 @@ def auth_login(username: str, password: str, market: Markets,
         inputs["mfaSubmit"] = "Submit"
         inputs["rememberDevice"] = "false"
 
-        response = session.post(
-            market.amazon_login + "/ap/signin",
-            data=inputs
-        )
+        response = session.post(market.amazon_login + "/ap/signin",
+                                data=inputs)
 
         body = BeautifulSoup(response.text, "html.parser")
         mfa = body.find("form", id=lambda x: x and "auth-mfa-form" in x)
@@ -141,31 +148,22 @@ def auth_login(username: str, password: str, market: Markets,
         for node in body.select('input[type=hidden]'):
             if node["name"] and node["value"]:
                 inputs[node["name"]] = node["value"]
-        headers = {
-            "Content-Type": "application/x-www-form-urlencoded",
-            "Referer": response.url
-        }
-        response = session.post(
-            market.amazon_login + "/ap/cvf/verify",
-            headers=headers,
-            data=inputs
-        )
+        headers = {"Content-Type": "application/x-www-form-urlencoded",
+                   "Referer": response.url}
+        response = session.post(market.amazon_login + "/ap/cvf/verify",
+                                headers=headers, data=inputs)
 
         body = BeautifulSoup(response.text, "html.parser")
         inputs = {}
         for node in body.select('input[type=hidden]'):
             if node["name"] and node["value"]:
                 inputs[node["name"]] = node["value"]
-        headers = {
-            "Content-Type": "application/x-www-form-urlencoded",
-            "Referer": response.url
-        }
+        headers = {"Content-Type": "application/x-www-form-urlencoded",
+                   "Referer": response.url}
         inputs["action"] = "code"
         inputs["code"] = input("Code: ")
-        response = session.post(
-            market.amazon_login + "/ap/cvf/verify",
-            headers=headers, data=inputs
-        )
+        response = session.post(market.amazon_login + "/ap/cvf/verify",
+                                headers=headers, data=inputs)
 
     if response.status_code != 404:
         raise Exception("Unable to login")
@@ -177,14 +175,14 @@ def auth_login(username: str, password: str, market: Markets,
     for cookie in session.cookies:
         login_cookies[cookie.name] = cookie.value.replace(r'"', r'')
 
-    login_cred = {
-        "access_token": access_token,
-        "login_cookies": login_cookies
-    }
-    return login_cred
+    login_credentials = {"access_token": access_token,
+                         "login_cookies": login_cookies}
+
+    return login_credentials
 
 
-def default_captcha_callback(captcha_url):
+def default_captcha_callback(captcha_url: str) -> str:
+    """Helper function for handling captcha."""
     # on error print captcha url instead of display captcha
     try:
         captcha = requests.get(captcha_url).content
@@ -198,12 +196,19 @@ def default_captcha_callback(captcha_url):
     return str(guess).strip().lower()
 
 
-def default_otp_callback():
+def default_otp_callback() -> str:
+    """Helper function for handling 2-factor authentication."""
     guess = input("OTP Code: ")
     return str(guess).strip().lower()
 
 
-def auth_register(access_token, login_cookies, market):
+def auth_register(access_token: str, login_cookies: dict,
+                  market: Markets) -> Dict[str, Any]:
+    """
+    Register a dummy audible device with access token and cookies
+    from ``auth_login``.
+    Returns important credentials needed for access audible api.
+    """
     json_cookies = []
     for key, val in login_cookies.items():
         json_cookies.append({
@@ -222,7 +227,8 @@ def auth_register(access_token, login_cookies, market):
             "app_version": "3.7",
             "device_serial": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
             "device_type": "A2CZJZGLK2JJVM",
-            "device_name": "%FIRST_NAME%%FIRST_NAME_POSSESSIVE_STRING%%DUPE_STRATEGY_1ST%Audible for iPhone",
+            "device_name": ("%FIRST_NAME%%FIRST_NAME_POSSESSIVE_STRING%%DUPE_"
+                            "STRATEGY_1ST%Audible for iPhone"),
             "os_version": "12.3.1",
             "device_model": "iPhone",
             "app_name": "Audible"
@@ -243,13 +249,9 @@ def auth_register(access_token, login_cookies, market):
         "Accept-Language": market.accept_language
     }
 
-    url = market.amazon_api + "/auth/register"
-    response = requests.post(
-        url,
-        json=json_object,
-        headers=headers,
-        cookies=login_cookies
-    )
+    response = requests.post(market.amazon_api + "/auth/register",
+                             json=json_object, headers=headers,
+                             cookies=login_cookies)
 
     body = response.json()
     if response.status_code != 200:
@@ -269,21 +271,20 @@ def auth_register(access_token, login_cookies, market):
     for cookie in tokens["website_cookies"]:
         login_cookies_new[cookie["Name"]] = cookie["Value"].replace(r'"', r'')
 
-    register_cred = {
-        "adp_token": adp_token,
-        "device_private_key": device_private_key,
-        "access_token": access_token,
-        "refresh_token": refresh_token,
-        "expires": expires,
-        "login_cookies": login_cookies_new
-    }
-    return register_cred
+    register_credentials = {"adp_token": adp_token,
+                            "device_private_key": device_private_key,
+                            "access_token": access_token,
+                            "refresh_token": refresh_token,
+                            "expires": expires,
+                            "login_cookies": login_cookies_new}
+
+    return register_credentials
 
 
-def auth_deregister(access_token, login_cookies, market):
-    json_object = {
-        "deregister_all_existing_accounts": "true"
-    }
+def auth_deregister(access_token: str, login_cookies: dict,
+                    market: Markets) -> Dict[str, Any]:
+    """Deregister any device."""
+    json_object = {"deregister_all_existing_accounts": "true"}
     headers = {
         "Host": urlparse(market.amazon_api).netloc,
         "Content-Type": "application/x-www-form-urlencoded",
@@ -295,13 +296,9 @@ def auth_deregister(access_token, login_cookies, market):
         "Authorization": f"Bearer {access_token}"
     }
 
-    url = market.amazon_api + "/auth/deregister"
-    response = requests.post(
-        url,
-        json=json_object,
-        headers=headers,
-        cookies=login_cookies
-    )
+    response = requests.post(market.amazon_api + "/auth/deregister",
+                             json=json_object, headers=headers,
+                             cookies=login_cookies)
 
     body = response.json()
     if response.status_code != 200:
@@ -310,72 +307,70 @@ def auth_deregister(access_token, login_cookies, market):
     return body
 
 
-def refresh_access_token(refresh_token, market):
-    body = {
-        "app_name": "Audible",
-        "app_version": "3.7",
-        "source_token": refresh_token,
-        "requested_token_type": "access_token",
-        "source_token_type": "refresh_token"
-    }
+def refresh_access_token(refresh_token: str, market: Markets) -> Dict[str, Any]:
+    """
+    Refresh access token with refresh token. Access tokens are valid for 60 mins.
+    
+    """
+    
+    body = {"app_name": "Audible",
+            "app_version": "3.7",
+            "source_token": refresh_token,
+            "requested_token_type": "access_token",
+            "source_token_type": "refresh_token"}
 
     headers = {
         "Content-Type": "application/x-www-form-urlencoded",
         "x-amzn-identity-auth-domain": urlparse(market.amazon_api).netloc
     }
 
-    url = market.amazon_api + "/auth/token"
-    response = requests.post(url, data=body, headers=headers)
+    response = requests.post(market.amazon_api + "/auth/token",
+                             data=body, headers=headers)
 
     body = response.json()
     if response.status_code != 200:
         raise Exception(body)
 
-    refresh_result = {
-        "access_token": body["access_token"],
-        "expires": (datetime.utcnow() + timedelta(seconds=int(body["expires_in"]))).timestamp()
-    }
+    expires_in = int(body["expires_in"])
+    expires = (datetime.utcnow() + timedelta(seconds=expires_in)).timestamp()
+    refresh_result = {"access_token": body["access_token"],
+                      "expires": expires}
 
     return refresh_result
 
 
-def user_profile(access_token, login_cookies, market):
-    headers = {
-        "Host": urlparse(market.amazon_api).netloc,
-        "Accept-Charset": "utf-8",
-        "User-Agent": "AmazonWebView/Audible/3.7/iOS/12.3.1/iPhone",
-        "Accept-Language": market.accept_language,
-        "Authorization": f"Bearer {access_token}"
-    }
+def user_profile(access_token: str, login_cookies: dict,
+                 market: Markets) -> Dict[str, Any]:
+    """Returns user profile."""
 
-    url = market.amazon_api + "/user/profile"
-    response = requests.get(url, headers=headers, cookies=login_cookies)
+    headers = {"Host": urlparse(market.amazon_api).netloc,
+               "Accept-Charset": "utf-8",
+               "User-Agent": "AmazonWebView/Audible/3.7/iOS/12.3.1/iPhone",
+               "Accept-Language": market.accept_language,
+               "Authorization": f"Bearer {access_token}"}
+
+    response = requests.get(market.amazon_api + "/user/profile",
+                            headers=headers, cookies=login_cookies)
     response.raise_for_status()
 
     return response.json()
 
 
 class CertAuth(AuthBase):
-    def __init__(self, adp_token, device_cert):
+    def __init__(self, adp_token: str, device_cert: str):
         self.adp_token = adp_token
         self.device_cert = device_cert
 
     def __call__(self, r):
-        url_parsed = urlparse(r.url)
-        path = url_parsed[2]
-        query = url_parsed[4]
+        parsed_url = urlparse(r.url)
+        path = parsed_url.path
+        query = parsed_url.query
 
-        url = path[:]
         if query:
-            url += f"?{query}"
+            path += f"?{query}"
 
-        headers = sign_request(
-            url,
-            r.method,
-            r.body,
-            self.adp_token,
-            self.device_cert
-        )
+        headers = sign_request(path, r.method, r.body,
+                               self.adp_token, self.device_cert)
         for item in headers:
             r.headers[item] = headers[item]
 
@@ -383,22 +378,15 @@ class CertAuth(AuthBase):
 
 
 def sign_request(url: str, method: str, body: str, adp_token: str,
-                 private_key: str) -> dict:
+                 private_key: str) -> Dict[str, str]:
     """
-    Helper function who create a signed header params.
+    Helper function who creates a signed header for requests.
 
     :param url: the requested url
     :param method: the request method (GET, POST, DELETE, ...)
     :param body: the http message body
     :param adp_token: the token is obtained after register as device
     :param private_key: the rsa key obtained after register as device
-    :type url: str
-    :type method: str
-    :type body: str
-    :type adp_token: str
-    :type private_key: str
-    :return:
-    :rtype: dict
     """
     date = datetime.utcnow().isoformat("T") + "Z"
 
@@ -414,15 +402,13 @@ def sign_request(url: str, method: str, body: str, adp_token: str,
 
     signature = f"{signed_encoded.decode()}:{date}"
 
-    return {
-        "x-adp-token": adp_token,
-        "x-adp-alg": "SHA256withRSA:1.0",
-        "x-adp-signature": signature
-    }
+    return {"x-adp-token": adp_token,
+            "x-adp-alg": "SHA256withRSA:1.0",
+            "x-adp-signature": signature}
 
 
 class AccessTokenAuth(AuthBase):
-    def __init__(self, access_token, client_id=0):
+    def __init__(self, access_token: str, client_id: Union[int, str]=0):
         self.access_token = access_token
         self.client_id = client_id
 

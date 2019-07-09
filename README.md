@@ -32,10 +32,18 @@ This version is still in development and contains many proof of concepts and som
 
 ## Installation
 
-~~`pip install audible`~~
-ˋpip install git+https://github.com/mkb79/audible.git@developing`
+```
+# v0.1.5
+# README for this version here: https://github.com/mkb79/Audible/blob/master/README.md
+pip install audible
+
+# v0.2.0-developer
+pip install git+https://github.com/mkb79/audible.git@developing
+```
 
 ## Usage
+
+**The Usage section is for v0.2.0-developer only.**
 
 ### Basis Examples
 
@@ -105,13 +113,10 @@ import audible
 
 # needs the Top Level Domain for the audible page in your country
 # example for uk
-market_settings = audible.autodetect_market("co.uk")
+custom_market = audible.Markets.from_autodetect_market("co.uk")
 
 # look if everything is fine
-print(market_settings)
-
-# create Market with market settings
-custom_market = audible.Markets(**market_settings)
+print(custom_market.to_dict())
 
 # create client
 client = audible.Client.from_login(..., market=custom_market)
@@ -140,12 +145,15 @@ client.to_json_file()  # no filename needed
 ### CAPTCHA
 
 Logging in currently requires answering a CAPTCHA. By default Pillow is used to show captcha and user prompt will be provided using `input`, which looks like:
+
 ```
 Answer for CAPTCHA:
 ```
+
 If Pillow can't display the captcha, the captcha url will be printed.
 
 A custom callback can be provided (for example submitting the CAPTCHA to an external service), like so:
+
 ```
 def custom_captcha_callback(captcha_url):
     
@@ -160,11 +168,13 @@ client = audible.Client.from_login("EMAIL", "PASSWORD", market="us", captcha_cal
 ### 2FA
 
 If 2-factor-authentication by default is activated a user prompt will be provided using `input`, which looks like:
+
 ```
 "OTP Code: "
 ```
 
 A custom callback can be provided, like so:
+
 ```
 def custom_otp_callback():
     
@@ -174,6 +184,36 @@ def custom_otp_callback():
 
 client = audible.Client.from_login("EMAIL", "PASSWORD", market="us", otp_callback=custom_otp_callback)
 ```
+
+
+### Logging
+
+In preparation of adding logging in near future I add following functions:
+
+```python
+import audible
+
+# console logging
+audible.set_console_logger("level")
+
+# file logging
+audible.set_file_logger("filename", "level")
+
+```
+
+Following levels will be accepted:
+- debug
+- info
+- warn (or warning)
+- error
+- critical
+
+You can use numeric levels too:
+- 10 (debug)
+- 20 (info)
+- 30 (warn)
+- 40 (error)
+- 50 (critical)
 
 ## Authentication
 
