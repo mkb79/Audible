@@ -17,7 +17,7 @@ This package is written with Pythonista for iOS.
 
 This version is still in development and contains many proof of concepts and some need still testing. Feel free to participate.
 
-**The last stable release is v0.1.5**. 
+**The latest stable release is v0.1.5**. 
 
 
 ## Requirements
@@ -37,13 +37,13 @@ This version is still in development and contains many proof of concepts and som
 # README for this version here: https://github.com/mkb79/Audible/blob/master/README.md
 pip install audible
 
-# v0.2.0-developer
+# v0.2.0-alpha
 pip install git+https://github.com/mkb79/audible.git@developing
 ```
 
 ## Usage
 
-**The Usage section is for v0.2.0-developer only.**
+**The Usage section is for v0.2.0-alpha only.**
 
 ### Basis Examples
 
@@ -51,18 +51,18 @@ pip install git+https://github.com/mkb79/audible.git@developing
 import audible
 
 # for US accounts
-client = audible.Client.from_login("EMAIL", "PASSWORD", market="us")
+client = audible.Client.from_login("EMAIL", "PASSWORD", locale="us")
 
 # save session after initializing
-client = audible.Client.from_login("EMAIL", "PASSWORD", market="us", filename="FILENAME")
+client = audible.Client.from_login("EMAIL", "PASSWORD", locale="us", filename="FILENAME")
 client.to_json_file()
 
 # restore session from file
-# since this version market(local) are stored in file
-# restoring session from file uses this market
-# to specify an other market please use ˋmarket="us"ˋ
+# beginning with this version locale code are stored in file
+# restoring session from file uses this locale code
+# to specify different locales please use ˋlocale="us"ˋ
 client = audible.Client.from_json_file(filename="FILENAME")
-client =Client.from_json_file(filename="FILENAME", market="us")
+client =Client.from_json_file(filename="FILENAME", locale="us")
 
 # get library
 library = client.get("library", num_results=99, response_groups="media, sample")
@@ -131,7 +131,7 @@ Client session can be saved any time using `to_json_file("FILENAME")` like so:
 ```python
 import audible
 
-client = audible.Client.from_login("EMAIL", "PASSWORD", market="us")
+client = audible.Client.from_login("EMAIL", "PASSWORD", locale="us")
 client.to_json_file("FILENAME")
 
 # Sometime later...
@@ -162,7 +162,7 @@ def custom_captcha_callback(captcha_url):
 
     return "My answer for CAPTCHA"
 
-client = audible.Client.from_login("EMAIL", "PASSWORD", market="us", captcha_callback=custom_captcha_callback)
+client = audible.Client.from_login("EMAIL", "PASSWORD", locale="us", captcha_callback=custom_captcha_callback)
 ```
 
 ### 2FA
@@ -182,7 +182,7 @@ def custom_otp_callback():
 
     return "My answer for otp code"
 
-client = audible.Client.from_login("EMAIL", "PASSWORD", market="us", otp_callback=custom_otp_callback)
+client = audible.Client.from_login("EMAIL", "PASSWORD", locale="us", otp_callback=custom_otp_callback)
 ```
 
 
