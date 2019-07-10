@@ -63,7 +63,7 @@ class Markets:
         """
         return cls(**autodetect_market(tld))
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> Dict[str, str]:
         return {"amazon_login": self._amazon_login,
                 "amazon_api": self._amazon_api,
                 "audible_api": self._audible_api,

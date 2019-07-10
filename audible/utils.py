@@ -142,10 +142,7 @@ class CheckData:
             value = search_pieces.group(2)
             adp_token_as_dict[key] = value
     
-            allowed_keys = {
-                "enc", "key", "iv", "name",
-                "serial"
-            }
+            allowed_keys = {"enc", "key", "iv", "name", "serial"}
         if not adp_token_as_dict.keys() == allowed_keys:
             raise ValueError("adp_token have wrong format")
 
@@ -181,7 +178,7 @@ class CheckData:
         if not device_key.startswith("-----BEGIN RSA PRIVATE KEY-----"):
             raise ValueError('device_private_key have wrong format')
 
-        if device_key.endswith("-----END RSA PRIVATE KEY-----"):
+        if not device_key.endswith("-----END RSA PRIVATE KEY-----\n"):
             raise ValueError('device_private_key have wrong format')
 
     def _check_expires(self):
