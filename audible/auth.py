@@ -15,13 +15,13 @@ import rsa
 
 
 from .crypto import encrypt_metadata, meta_audible_app
-from .localization import Markets
+from .localization import Locale
 
 
 _auth_logger = logging.getLogger('audible.auth')
 
 
-def auth_login(username: str, password: str, market: Markets,
+def auth_login(username: str, password: str, locale: Locale,
                captcha_callback=None, otp_callback=None) -> Dict[str, Any]:
     """
     Login to amazon oauth service simulating audible app for iOS.
@@ -32,20 +32,20 @@ def auth_login(username: str, password: str, market: Markets,
     headers = {"Accept": ("text/html,application/xhtml+xml,"
                           "application/xml;q=0.9,*/*;q=0.8"),
                "Accept-Charset": "utf-8",
-               "Accept-Language": market.accept_language,
-               "Host": urlparse(market.amazon_login).netloc,
-               "Origin": market.amazon_login,
+               "Accept-Language": locale.accept_language,
+               "Host": urlparse(locale.amazon_login).netloc,
+               "Origin": locale.amazon_login,
                "User-Agent": ("Mozilla/5.0 (iPhone; CPU iPhone OS 12_3_1 "
                               "like Mac OS X) AppleWebKit/605.1.15 "
                               "(KHTML, like Gecko) Mobile/15E148")}
     session.headers.update(headers)
 
     while "session-token" not in session.cookies:
-        session.get(market.amazon_login)
+        session.get(locale.amazon_login)
 
     oauth_params = {"openid.oa2.response_type": "token",
-                    "openid.return_to": market.amazon_login + "/ap/maplanding",
-                    "openid.assoc_handle": market.openid_assoc_handle,
+                    "openid.return_to": locale.amazon_login + "/ap/maplanding",
+                    "openid.assoc_handle": locale.openid_assoc_handle,
                     "openid.identity": ("http://specs.openid.net/auth/2.0/"
                                         "identifier_select"),
                     "pageId": "amzn_audible_ios",
@@ -58,16 +58,16 @@ def auth_login(username: str, password: str, market: Markets,
                                              "05a76477a45375959566674327959465"
                                              "a6374424a53497069546d45234132435"
                                              "a4a5a474c4b324a4a564d"),
-                    "language": market.oauth_lang,
+                    "language": locale.oauth_lang,
                     "openid.ns.pape": ("http://specs.openid.net/extensions/"
                                        "pape/1.0"),
-                    "marketPlaceId": market.marketPlaceId,
+                    "marketPlaceId": locale.marketPlaceId,
                     "openid.oa2.scope": "device_auth_access",
                     "forceMobileLayout": "true",
                     "openid.ns": "http://specs.openid.net/auth/2.0",
                     "openid.pape.max_auth_age": "0"}
 
-    response = session.get(market.amazon_login + "/ap/signin",
+    response = session.get(locale.amazon_login + "/ap/signin",
                            params=oauth_params)
     oauth_url = response.request.url
 
@@ -87,7 +87,7 @@ def auth_login(username: str, password: str, market: Markets,
         {"Referer": oauth_url,
          "Content-Type": "application/x-www-form-urlencoded"}
     )
-    response = session.post(market.amazon_login + "/ap/signin", data=inputs)
+    response = session.post(locale.amazon_login + "/ap/signin", data=inputs)
 
     # check for captcha
     body = BeautifulSoup(response.text, "html.parser")
@@ -111,7 +111,7 @@ def auth_login(username: str, password: str, market: Markets,
         inputs["email"] = username
         inputs["password"] = password
 
-        response = session.post(market.amazon_login + "/ap/signin",
+        response = session.post(locale.amazon_login + "/ap/signin",
                                 data=inputs)
 
         body = BeautifulSoup(response.text, "html.parser")
@@ -135,7 +135,7 @@ def auth_login(username: str, password: str, market: Markets,
         inputs["mfaSubmit"] = "Submit"
         inputs["rememberDevice"] = "false"
 
-        response = session.post(market.amazon_login + "/ap/signin",
+        response = session.post(locale.amazon_login + "/ap/signin",
                                 data=inputs)
 
         body = BeautifulSoup(response.text, "html.parser")
@@ -152,7 +152,7 @@ def auth_login(username: str, password: str, market: Markets,
                 inputs[node["name"]] = node["value"]
         headers = {"Content-Type": "application/x-www-form-urlencoded",
                    "Referer": response.url}
-        response = session.post(market.amazon_login + "/ap/cvf/verify",
+        response = session.post(locale.amazon_login + "/ap/cvf/verify",
                                 headers=headers, data=inputs)
 
         body = BeautifulSoup(response.text, "html.parser")
@@ -164,7 +164,7 @@ def auth_login(username: str, password: str, market: Markets,
                    "Referer": response.url}
         inputs["action"] = "code"
         inputs["code"] = input("Code: ")
-        response = session.post(market.amazon_login + "/ap/cvf/verify",
+        response = session.post(locale.amazon_login + "/ap/cvf/verify",
                                 headers=headers, data=inputs)
 
     if response.status_code != 404:
@@ -205,7 +205,7 @@ def default_otp_callback() -> str:
 
 
 def auth_register(access_token: str, login_cookies: dict,
-                  market: Markets) -> Dict[str, Any]:
+                  locale: Locale) -> Dict[str, Any]:
     """
     Register a dummy audible device with access token and cookies
     from ``auth_login``.
@@ -222,7 +222,7 @@ def auth_register(access_token: str, login_cookies: dict,
         "requested_token_type": ["bearer", "mac_dms", "website_cookies"],
         "cookies": {
             "website_cookies": json_cookies,
-            "domain": market.auth_register_domain
+            "domain": locale.auth_register_domain
         },
         "registration_data": {
             "domain": "Device",
@@ -242,16 +242,16 @@ def auth_register(access_token: str, login_cookies: dict,
     }
 
     headers = {
-        "Host": urlparse(market.amazon_api).netloc,
+        "Host": urlparse(locale.amazon_api).netloc,
         "Content-Type": "application/json",
         "Accept-Charset": "utf-8",
-        "x-amzn-identity-auth-domain": urlparse(market.amazon_api).netloc,
+        "x-amzn-identity-auth-domain": urlparse(locale.amazon_api).netloc,
         "Accept": "application/json",
         "User-Agent": "AmazonWebView/Audible/3.7/iOS/12.3.1/iPhone",
-        "Accept-Language": market.accept_language
+        "Accept-Language": locale.accept_language
     }
 
-    response = requests.post(market.amazon_api + "/auth/register",
+    response = requests.post(locale.amazon_api + "/auth/register",
                              json=json_object, headers=headers,
                              cookies=login_cookies)
 
@@ -284,21 +284,21 @@ def auth_register(access_token: str, login_cookies: dict,
 
 
 def auth_deregister(access_token: str, login_cookies: dict,
-                    market: Markets) -> Dict[str, Any]:
+                    locale: Locale) -> Dict[str, Any]:
     """Deregister any device."""
     json_object = {"deregister_all_existing_accounts": "true"}
     headers = {
-        "Host": urlparse(market.amazon_api).netloc,
+        "Host": urlparse(locale.amazon_api).netloc,
         "Content-Type": "application/x-www-form-urlencoded",
         "Accept-Charset": "utf-8",
-        "x-amzn-identity-auth-domain": urlparse(market.amazon_api).netloc,
+        "x-amzn-identity-auth-domain": urlparse(locale.amazon_api).netloc,
         "Accept": "application/json",
         "User-Agent": "AmazonWebView/Audible/3.7/iOS/12.3.1/iPhone",
-        "Accept-Language": market.accept_language,
+        "Accept-Language": locale.accept_language,
         "Authorization": f"Bearer {access_token}"
     }
 
-    response = requests.post(market.amazon_api + "/auth/deregister",
+    response = requests.post(locale.amazon_api + "/auth/deregister",
                              json=json_object, headers=headers,
                              cookies=login_cookies)
 
@@ -309,7 +309,7 @@ def auth_deregister(access_token: str, login_cookies: dict,
     return body
 
 
-def refresh_access_token(refresh_token: str, market: Markets) -> Dict[str, Any]:
+def refresh_access_token(refresh_token: str, locale: Locale) -> Dict[str, Any]:
     """
     Refresh access token with refresh token.
     Access tokens are valid for 60 mins.
@@ -324,10 +324,10 @@ def refresh_access_token(refresh_token: str, market: Markets) -> Dict[str, Any]:
 
     headers = {
         "Content-Type": "application/x-www-form-urlencoded",
-        "x-amzn-identity-auth-domain": urlparse(market.amazon_api).netloc
+        "x-amzn-identity-auth-domain": urlparse(locale.amazon_api).netloc
     }
 
-    response = requests.post(market.amazon_api + "/auth/token",
+    response = requests.post(locale.amazon_api + "/auth/token",
                              data=body, headers=headers)
 
     body = response.json()
@@ -343,16 +343,16 @@ def refresh_access_token(refresh_token: str, market: Markets) -> Dict[str, Any]:
 
 
 def user_profile(access_token: str, login_cookies: dict,
-                 market: Markets) -> Dict[str, Any]:
+                 locale: Locale) -> Dict[str, Any]:
     """Returns user profile."""
 
-    headers = {"Host": urlparse(market.amazon_api).netloc,
+    headers = {"Host": urlparse(locale.amazon_api).netloc,
                "Accept-Charset": "utf-8",
                "User-Agent": "AmazonWebView/Audible/3.7/iOS/12.3.1/iPhone",
-               "Accept-Language": market.accept_language,
+               "Accept-Language": locale.accept_language,
                "Authorization": f"Bearer {access_token}"}
 
-    response = requests.get(market.amazon_api + "/user/profile",
+    response = requests.get(locale.amazon_api + "/user/profile",
                             headers=headers, cookies=login_cookies)
     response.raise_for_status()
 

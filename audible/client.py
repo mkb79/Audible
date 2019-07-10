@@ -4,7 +4,7 @@ import logging
 
 import requests
 
-from .localization import Markets
+from .localization import Locale
 from .utils import Storage
 from .auth import (auth_login, auth_register, auth_deregister,
                    CertAuth, refresh_access_token, user_profile)
@@ -34,31 +34,31 @@ class Client:
             raise KeyError('No such key: {}'.format(item))
 
     @classmethod
-    def from_login(cls, username, password, market, filename=None,
+    def from_login(cls, username, password, locale, filename=None,
                    register=True, captcha_callback=None, otp_callback=None):
-        data = Storage(market=market, filename=filename)
+        data = Storage(locale=locale, filename=filename)
 
         response = auth_login(username,
                               password,
-                              data.market,
+                              data.locale,
                               captcha_callback=captcha_callback,
                               otp_callback=otp_callback)
         if register:
-            response = auth_register(**response, market=data.market)
+            response = auth_register(**response, locale=data.locale)
 
         data.update_data(**response)
 
         return cls(data=data)
 
     @classmethod
-    def from_json_file(cls, filename, market=None):
-        data = Storage(market=market, filename=filename)
+    def from_json_file(cls, filename, locale=None):
+        data = Storage(locale=locale, filename=filename)
 
         json_data = json.loads(data.filename.read_text())
 
         data.update_data(**json_data)
         _client_logger.info((f"loaded data from file {filename} for "
-                             f"market {data.market.market_code}"))
+                             f"locale {data.locale.locale_code}"))
 
         return cls(data=data)
 
@@ -76,7 +76,7 @@ class Client:
                 "refresh_token": self.refresh_token,
                 "device_private_key": self.device_private_key,
                 "expires": self.expires,
-                "market_code": self.market.market_code}
+                "locale_code": self.locale.locale_code}
         filename.write_text(json.dumps(body, indent=indent))
 
     def re_login(self, username, password, captcha_callback=None,
@@ -84,7 +84,7 @@ class Client:
 
         login = auth_login(username,
                            password,
-                           self.market,
+                           self.locale,
                            captcha_callback=captcha_callback,
                            otp_callback=otp_callback)
 
@@ -93,20 +93,20 @@ class Client:
     def register_device(self):
         register = auth_register(access_token=self.access_token,
                                  login_cookies=self.login_cookies,
-                                 market=self.market)
+                                 locale=self.locale)
 
         self._data.update_data(**register)
 
     def deregister_device(self):
         return auth_deregister(access_token=self.access_token,
                                login_cookies=self.login_cookies,
-                               market=self.market)
+                               locale=self.locale)
 
     def refresh_access_token(self, force=False):
         if force or self.access_token_expired:
             refresh_data = refresh_access_token(
                 refresh_token=self.refresh_token,
-                market=self.market
+                locale=self.locale
             )
     
             self._data.update_data(**refresh_data)
@@ -127,7 +127,7 @@ class Client:
     def user_profile(self):
         return user_profile(access_token=self.access_token,
                             login_cookies=self.login_cookies,
-                            market=self.market)
+                            locale=self.locale)
 
     @property
     def access_token_expires(self):
@@ -142,7 +142,7 @@ class Client:
 
     def _api_request(self, method, path, api_version="1.0", json_data=None,
                      auth=None, cookies=None, **params):
-        url = "/".join((self.market.audible_api, api_version, path))
+        url = "/".join((self.locale.audible_api, api_version, path))
         headers = {"Accept": "application/json",
                    "Content-Type": "application/json"}
         auth = auth or CertAuth(self.adp_token, self.device_private_key)

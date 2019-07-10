@@ -2,26 +2,26 @@ from bs4 import BeautifulSoup
 import logging
 import re
 import requests
-from typing import Any, Dict, Optional
+from typing import Dict, Optional
 from urllib.parse import parse_qs, urlparse
 
 
 _localization_logger = logging.getLogger('audible.localization')
 
 
-class Markets:
+class Locale:
     """
     Adjustments for the different marketplaces who are provided by audible.
 
-    Look at `market_templates` for examples. You can try to
-    ``autodetect_market`` if your marketplace is not in `market_templates`.
+    Look at `locales_templates` for examples. You can try to
+    ``autodetect_locale`` if your marketplace is not in `locales_templates`.
     
     """
     def __init__(self, amazon_login: str, amazon_api: str,
                  audible_api: str, accept_language: str,
                  marketPlaceId: str, openid_assoc_handle: str,
                  oauth_lang: str, auth_register_domain: str,
-                 market_code: Optional[str] = None) -> None:
+                 locale_code: Optional[str] = None) -> None:
 
         self._amazon_login = amazon_login
         self._amazon_api = amazon_api
@@ -32,36 +32,36 @@ class Markets:
         self._oauth_lang = oauth_lang
         self._auth_register_domain = auth_register_domain
 
-        if market_code is None:
-            self._market_code = None
-        elif market_code not in market_templates:
-            raise ValueError(f"{market_code} not found in market templates")
+        if locale_code is None:
+            self._locale_code = None
+        elif locale_code not in locales_templates:
+            raise ValueError(f"{locale_code} not found in locales templates")
         else:
-            self._market_code = market_code
+            self._locale_code = locale_code
 
     def __repr__(self):
-        return (f"Market class for api: {self._audible_api}, "
+        return (f"Locale class for api: {self._audible_api}, "
                 f"marketplace: {self._marketPlaceId}")
 
     @classmethod
-    def from_market_code(cls, market_code: str):
+    def from_locale_code(cls, locale_code: str):
         """
-        Compares `market_code` with dict keys from `market_templates` and
-        returns a ``Markets`` instance from match result.
+        Compares `locale_code` with dict keys from `locales_templates` and
+        returns a ``Locale`` instance from match result.
 
         """
-        return cls(**market_templates[market_code], market_code=market_code)
+        return cls(**locales_templates[locale_code], locale_code=locale_code)
 
     @classmethod
-    def from_autodetect_market(cls, tld: str):
+    def from_autodetect_locale(cls, tld: str):
         """
-        Uses ``autodetct_market`` to automatically detect correct settings for
+        Uses ``autodetct_locale`` to automatically detect correct settings for
         marketplace.
 
         Needs the top level domain of the audible page to continue with.
 
         """
-        return cls(**autodetect_market(tld))
+        return cls(**autodetect_locale(tld))
 
     def to_dict(self) -> Dict[str, str]:
         return {"amazon_login": self._amazon_login,
@@ -106,66 +106,66 @@ class Markets:
         return self._auth_register_domain
 
     @property
-    def market_code(self):
-        return self._market_code
+    def locale_code(self):
+        return self._locale_code
 
 
-market_templates = {"de": {"amazon_login": "https://www.amazon.de",
-                           "amazon_api": "https://api.amazon.de",
-                           "audible_api": "https://api.audible.de",
-                           "accept_language": "de-DE",
-                           "marketPlaceId": "AN7V1F1VY261K",
-                           "openid_assoc_handle": "amzn_audible_ios_de",
-                           "oauth_lang": "de-DE",
-                           "auth_register_domain": ".amazon.de"},
+locales_templates = {"de": {"amazon_login": "https://www.amazon.de",
+                            "amazon_api": "https://api.amazon.de",
+                            "audible_api": "https://api.audible.de",
+                            "accept_language": "de-DE",
+                            "marketPlaceId": "AN7V1F1VY261K",
+                            "openid_assoc_handle": "amzn_audible_ios_de",
+                            "oauth_lang": "de-DE",
+                            "auth_register_domain": ".amazon.de"},
 
-                    "us": {"amazon_login": "https://www.amazon.com",
-                           "amazon_api": "https://api.amazon.com",
-                           "audible_api": "https://api.audible.com",
-                           "accept_language": "en-US",
-                           "marketPlaceId": "AF2M0KC94RCEA",
-                           "openid_assoc_handle": "amzn_audible_ios_us",
-                           "oauth_lang": "en-US",
-                           "auth_register_domain": ".amazon.com"},
+                     "us": {"amazon_login": "https://www.amazon.com",
+                            "amazon_api": "https://api.amazon.com",
+                            "audible_api": "https://api.audible.com",
+                            "accept_language": "en-US",
+                            "marketPlaceId": "AF2M0KC94RCEA",
+                            "openid_assoc_handle": "amzn_audible_ios_us",
+                            "oauth_lang": "en-US",
+                            "auth_register_domain": ".amazon.com"},
 
-                    "uk": {"amazon_login": "https://www.amazon.co.uk",
-                           "amazon_api": "https://api.amazon.co.uk",
-                           "audible_api": "https://api.audible.co.uk",
-                           "accept_language": "en-GB",
-                           "marketPlaceId": "A2I9A3Q2GNFNGQ",
-                           "openid_assoc_handle": "amzn_audible_ios_uk",
-                           "oauth_lang": "en-GB",
-                           "auth_register_domain": ".amazon.co.uk"},
+                     "uk": {"amazon_login": "https://www.amazon.co.uk",
+                            "amazon_api": "https://api.amazon.co.uk",
+                            "audible_api": "https://api.audible.co.uk",
+                            "accept_language": "en-GB",
+                            "marketPlaceId": "A2I9A3Q2GNFNGQ",
+                            "openid_assoc_handle": "amzn_audible_ios_uk",
+                            "oauth_lang": "en-GB",
+                            "auth_register_domain": ".amazon.co.uk"},
 
-                    "fr": {"amazon_login": "https://www.amazon.fr",
-                           "amazon_api": "https://api.amazon.fr",
-                           "audible_api": "https://api.audible.fr",
-                           "accept_language": "fr-FR",
-                           "marketPlaceId": "A2728XDNODOQ8T",
-                           "openid_assoc_handle": "amzn_audible_ios_fr",
-                           "oauth_lang": "fr-FR",
-                           "auth_register_domain": ".amazon.fr"},
+                     "fr": {"amazon_login": "https://www.amazon.fr",
+                            "amazon_api": "https://api.amazon.fr",
+                            "audible_api": "https://api.audible.fr",
+                            "accept_language": "fr-FR",
+                            "marketPlaceId": "A2728XDNODOQ8T",
+                            "openid_assoc_handle": "amzn_audible_ios_fr",
+                            "oauth_lang": "fr-FR",
+                            "auth_register_domain": ".amazon.fr"},
 
-                    "ca": {"amazon_login": "https://www.amazon.ca",
-                           "amazon_api": "https://api.amazon.ca",
-                           "audible_api": "https://api.audible.ca",
-                           "accept_language": "en-CA",
-                           "marketPlaceId": "A2CQZ5RBY40XE",
-                           "openid_assoc_handle": "amzn_audible_ios_ca",
-                           "oauth_lang": "en-CA",
-                           "auth_register_domain": ".amazon.ca"}}
+                     "ca": {"amazon_login": "https://www.amazon.ca",
+                            "amazon_api": "https://api.amazon.ca",
+                            "audible_api": "https://api.audible.ca",
+                            "accept_language": "en-CA",
+                            "marketPlaceId": "A2CQZ5RBY40XE",
+                            "openid_assoc_handle": "amzn_audible_ios_ca",
+                            "oauth_lang": "en-CA",
+                            "auth_register_domain": ".amazon.ca"}}
 
 
-def custom_market(amazon_login: str, amazon_api: str, audible_api: str,
+def custom_locale(amazon_login: str, amazon_api: str, audible_api: str,
                   accept_language: str, marketPlaceId: str,
                   openid_assoc_handle: str, oauth_lang: str,
-                  auth_register_domain: str) -> Markets:
+                  auth_register_domain: str) -> Locale:
     """
     This function is deprecated and will be removed in future releases.
-    Please use Markets class instead.
+    Please use Locale class instead.
 
     """
-    market = {"amazon_login": amazon_login,
+    locale = {"amazon_login": amazon_login,
               "amazon_api": amazon_api,
               "audible_api": audible_api,
               "accept_language": accept_language,
@@ -174,10 +174,10 @@ def custom_market(amazon_login: str, amazon_api: str, audible_api: str,
               "oauth_lang": oauth_lang,
               "auth_register_domain": auth_register_domain}
 
-    return Markets(**market)
+    return Locale(**locale)
 
 
-def autodetect_market(tld: str) -> Dict[str, str]:
+def autodetect_locale(tld: str) -> Dict[str, str]:
     """
     Try to automatically detect correct settings for marketplace.
 

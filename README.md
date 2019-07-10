@@ -80,19 +80,19 @@ print(library)
 
 At this moment api supports 5 countrys natively.
 
-- USA (market="us")
-- Germany (market="de")
-- United Kingdom (market="uk")
-- France (market="fr")
-- Canada (market="ca")
+- USA (locale="us")
+- Germany (locale="de")
+- United Kingdom (locale="uk")
+- France (locale="fr")
+- Canada (locale="ca")
 
-You can provide a custom local with this code:
+You can provide custom locale settings with this code:
 
 ```Python
 import audible
 
 # example for germany
-custom_market = audible.Markets(
+custom_locale = audible.Locale(
     amazon_login="https://www.amazon.de",
     amazon_api="https://api.amazon.de",
     audible_api="https://api.audible.de",
@@ -102,24 +102,24 @@ custom_market = audible.Markets(
     oauth_lang="de-DE",
     auth_register_domain=".amazon.de")
 
-client = audible.Client.from_login(..., market=custom_market)
+client = audible.Client.from_login(..., locale=custom_locale)
 
 ```
 
-You can try to autodetect market settings like so:
+You can try to autodetect locale settings like so:
 
 ```Python
 import audible
 
 # needs the Top Level Domain for the audible page in your country
 # example for uk
-custom_market = audible.Markets.from_autodetect_market("co.uk")
+custom_locale = audible.Locale.from_autodetect_locale("co.uk")
 
 # look if everything is fine
-print(custom_market.to_dict())
+print(custom_locale.to_dict())
 
 # create client
-client = audible.Client.from_login(..., market=custom_market)
+client = audible.Client.from_login(..., locale=custom_locale)
 
 ```
 

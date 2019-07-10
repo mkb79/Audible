@@ -5,7 +5,7 @@ from typing import Any, Dict
 
 from box import Box
 
-from .localization import Markets
+from .localization import Locale
 
 
 _utils_logger = logging.getLogger('audible.utils')
@@ -27,7 +27,7 @@ class Storage:
         """Update stored data."""
         allowed_keywords = ["login_cookies", "adp_token", "access_token",
                             "refresh_token", "device_private_key", "expires",
-                            "filename", "market"]
+                            "filename", "locale"]
 
         # perform certain tests and change data type if necessary
         if perform_tests:
@@ -197,20 +197,20 @@ class CheckData:
                 raise ValueError("type of device_private_key is str "
                                  "and can't be converted to float")
 
-    def _check_market(self):
-        market = self._revised_data.get("market", None)
-        market_code = self._revised_data.get("market_code", None)
+    def _check_locales(self):
+        locale = self._revised_data.get("locale", None)
+        locale_code = self._revised_data.get("locale_code", None)
 
-        if market is not None:
-            if isinstance(market, Markets):
+        if locale is not None:
+            if isinstance(locale, Locale):
                 return
-            elif isinstance(market, str):
-                self._revised_data["market"] = Markets.from_market_code(market.lower())
+            elif isinstance(locale, str):
+                self._revised_data["locale"] = Locale.from_locale_code(locale.lower())
             else:
-                raise TypeError("Market error")
+                raise TypeError("Locale error")
 
-        elif market_code is not None:
-            self._revised_data["market"] = Markets.from_market_code(market_code.lower())
+        elif locale_code is not None:
+            self._revised_data["locale"] = Locale.from_locale_code(locale_code.lower())
 
     def _check_filename(self):
         filename = self._revised_data.get("filename", None)
