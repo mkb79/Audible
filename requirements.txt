@@ -1,5 +1,7 @@
 beautifulsoup4
+pbkdf2
 Pillow
+pycrypto
 python-box
 requests
 rsa

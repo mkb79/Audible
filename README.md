@@ -11,74 +11,70 @@
 
 **Interface for internal Audible API written in pure Python.**
 
-Code including this README is forked from omarroth‘s fantastic [audible.cr](https://github.com/omarroth/audible.cr) API written in crystal.
+Code and README are forked from omarroth‘s fantastic [audible.cr](https://github.com/omarroth/audible.cr) API written in crystal.
+The whole code is written with Pythonista for iOS.
 
-This package is written with Pythonista for iOS.
+**This README is for the development tree only. The development tree contains many proof of concepts. Some needs still testing. Feel free to participate.**
 
-This version is still in development and contains many proof of concepts and some need still testing. Feel free to participate.
-
-**The latest stable release is v0.1.5**. 
-
+The README for the latest stable release (v0.1.5) can be found [here](https://github.com/mkb79/Audible/blob/master/README.md).
 
 ## Requirements
 
 - Python >= 3.6
 - depends on following packages:
 	- 	beautifulsoup4
+	- pbkdf2
 	- 	Pillow
+	- pycrypto
 	- 	python-box
 	- 	requests
 	- 	rsa 
 
 ## Installation
 
-```
+```python
 # v0.1.5
-# README for this version here: https://github.com/mkb79/Audible/blob/master/README.md
 pip install audible
 
-# v0.2.0-alpha
+# v0.2.0-alpha (development tree)
 pip install git+https://github.com/mkb79/audible.git@developing
 ```
 
 ## Usage
-
-**The Usage section is for v0.2.0-alpha only.**
 
 ### Basis Examples
 
 ```python
 import audible
 
-# for US accounts
+# example for US accounts
 client = audible.Client.from_login("EMAIL", "PASSWORD", locale="us")
 
 # save session after initializing
-client = audible.Client.from_login("EMAIL", "PASSWORD", locale="us", filename="FILENAME")
-client.to_json_file()
+# locale code are stored in file
+client.to_file("FILENAME", encryption=False)
 
 # restore session from file
-# beginning with this version locale code are stored in file
-# restoring session from file uses this locale code
-# to specify different locales please use ˋlocale="us"ˋ
-client = audible.Client.from_json_file(filename="FILENAME")
-client =Client.from_json_file(filename="FILENAME", locale="us")
+# restore process uses saved locale code
+client = audible.Client.from_file("FILENAME")
 
-# get library
+# to specify another locale code at restore
+client = audible.Client.from_file("FILENAME", locale="some other locale")
+
+# example for retrieving library from API
 library = client.get("library", num_results=99, response_groups="media, sample")
 print(library)
 
-# specify a api_version on request
-# default is api_version="1.0"
-# get deprecated version of library
+# audibles current API version is 1.0
+# the audible Client uses version 1.0 on default
+# to specify another API version
 library = client.get("library/books", api_version="0.0", purchaseAfterDate="01/01/1970", sortInAscendingOrder="true")
 print(library)
-
 ```
 
 ### Localizations
 
-At this moment api supports 5 countrys natively.
+Currently this Client have localizations for 5 countries built-in.
 
 - USA (locale="us")
 - Germany (locale="de")
@@ -86,9 +82,9 @@ At this moment api supports 5 countrys natively.
 - France (locale="fr")
 - Canada (locale="ca")
 
-You can provide custom locale settings with this code:
+You can provide custom locales with this code:
 
-```Python
+```python
 import audible
 
 # example for germany
@@ -103,12 +99,11 @@ custom_locale = audible.Locale(
     auth_register_domain=".amazon.de")
 
 client = audible.Client.from_login(..., locale=custom_locale)
-
 ```
 
-You can try to autodetect locale settings like so:
+You can try to autodetect locales like so:
 
-```Python
+```python
 import audible
 
 # needs the Top Level Domain for the audible page in your country
@@ -120,27 +115,83 @@ print(custom_locale.to_dict())
 
 # create client
 client = audible.Client.from_login(..., locale=custom_locale)
-
 ```
 
 
 ### Load and Save sessions
 
-Client session can be saved any time using `to_json_file("FILENAME")` like so:
+#### Unencrypted Load/Save
+
+Client session can be saved any time to file like so:
 
 ```python
 import audible
 
 client = audible.Client.from_login("EMAIL", "PASSWORD", locale="us")
-client.to_json_file("FILENAME")
+client.to_file("FILENAME", encryption=False)
 
 # Sometime later...
-client = audible.Client.from_json_file(filename="FILENAME")
+client = audible.Client.from_file("FILENAME")
 
-# if restore session with client = audible.Client.from_json_file(filename="FILENAME")
-# simply run
-client.to_json_file()  # no filename needed
+# Client sets the filename as the default value when restoring from or save to file
+# simply run to overwrite old file
+client.to_file()  # no filename needed
+
+# to prevent remembering filename (and encryption style)
+client = audible.Client.from_file(..., set_default=False)
+client = audible.Client.to_file(..., set_default=False)
 ```
+
+#### Encrypted Load/Save
+
+This Client supports file encryption now. The encryption
+algorithm used is symmetric AES in cipher-block chaining (CBC) mode. Currently json style and bytes style are supported.
+Client session can be saved any time to encrypted file like so:
+
+```python
+import audible
+
+client = audible.Client.from_login("EMAIL", "PASSWORD", locale="us")
+# save Client in json style
+client.to_file("FILENAME", "PASSWORD", encryption="json")
+# save Client in bytes style
+client.to_file("FILENAME", "PASSWORD", encryption="bytes")
+
+# Sometime later...
+# load Client from json style
+client = audible.Client.from_file("FILENAME", "PASSWORD", encryption="json")
+# load Client from bytes style
+client = audible.Client.from_file("FILENAME", "PASSWORD", encryption="bytes")
+
+# Client sets the filename and encryption style as the default values when restoring from or save to file
+# simply run to overwrite old file with same password and encryption style
+client.to_file()  # no filename needed
+
+# to prevent remembering filename (and password/encryption style)
+client = audible.Client.from_file(..., set_default=False)
+client = audible.Client.to_file(..., set_default=False)
+```
+
+##### Advanced use of encryption/decryption:
+
+`client.to_file("FILENAME", "PASSWORD", encryption="json", **kwargs)`
+
+`client = audible.Client.from_file("FILENAME", "PASSWORD", encryption="json", **kwargs)`
+
+Following arguments are possible:
+
+- key_size (default = 32)
+- salt_marker (default = b"$")
+- kdf_iterations (default = 1000)
+- hashmod (default = Crypto.Hash.SHA256)
+    
+`key_size` may be 16, 24 or 32. The key is derived via the PBKDF2 key derivation function (KDF) from the password and a random salt of 16 bytes (the AES block size) minus the length of the salt header (see below).
+The hash function used by PBKDF2 is SHA256 per default. You can pass a different hash function module via the `hashmod` argument. The module must adhere to the Python API for Cryptographic Hash Functions (PEP 247).
+PBKDF2 uses a number of iterations of the hash function to derive the key, which can be set via the `kdf_iterations` keyword argumeent. The default number is 1000 and the maximum 65535.
+The header and the salt are written to the first block of the encrypted output (bytes mode) or written as key/value pairs (dict mode). The header consist of the number of KDF iterations encoded as a big-endian word bytes wrapped by `salt_marker` on both sides. With the default value of `salt_marker = b'$'`, the header size is thus 4 and the salt 12 bytes.
+The salt marker must be a byte string of 1-6 bytes length.
+The last block of the encrypted output is padded with up to 16 bytes, all having the value of the length of the padding.
+In json style all values are written as base64 encoded string.
 
 ### CAPTCHA
 

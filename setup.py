@@ -10,7 +10,7 @@ except:
     long_description = None
 
 version = {}
-with open(path.join(dirname,'audible/__version__.py')) as f:
+with open(path.join(dirname,'audible/__init__.py')) as f:
     exec(f.read(), version)
 
 setup(

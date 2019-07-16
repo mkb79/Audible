@@ -27,7 +27,7 @@ class Storage:
         """Update stored data."""
         allowed_keywords = ["login_cookies", "adp_token", "access_token",
                             "refresh_token", "device_private_key", "expires",
-                            "filename", "locale"]
+                            "filename", "locale", "crypter", "encryption"]
 
         # perform certain tests and change data type if necessary
         if perform_tests:
@@ -47,7 +47,7 @@ class Storage:
 
     def reset_data(self) -> None:
         """Reset all stored data."""
-        self._boxed_data = Box()
+        self._boxed_data.clear()
 
     def last_discarded_data(self) -> Dict[str, Any]:
         """Returns discarded data from last update."""
@@ -224,3 +224,20 @@ class CheckData:
                 self._revised_data["filename"] = pathlib.WindowsPath(filename)
             except:
                 raise Exception("File error")
+
+    def _check_crypter(self):
+        crypter = self._revised_data.get("crypter", None)
+
+        if crypter is None:
+            return
+        # TODO: write checks
+
+    def _check_encryption(self):
+        encryption = self._revised_data.get("encryption", False)
+
+        allowed_values = [False, "json", "bytes"]
+
+        if not isinstance(encryption, (bool, str)):
+            raise TypeError("encryption has wrong type")
+        if encryption not in allowed_values:
+            raise ValueError("encryption has wrong value")

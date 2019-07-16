@@ -4,23 +4,23 @@ import logging
 
 import requests
 
-from .localization import Locale
-from .utils import Storage
 from .auth import (auth_login, auth_register, auth_deregister,
                    CertAuth, refresh_access_token, user_profile)
+from .cryptography import AESCipher
+from .utils import Storage
 
 
 _client_logger = logging.getLogger('audible.client')
 
 
 class Client:
-    def __init__(self, **kwargs):
-        self._data = kwargs.get("data", None) or Storage(**kwargs)
+    def __init__(self, data: Storage) -> None:
+        self._data = data
         # discarded_kwargs = self._data.last_discarded_data()
 
     def __getattr__(self, attr):
         try:
-            return getattr(self._data, attr)
+            return getattr(self._data._boxed_data, attr)
         except AttributeError:
             try:
                 return super().__getattr__(attr)
@@ -29,26 +29,26 @@ class Client:
 
     def __getitem__(self, item):
         try:
-            return getattr(self._data, item)
+            return getattr(self._data._boxed_data, item)
         except AttributeError:
             raise KeyError('No such key: {}'.format(item))
 
     @classmethod
-    def from_login(cls, username, password, locale, filename=None,
+    def from_login(cls, username: str, password: str, locale, filename=None,
                    register=True, captcha_callback=None, otp_callback=None):
+
         data = Storage(locale=locale, filename=filename)
 
-        response = auth_login(username,
-                              password,
-                              data.locale,
+        response = auth_login(username, password, data.locale,
                               captcha_callback=captcha_callback,
                               otp_callback=otp_callback)
+
         if register:
             response = auth_register(**response, locale=data.locale)
 
         data.update_data(**response)
 
-        return cls(data=data)
+        return cls(data)
 
     @classmethod
     def from_json_file(cls, filename, locale=None):
@@ -57,12 +57,38 @@ class Client:
         json_data = json.loads(data.filename.read_text())
 
         data.update_data(**json_data)
+
+        _client_logger.warn("``from_json_file`` is deprecated. "
+                            "``use from_file instead``")
+
         _client_logger.info((f"loaded data from file {filename} for "
                              f"locale {data.locale.locale_code}"))
 
-        return cls(data=data)
+        return cls(data)
+
+    @classmethod
+    def from_file(cls, filename, password=None, locale=None, encryption=False,
+                  set_default=True, **kwargs):
+
+        data = Storage(filename=filename, encryption=encryption)
+        if data.encryption:
+            data.update_data(crypter=AESCipher(password, **kwargs))
+            file_data = data.crypter.from_file(data.filename, data.encryption)
+        else:
+            file_data = data.filename.read_text()
+
+        json_data = json.loads(file_data)
+
+        reset = False if set_default else True
+        data.update_data(**json_data, locale=locale, reset_storage=reset)
+
+        _client_logger.info((f"load data from file {filename} for "
+                             f"locale {data.locale.locale_code}"))
+
+        return cls(data)
 
     def to_json_file(self, filename=None, indent=4):
+        _client_logger.warn("to_json_file is deprecated. use to_file instead.")
         if filename:
             filename = Storage(filename=filename).filename
         elif self.filename:
@@ -78,6 +104,45 @@ class Client:
                 "expires": self.expires,
                 "locale_code": self.locale.locale_code}
         filename.write_text(json.dumps(body, indent=indent))
+
+    def to_file(self, filename=None, password=None, encryption="default",
+                indent=4, set_default=True, **kwargs):
+
+        filename = filename or self.filename
+        if not filename:
+            raise ValueError("No filename provided")
+
+        encryption = encryption if encryption != "default" else self.encryption
+
+        if encryption is None:
+            raise ValueError("No encryption provided")
+
+        data = Storage(filename=filename, encryption=encryption)
+        
+        body = {"login_cookies": self.login_cookies,
+                "adp_token": self.adp_token,
+                "access_token": self.access_token,
+                "refresh_token": self.refresh_token,
+                "device_private_key": self.device_private_key,
+                "expires": self.expires,
+                "locale_code": self.locale.locale_code}
+        json_body = json.dumps(body, indent=indent)
+
+        if data.encryption is False:
+            data.filename.write_text(json_body)
+        else:
+            if password:
+                data.update_data(crypter=AESCipher(password, **kwargs))
+            elif self.crypter:
+                data.update_data(crypter=self.crypter)
+            else:
+                raise ValueError("No password provided")
+
+            data.crypter.to_file(json_body, filename=data.filename,
+                                 encryption=encryption, indent=indent)
+
+        if set_default:
+            self._data.update_data(**data)
 
     def re_login(self, username, password, captcha_callback=None,
                  otp_callback=None):

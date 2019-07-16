@@ -14,7 +14,7 @@ from requests.auth import AuthBase
 import rsa
 
 
-from .crypto import encrypt_metadata, meta_audible_app
+from .cryptography import encrypt_metadata, meta_audible_app
 from .localization import Locale
 
 
