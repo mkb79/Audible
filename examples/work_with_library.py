@@ -21,7 +21,9 @@ books = client.get(
 print(books["items"])
 
 
-# get download links(s) for book
+# broken at the moment
+# see examples/download_books.py for informations
+# get download link(s) for book
 def _get_book_infos(asin):
     book = client.get(
         f"library/{asin}",
@@ -76,15 +78,5 @@ def get_download_link(asin, quality="Extreme"):
 
     book_infos.pop("parts")
     return book_infos
-            
-
-    '''except requests.exceptions.HTTPError as e:
-        if e.response.status_code == 404:
-            parts_dict = dict()
-            parts = self.get_parts_from_multipartbook(asin)["parts"]
-            for key, value in parts.items():
-                parts_dict[key] = self.get_download_link(value)
-            return parts_dict'''
 
 print(get_download_link("YOUR ASIN HERE"))
-
