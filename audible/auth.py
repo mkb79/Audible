@@ -399,6 +399,8 @@ def sign_request(url: str, method: str, body: str, adp_token: str,
 
     data = f"{method}\n{url}\n{date}\n"
     if body:
+        if isinstance(body, bytes):
+            body = body.decode('utf-8')
         data += body
     data += "\n"
     data += adp_token
