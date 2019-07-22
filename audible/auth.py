@@ -252,8 +252,7 @@ def auth_register(access_token: str, login_cookies: dict,
     }
 
     response = requests.post(locale.amazon_api + "/auth/register",
-                             json=json_object, headers=headers,
-                             cookies=login_cookies)
+                             json=json_object, headers=headers)
 
     body = response.json()
     if response.status_code != 200:
@@ -283,10 +282,17 @@ def auth_register(access_token: str, login_cookies: dict,
     return register_credentials
 
 
-def auth_deregister(access_token: str, login_cookies: dict,
-                    locale: Locale) -> Dict[str, Any]:
-    """Deregister any device."""
-    json_object = {"deregister_all_existing_accounts": "true"}
+def auth_deregister(access_token: str, locale: Locale,
+                    deregister_all: bool = False) -> Dict[str, Any]:
+    """
+    Deregister device which was previously registered with `access_token`.
+
+    `access_token` is valid until expiration. All other credentials will
+    be invalid immediately.
+    
+    If `deregister_all=True` all registered devices will be deregistered.
+    """
+    json_object = {"deregister_all_existing_accounts": deregister_all}
     headers = {
         "Host": urlparse(locale.amazon_api).netloc,
         "Content-Type": "application/x-www-form-urlencoded",
@@ -299,8 +305,7 @@ def auth_deregister(access_token: str, login_cookies: dict,
     }
 
     response = requests.post(locale.amazon_api + "/auth/deregister",
-                             json=json_object, headers=headers,
-                             cookies=login_cookies)
+                             json=json_object, headers=headers)
 
     body = response.json()
     if response.status_code != 200:
@@ -342,8 +347,7 @@ def refresh_access_token(refresh_token: str, locale: Locale) -> Dict[str, Any]:
     return refresh_result
 
 
-def user_profile(access_token: str, login_cookies: dict,
-                 locale: Locale) -> Dict[str, Any]:
+def user_profile(access_token: str, locale: Locale) -> Dict[str, Any]:
     """Returns user profile."""
 
     headers = {"Host": urlparse(locale.amazon_api).netloc,
@@ -353,13 +357,19 @@ def user_profile(access_token: str, login_cookies: dict,
                "Authorization": f"Bearer {access_token}"}
 
     response = requests.get(locale.amazon_api + "/user/profile",
-                            headers=headers, cookies=login_cookies)
+                            headers=headers)
     response.raise_for_status()
 
     return response.json()
 
 
 def get_random_device_serial() -> str:
+    """
+    Generates a random text (str + int) with a length of 40 chars.
+    
+    Use of random serial prevents unregister device by other users
+    with same `device_serial`.
+    """
     return ''.join(random.choices(string.ascii_uppercase + string.digits, k=40))
 
 

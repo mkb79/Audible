@@ -33,7 +33,7 @@ The README for the latest stable release (v0.1.5) can be found [here](https://gi
 ## Installation
 
 ```python
-# v0.1.5
+# v0.1.6
 pip install audible
 
 # v0.2.0-alpha (development tree)
@@ -270,11 +270,15 @@ You can use numeric levels too:
 
 ## Authentication
 
-Clients are authenticated using OpenID. Once a client has successfully authenticated with Amazon, they are given an access token and refresh token for authenticating with Audible.
+### Informations
 
-Clients authenticate with Audible using cookies from Amazon and the given access token to `/auth/register`. Clients are given an RSA private key and adp_token used for signing subsequent requests.
+Clients are authenticated using OpenID. Once a client has successfully authenticated with Amazon, they are given an access token for authenticating with Audible.
 
-For requests to the Audible API, requests need to be signed using the provided key and adp_token. Request signing is fairly straight-forward and uses a signed SHA256 digest. Headers look like:
+### Register device
+
+Clients authenticate with Audible using cookies from Amazon and the given access token to `/auth/register`. Clients are given an refresh token, RSA private key and adp_token.
+
+For requests to the Audible API, requests need to be signed using the provided RSA private key and adp_token. Request signing is fairly straight-forward and uses a signed SHA256 digest. Headers look like:
 
 ```
 x-adp-alg: SHA256withRSA:1.0
@@ -284,12 +288,14 @@ x-adp-token: {enc:...}
 
 As reference for other implementations, a client **must** store cookies from a successful Amazon login and a working `access_token` in order to renew `refresh_token`, `adp_token`, etc from `/auth/register`.
 
+### Refresh access token
+
 An `access_token` can be renewed by making a request to `/auth/token`. `access_token`s are valid for 1 hour.
 To renew access_token with client call:
 
-```
+```python
 # refresh access_token if token already expired
-# if token valid nothing will be refreshed.
+# if token is valid nothing will be refreshed.
 client.refresh_token()
 
 # to force renew of access_token if token is valid
@@ -298,6 +304,16 @@ client.refresh_token(force=true)
 # if you saved your session before don't forget to save again
 
 ```
+
+### Deregister device
+
+Refresh token, RSA private key and adp_token are valid until deregister.
+
+To deregister a device with client call `client.deregister_device()`
+
+To deregister all devices with client call `client.deregister_device(deregister_all=True)`.
+This function is necessary to prevent hanging slots if you registered a device earlier but don‘t store the given credentials.
+This also deregister all other devices such as a audible app on mobile devices.
 
 ## Documentation:
 

@@ -162,9 +162,9 @@ class Client:
 
         self._data.update_data(**register)
 
-    def deregister_device(self):
+    def deregister_device(self, deregister_all: bool = False):
         return auth_deregister(access_token=self.access_token,
-                               login_cookies=self.login_cookies,
+                               deregister_all=deregister_all,
                                locale=self.locale)
 
     def refresh_access_token(self, force=False):
@@ -191,7 +191,6 @@ class Client:
 
     def user_profile(self):
         return user_profile(access_token=self.access_token,
-                            login_cookies=self.login_cookies,
                             locale=self.locale)
 
     @property
