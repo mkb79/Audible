@@ -1,31 +1,22 @@
 import audible
 
 
-audible.set_file_logger("log.log", "warn")
-audible.set_console_logger("debug")
-
-client = audible.Client.from_file(
-    filename="credentials_enc.json",
-    encryption="json",
-    password="yourtopsecretpassword"
-)
-
 # get library
-books = client.get(
-    "library",
-    response_groups=("contributors, media, product_desc, series,"
-                     "product_extended_attrs, product_attrs"),
-    num_results=999,
-    page=1
-)
-print(books["items"])
+def get_library():
+    books, _ = client.get(
+        "library",
+        response_groups=(
+            "contributors, media, product_desc, series,"
+            "product_extended_attrs, product_attrs"
+        ),
+        num_results=999,
+        page=1
+    )
+    return books
 
 
-# broken at the moment
-# see examples/download_books.py for informations
-# get download link(s) for book
 def _get_book_infos(asin):
-    book = client.get(
+    book, _ = client.get(
         f"library/{asin}",
         response_groups="relationships, product_desc, product_attrs, media"
     )
@@ -52,7 +43,7 @@ def _get_book_infos(asin):
 
 
 def _get_download_link(asin, quality):
-    response = client.post(
+    data, _ = client.post(
         f"content/{asin}/licenserequest",
         body={
             "drm_type": "Adrm",
@@ -60,7 +51,7 @@ def _get_download_link(asin, quality):
             "quality": quality
         }
     )
-    return response['content_license']['content_metadata']['content_url']['offline_url']
+    return data['content_license']['content_metadata']['content_url']['offline_url']
 
 
 def get_download_link(asin, quality="Extreme"):
@@ -79,4 +70,15 @@ def get_download_link(asin, quality="Extreme"):
     book_infos.pop("parts")
     return book_infos
 
-print(get_download_link("YOUR ASIN HERE"))
+
+if __name__ == "__main__":
+    password = input("Password for file: ")
+
+    auth = audible.FileAuthenticator(
+        filename="FILENAME",
+        encryption="json",
+        password=password
+    )
+    client = audible.AudibleAPI(auth)
+    link = get_download_link("BOOK_ASIN")
+    print(link)

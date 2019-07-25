@@ -6,17 +6,9 @@ import audible
 
 
 # get download link(s) for book
-
-'''
-since 2019-07-18 retrieving library (api_version 1.0) seems to be broken
-get a single book with ``client.get(f"library/{asin}") is still possible
-
-switch back to api_version 0.0 when retrieving library
-'''
-
 def _get_download_link(asin, quality):
     try:
-        response = client.post(
+        response, _ = client.post(
             f"content/{asin}/licenserequest",
             body={
                 "drm_type": "Adrm",
@@ -42,13 +34,22 @@ def download_file(url, filename):
 if __name__ == "__main__":
     password = input("Password for file: ")
 
-    client = audible.Client.from_file("credentials_enc.json", password, encryption="json")
+    auth = audible.FileAuthenticator(
+        filename="FILENAME",
+        encryption="json",
+        password=password
+    )
+    client = audible.AudibleAPI(auth)
 
-    books = client.get("library/books", api_version="0.0", purchaseAfterDate="01/01/1970")["books"]["book"]
+    books, _ = client.get(
+        "library/books",
+        api_version="0.0",
+        purchaseAfterDate="01/01/1970"
+    )["books"]["book"]
 
     for book in books:
         asin = book['asin']
-        title = book['title'] + ".aax"
+        title = book['title'] + f" ({asin})" + ".aax"
         dl_link = _get_download_link(asin, quality="Extreme")
         if dl_link:
             filename = pathlib.Path.cwd() / "audiobooks" / title

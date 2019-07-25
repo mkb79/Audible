@@ -9,26 +9,27 @@
 [![image](https://img.shields.io/pypi/implementation/audible.svg)](https://pypi.org/project/audible/)
 [![image](https://img.shields.io/pypi/dm/audible.svg)](https://pypi.org/project/audible/)
 
-**Interface for internal Audible API written in pure Python.**
+**Sync/Async Interface for internal Audible API written in pure Python.**
 
 Code and README are forked from omarroth‘s fantastic [audible.cr](https://github.com/omarroth/audible.cr) API written in crystal.
 The whole code is written with Pythonista for iOS.
 
 **This README is for the development tree only. The development tree contains many proof of concepts. Some needs still testing. Feel free to participate.**
 
-The README for the latest stable release (v0.1.5) can be found [here](https://github.com/mkb79/Audible/blob/master/README.md).
+The README for the latest stable release (v0.1.6) can be found [here](https://github.com/mkb79/Audible/blob/master/README.md).
 
 ## Requirements
 
 - Python >= 3.6
 - depends on following packages:
-	- 	beautifulsoup4
+	- aiohttp
+	- beautifulsoup4
 	- pbkdf2
-	- 	Pillow
+	- Pillow
 	- pycrypto
-	- 	python-box
-	- 	requests
-	- 	rsa 
+	- python-box
+	- requests
+	- rsa 
 
 ## Installation
 
@@ -44,31 +45,65 @@ pip install git+https://github.com/mkb79/audible.git@developing
 
 ### Basis Examples
 
+- Retrieving API credentials
+
 ```python
 import audible
 
 # example for US accounts
-client = audible.Client.from_login("EMAIL", "PASSWORD", locale="us")
+auth = audible.LoginAuthenticator(
+    "EMAIL", "PASSWORD", locale="us"
+)
+```
 
-# save session after initializing
-# locale code are stored in file
-client.to_file("FILENAME", encryption=False)
+- Instantiate API with Authenticator
 
-# restore session from file
-# restore process uses saved locale code
-client = audible.Client.from_file("FILENAME")
+*Hint: the Authenticator will be stored as `auth` attribute, you can access them with `client.auth`*
+
+```python
+client = audible.AudibleAPI(auth)
+```
+
+- Save credentials
+
+*Hint: locale code are stored in file*
+
+```python
+auth.to_file("FILENAME", encryption=False)`
+```
+
+- Load credentials from file
+
+*Hint: uses saved locale code*
+
+```python
+auth = audible.FileAuthenticator("FILENAME")
 
 # to specify another locale code at restore
-client = audible.Client.from_file("FILENAME", locale="some other locale")
+auth = audible.FileAuthenticator(
+    "FILENAME", locale="some other locale"
+)
+```
 
-# example for retrieving library from API
-library = client.get("library", num_results=99, response_groups="media, sample")
+- retrieving library from API
+
+*Hint: with any request you get a list with response text and the raw response object*
+
+*Hint: audibles current API version is 1.0, the Client use this version on default*
+
+```python
+library, _ = client.get(
+    "library", num_results=99, response_groups="media, sample"
+)
 print(library)
 
-# audibles current API version is 1.0
-# the audible Client uses version 1.0 on default
 # to specify another API version
-library = client.get("library/books", api_version="0.0", purchaseAfterDate="01/01/1970", sortInAscendingOrder="true")
+library, _ = client.get(
+    "library/books",
+    api_version="0.0",
+    purchaseAfterDate="01/01/1970",
+    sortInAscendingOrder="true"
+)
 print(library)
 ```
 
@@ -98,7 +133,8 @@ custom_locale = audible.Locale(
     oauth_lang="de-DE",
     auth_register_domain=".amazon.de")
 
-client = audible.Client.from_login(..., locale=custom_locale)
+auth = audible.LoginAuthenticator(..., locale=custom_locale)
+client = audible.AudibleAPI(auth)
 ```
 
 You can try to autodetect locales like so:
@@ -113,70 +149,78 @@ custom_locale = audible.Locale.from_autodetect_locale("co.uk")
 # look if everything is fine
 print(custom_locale.to_dict())
 
-# create client
-client = audible.Client.from_login(..., locale=custom_locale)
+# create Authenticator
+auth = audible.LoginAuthenticator(..., locale=custom_locale)
 ```
 
 
-### Load and Save sessions
+### Load and Save Credentials
 
 #### Unencrypted Load/Save
 
-Client session can be saved any time to file like so:
+Credentials can be saved any time to file like so:
 
 ```python
 import audible
 
-client = audible.Client.from_login("EMAIL", "PASSWORD", locale="us")
-client.to_file("FILENAME", encryption=False)
+auth = audible.LoginAuthenticator("EMAIL", "PASSWORD", locale="us")
+auth.to_file("FILENAME", encryption=False)
 
 # Sometime later...
-client = audible.Client.from_file("FILENAME")
+auth = audible.FileAuthenticator("FILENAME")
+```
 
-# Client sets the filename as the default value when restoring from or save to file
-# simply run to overwrite old file
-client.to_file()  # no filename needed
+Authenticator sets the filename as the default value when loading from or save to file simply run to overwrite old file
+`auth.to_file()`. No filename is needed.
 
-# to prevent remembering filename (and encryption style)
-client = audible.Client.from_file(..., set_default=False)
-client = audible.Client.to_file(..., set_default=False)
+To prevent remembering filename (and encryption style) you can do following:
+
+```python
+auth = audible.FileAuthenticator(..., set_default=False)
+auth = audible.FileAuthenticator(..., set_default=False)
 ```
 
 #### Encrypted Load/Save
 
 This Client supports file encryption now. The encryption
-algorithm used is symmetric AES in cipher-block chaining (CBC) mode. Currently json style and bytes style are supported.
-Client session can be saved any time to encrypted file like so:
+algorithm used is symmetric AES in cipher-block chaining (CBC) mode. Currently json and bytes style output are supported.
+Credentials can be saved any time to encrypted file like so:
 
 ```python
 import audible
 
-client = audible.Client.from_login("EMAIL", "PASSWORD", locale="us")
-# save Client in json style
-client.to_file("FILENAME", "PASSWORD", encryption="json")
-# save Client in bytes style
-client.to_file("FILENAME", "PASSWORD", encryption="bytes")
+auth = audible.LoginAuthenticator("EMAIL", "PASSWORD", locale="us")
+# save credentials in json style
+auth.to_file("FILENAME", "PASSWORD", encryption="json")
+# in bytes style
+auth.to_file("FILENAME", "PASSWORD", encryption="bytes")
 
 # Sometime later...
-# load Client from json style
-client = audible.Client.from_file("FILENAME", "PASSWORD", encryption="json")
-# load Client from bytes style
-client = audible.Client.from_file("FILENAME", "PASSWORD", encryption="bytes")
+# load credentials from json style
+auth = audible.FileAuthenticator(
+    "FILENAME", "PASSWORD", encryption="json"
+)
+# from bytes style
+auth = audible.FileAuthenticator(
+    "FILENAME", "PASSWORD", encryption="bytes"
+)
+```
 
-# Client sets the filename and encryption style as the default values when restoring from or save to file
-# simply run to overwrite old file with same password and encryption style
-client.to_file()  # no filename needed
+Authenticator sets the filename and encryption style as the default values when loading from or save to file simply run to overwrite old file with same password and encryption style
+`auth.to_file()`. No filename is needed.
 
-# to prevent remembering filename (and password/encryption style)
-client = audible.Client.from_file(..., set_default=False)
-client = audible.Client.to_file(..., set_default=False)
+To prevent remembering filename (and password/encryption style)
+
+```python
+auth = audible.FileAuthenticator(..., set_default=False)
+auth = audible.FileAuthenticator(..., set_default=False)
 ```
 
 ##### Advanced use of encryption/decryption:
 
-`client.to_file("FILENAME", "PASSWORD", encryption="json", **kwargs)`
+`auth.to_file(..., **kwargs)`
 
-`client = audible.Client.from_file("FILENAME", "PASSWORD", encryption="json", **kwargs)`
+`auth = audible.FileAuthenticator(..., **kwargs)`
 
 Following arguments are possible:
 
@@ -213,7 +257,10 @@ def custom_captcha_callback(captcha_url):
 
     return "My answer for CAPTCHA"
 
-client = audible.Client.from_login("EMAIL", "PASSWORD", locale="us", captcha_callback=custom_captcha_callback)
+auth = audible.LoginAuthenticator(
+    "EMAIL", "PASSWORD", locale="us",
+    captcha_callback=custom_captcha_callback
+)
 ```
 
 ### 2FA
@@ -233,7 +280,10 @@ def custom_otp_callback():
 
     return "My answer for otp code"
 
-client = audible.Client.from_login("EMAIL", "PASSWORD", locale="us", otp_callback=custom_otp_callback)
+auth = audible.LoginAuthenticator(
+    "EMAIL", "PASSWORD", locale="us",
+    otp_callback=custom_otp_callback
+)
 ```
 
 
@@ -268,6 +318,12 @@ You can use numeric levels too:
 - 40 (error)
 - 50 (critical)
 
+### Asynchron requests
+
+By default the AudibleAPI client requests are synchron using the requests module.
+
+The client supports now asynchronous request using the aiohttp module. You can instantiate a async client with `client = audible.AudibleAPI(..., is_async=True)`. Example to use async client can be found in [example folder](https://github.com/mkb79/Audible/tree/developing/examples) on github repo.
+
 ## Authentication
 
 ### Informations
@@ -296,22 +352,23 @@ To renew access_token with client call:
 ```python
 # refresh access_token if token already expired
 # if token is valid nothing will be refreshed.
-client.refresh_token()
+auth.refresh_token()
 
 # to force renew of access_token if token is valid
-client.refresh_token(force=true)
-
-# if you saved your session before don't forget to save again
-
+auth.refresh_token(force=true)
 ```
+
+*Hint: If you saved your session before don't forget to save again.*
+
+
 
 ### Deregister device
 
 Refresh token, RSA private key and adp_token are valid until deregister.
 
-To deregister a device with client call `client.deregister_device()`
+To deregister a device with client call `auth.deregister_device()`
 
-To deregister all devices with client call `client.deregister_device(deregister_all=True)`.
+To deregister all devices with client call `auth.deregister_device(deregister_all=True)`.
 This function is necessary to prevent hanging slots if you registered a device earlier but don‘t store the given credentials.
 This also deregister all other devices such as a audible app on mobile devices.
 

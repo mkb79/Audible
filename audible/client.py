@@ -1,231 +1,161 @@
-from datetime import datetime
+import asyncio
 import json
 import logging
+from typing import Union, Optional
+from urllib.parse import urlencode, urlparse
+import yarl
 
+import aiohttp
 import requests
 
-from .auth import (auth_login, auth_register, auth_deregister,
-                   CertAuth, refresh_access_token, user_profile)
-from .cryptography import AESCipher
-from .utils import Storage
+from .auth import sign_request, LoginAuthenticator, FileAuthenticator
+from .errors import (BadRequest, NotFoundError, NotResponding, NetworkError,
+                     ServerError, Unauthorized, UnexpectedError,
+                     RatelimitError)
 
 
 _client_logger = logging.getLogger('audible.client')
 
 
-class Client:
-    def __init__(self, data: Storage) -> None:
-        self._data = data
-        # discarded_kwargs = self._data.last_discarded_data()
+class AudibleAPI:
 
-    def __getattr__(self, attr):
+    REQUEST_LOG = '{method} {url} has received {text}, has returned {status}'
+
+    def __init__(self, auth: Optional[Union[LoginAuthenticator, FileAuthenticator]] = None,
+                 session=None, is_async=False, **options) -> None:
+        self.auth = auth
+        self.adp_token = options.get("adp_token", auth.adp_token)
+        self.device_private_key = options.get("device_private_key",
+                                              auth.device_private_key)
+
+        self.is_async = is_async
+        self.session = (session or (aiohttp.ClientSession() if is_async
+                        else requests.Session()))
+        self.headers = {
+            "Accept": "application/json",
+            "Content-Type": "application/json"
+        }
+
+        self.api_root_url = options.get("url", auth.locale.audible_api)
+
+        self.timeout = options.get('timeout', 10)
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        self.close()
+
+    async def __aenter__(self):
+        return self
+
+    async def __aexit__(self, exc_type, exc_value, traceback):
+        self.close()
+
+    def __repr__(self):
+        return f"<AudibleAPI Client async={self.is_async}>"
+
+    def close(self):
+        return self.session.close()
+
+    def _raise_for_status(self, resp, text, *, method=None):
         try:
-            return getattr(self._data._boxed_data, attr)
-        except AttributeError:
-            try:
-                return super().__getattr__(attr)
-            except AttributeError:
-                return None
+            data = json.loads(text)
+        except json.JSONDecodeError:
+            data = text
+        code = getattr(resp, 'status', None) or getattr(resp, 'status_code')
 
-    def __getitem__(self, item):
-        try:
-            return getattr(self._data._boxed_data, item)
-        except AttributeError:
-            raise KeyError('No such key: {}'.format(item))
+        _client_logger.debug(self.REQUEST_LOG.format(
+            method=method or resp.request_info.method, url=resp.url,
+            text=text, status=code
+        ))
 
-    @classmethod
-    def from_login(cls, username: str, password: str, locale, filename=None,
-                   register=True, captcha_callback=None, otp_callback=None):
+        if 300 > code >= 200:  # Request was successful
+            return data, resp  # value, response
+        if code == 400:
+            raise BadRequest(resp, data)
+        if code in (401, 403):  # Unauthorized request - Invalid credentials
+            raise Unauthorized(resp, data)
+        if code == 404:  # not found
+            raise NotFoundError(resp, data)
+        if code == 429:
+            raise RatelimitError(resp, data)
+        if code == 503:  # Maintainence
+            raise ServerError(resp, data)
 
-        data = Storage(locale=locale, filename=filename)
+        raise UnexpectedError(resp, data)
 
-        response = auth_login(username, password, data.locale,
-                              captcha_callback=captcha_callback,
-                              otp_callback=otp_callback)
-
-        if register:
-            response = auth_register(**response, locale=data.locale)
-
-        data.update_data(**response)
-
-        return cls(data)
-
-    @classmethod
-    def from_json_file(cls, filename, locale=None):
-        data = Storage(locale=locale, filename=filename)
-
-        json_data = json.loads(data.filename.read_text())
-
-        data.update_data(**json_data)
-
-        _client_logger.warn("``from_json_file`` is deprecated. "
-                            "``use from_file instead``")
-
-        _client_logger.info((f"loaded data from file {filename} for "
-                             f"locale {data.locale.locale_code}"))
-
-        return cls(data)
-
-    @classmethod
-    def from_file(cls, filename, password=None, locale=None, encryption=False,
-                  set_default=True, **kwargs):
-
-        data = Storage(filename=filename, encryption=encryption)
-        if data.encryption:
-            data.update_data(crypter=AESCipher(password, **kwargs))
-            file_data = data.crypter.from_file(data.filename, data.encryption)
-        else:
-            file_data = data.filename.read_text()
-
-        json_data = json.loads(file_data)
-
-        reset = False if set_default else True
-        data.update_data(**json_data, locale=locale, reset_storage=reset)
-
-        _client_logger.info((f"load data from file {filename} for "
-                             f"locale {data.locale.locale_code}"))
-
-        return cls(data)
-
-    def to_json_file(self, filename=None, indent=4):
-        _client_logger.warn("to_json_file is deprecated. use to_file instead.")
-        if filename:
-            filename = Storage(filename=filename).filename
-        elif self.filename:
-            filename = Storage(filename=self.filename).filename
-        else:
-            raise ValueError("No filename provided")
-
-        body = {"login_cookies": self.login_cookies,
-                "adp_token": self.adp_token,
-                "access_token": self.access_token,
-                "refresh_token": self.refresh_token,
-                "device_private_key": self.device_private_key,
-                "expires": self.expires,
-                "locale_code": self.locale.locale_code}
-        filename.write_text(json.dumps(body, indent=indent))
-
-    def to_file(self, filename=None, password=None, encryption="default",
-                indent=4, set_default=True, **kwargs):
-
-        filename = filename or self.filename
-        if not filename:
-            raise ValueError("No filename provided")
-
-        encryption = encryption if encryption != "default" else self.encryption
-
-        if encryption is None:
-            raise ValueError("No encryption provided")
-
-        data = Storage(filename=filename, encryption=encryption)
-        
-        body = {"login_cookies": self.login_cookies,
-                "adp_token": self.adp_token,
-                "access_token": self.access_token,
-                "refresh_token": self.refresh_token,
-                "device_private_key": self.device_private_key,
-                "expires": self.expires,
-                "locale_code": self.locale.locale_code}
-        json_body = json.dumps(body, indent=indent)
-
-        if data.encryption is False:
-            data.filename.write_text(json_body)
-        else:
-            if password:
-                data.update_data(crypter=AESCipher(password, **kwargs))
-            elif self.crypter:
-                data.update_data(crypter=self.crypter)
-            else:
-                raise ValueError("No password provided")
-
-            data.crypter.to_file(json_body, filename=data.filename,
-                                 encryption=encryption, indent=indent)
-
-        if set_default:
-            self._data.update_data(**data)
-
-    def re_login(self, username, password, captcha_callback=None,
-                 otp_callback=None):
-
-        login = auth_login(username,
-                           password,
-                           self.locale,
-                           captcha_callback=captcha_callback,
-                           otp_callback=otp_callback)
-
-        self._data.update_data(**login)
-
-    def register_device(self):
-        register = auth_register(access_token=self.access_token,
-                                 login_cookies=self.login_cookies,
-                                 locale=self.locale)
-
-        self._data.update_data(**register)
-
-    def deregister_device(self, deregister_all: bool = False):
-        return auth_deregister(access_token=self.access_token,
-                               deregister_all=deregister_all,
-                               locale=self.locale)
-
-    def refresh_access_token(self, force=False):
-        if force or self.access_token_expired:
-            refresh_data = refresh_access_token(
-                refresh_token=self.refresh_token,
-                locale=self.locale
-            )
+    def _sign_request(self, method, url, params, json_data):
+        path = urlparse(url).path
+        query = urlencode(params)
+        json_body = json.dumps(json_data)
     
-            self._data.update_data(**refresh_data)
-        else:
-            print("Access Token not expired. No refresh nessessary. "
-                  "To force refresh please use force=True")
+        if query:
+            path += f"?{query}"
+    
+        return sign_request(path, method, json_body, self.adp_token,
+                            self.device_private_key)
 
-    def refresh_or_register(self, force=False):
+    async def _arequest(self, url, **params):
+        method = params.pop('method', 'GET')
+        json_data = params.pop('json', {})
+        timeout = params.pop('timeout', None) or self.timeout
+
+        signed_headers = self._sign_request(
+            method, url, params, json_data
+        )
+        headers = self.headers.copy()
+        for item in signed_headers:
+            headers[item] = signed_headers[item]
+
+        url += "?" + urlencode(params)
+        url = yarl.URL(url, encoded=True)
+
         try:
-            self.refresh_access_token(force=force)
-        except:
-            try:
-                self.auth_deregister()
-                self.auth_register()
-            except:
-                raise Exception("Could not refresh client.")
+            async with self.session.request(
+                method, url, timeout=timeout, headers=headers, json=json_data
+            ) as resp:
+                return self._raise_for_status(resp, await resp.text())
+        except asyncio.TimeoutError:
+            raise NotResponding
+        except aiohttp.ServerDisconnectedError:
+            raise NetworkError
 
-    def user_profile(self):
-        return user_profile(access_token=self.access_token,
-                            locale=self.locale)
+    def _request(self, url, **params):
+        if self.is_async:  # return a coroutine
+            return self._arequest(url, **params)
 
-    @property
-    def access_token_expires(self):
-        return datetime.fromtimestamp(self.expires) - datetime.utcnow()
+        method = params.pop('method', 'GET')
+        json_data = params.pop('json', {})
+        timeout = params.pop('timeout', None) or self.timeout
 
-    @property
-    def access_token_expired(self):
-        if datetime.fromtimestamp(self.expires) <= datetime.utcnow():
-            return True
-        else:
-            return False
+        signed_headers = self._sign_request(method, url, params, json_data)
+        headers = self.headers.copy()
+        for item in signed_headers:
+            headers[item] = signed_headers[item]
 
-    def _api_request(self, method, path, api_version="1.0", json_data=None,
-                     auth=None, cookies=None, **params):
-        url = "/".join((self.locale.audible_api, api_version, path))
-        headers = {"Accept": "application/json",
-                   "Content-Type": "application/json"}
-        auth = auth or CertAuth(self.adp_token, self.device_private_key)
-        resp = requests.request(method,
-                                url,
-                                json=json_data,
-                                params=params,
-                                headers=headers,
-                                auth=auth,
-                                cookies=cookies)
-        resp.raise_for_status()
-
-        return resp.json()
+        try:
+            with self.session.request(
+                method, url, timeout=timeout, headers=headers,
+                params=params, json=json_data
+            ) as resp:
+                return self._raise_for_status(resp, resp.text, method=method)
+        except requests.Timeout:
+            raise NotResponding
+        except requests.ConnectionError:
+            raise NetworkError
 
     def get(self, path, **params):
-        return self._api_request("GET", path, **params)
+        api_version = params.pop("api_version", "1.0")
+        url = "/".join((self.api_root_url, api_version, path))
+        return self._request(url, **params)
 
     def post(self, path, body, **params):
-        return self._api_request("POST", path, json_data=body, **params)
+        api_version = params.pop("api_version", "1.0")
+        url = "/".join((self.api_root_url, api_version, path))
+        return self._request(url, method="POST", json=body, **params)
 
     def delete(self, path, **params):
-        return self._api_request("DELETE", path, **params)
+        api_version = params.pop("api_version", "1.0")
+        url = "/".join((self.api_root_url, api_version, path))
+        return self._request(url, method="POST", **params)

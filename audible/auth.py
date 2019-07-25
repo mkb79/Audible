@@ -1,6 +1,7 @@
 import base64
 from datetime import datetime, timedelta
 import io
+import json
 import logging
 import random
 import string
@@ -13,9 +14,9 @@ import requests
 from requests.auth import AuthBase
 import rsa
 
-
-from .cryptography import encrypt_metadata, meta_audible_app
+from .cryptography import encrypt_metadata, meta_audible_app, AESCipher
 from .localization import Locale
+from .utils import Storage
 
 
 _auth_logger = logging.getLogger('audible.auth')
@@ -177,10 +178,10 @@ def auth_login(username: str, password: str, locale: Locale,
     for cookie in session.cookies:
         login_cookies[cookie.name] = cookie.value.replace(r'"', r'')
 
-    login_credentials = {"access_token": access_token,
-                         "login_cookies": login_cookies}
+    session.close()
 
-    return login_credentials
+    return {"access_token": access_token,
+            "login_cookies": login_cookies}
 
 
 def default_captcha_callback(captcha_url: str) -> str:
@@ -204,7 +205,7 @@ def default_otp_callback() -> str:
     return str(guess).strip().lower()
 
 
-def auth_register(access_token: str, login_cookies: dict,
+def auth_register(access_token: str, login_cookies: Dict[str, str],
                   locale: Locale) -> Dict[str, Any]:
     """
     Register a dummy audible device with access token and cookies
@@ -272,14 +273,12 @@ def auth_register(access_token: str, login_cookies: dict,
     for cookie in tokens["website_cookies"]:
         login_cookies_new[cookie["Name"]] = cookie["Value"].replace(r'"', r'')
 
-    register_credentials = {"adp_token": adp_token,
-                            "device_private_key": device_private_key,
-                            "access_token": access_token,
-                            "refresh_token": refresh_token,
-                            "expires": expires,
-                            "login_cookies": login_cookies_new}
-
-    return register_credentials
+    return {"adp_token": adp_token,
+            "device_private_key": device_private_key,
+            "access_token": access_token,
+            "refresh_token": refresh_token,
+            "expires": expires,
+            "login_cookies": login_cookies_new}
 
 
 def auth_deregister(access_token: str, locale: Locale,
@@ -341,10 +340,9 @@ def refresh_access_token(refresh_token: str, locale: Locale) -> Dict[str, Any]:
 
     expires_in = int(body["expires_in"])
     expires = (datetime.utcnow() + timedelta(seconds=expires_in)).timestamp()
-    refresh_result = {"access_token": body["access_token"],
-                      "expires": expires}
 
-    return refresh_result
+    return {"access_token": body["access_token"],
+            "expires": expires}
 
 
 def user_profile(access_token: str, locale: Locale) -> Dict[str, Any]:
@@ -370,10 +368,225 @@ def get_random_device_serial() -> str:
     Use of random serial prevents unregister device by other users
     with same `device_serial`.
     """
-    return ''.join(random.choices(string.ascii_uppercase + string.digits, k=40))
+    return "".join(random.choices(string.ascii_uppercase + string.digits, k=40))
+
+
+def sign_request(path: str, method: str, body: str, adp_token: str,
+                 private_key: str) -> Dict[str, str]:
+    """
+    Helper function who creates a signed header for requests.
+
+    :param path: the requested url path and query
+    :param method: the request method (GET, POST, DELETE, ...)
+    :param body: the http message body
+    :param adp_token: the token is obtained after register as device
+    :param private_key: the rsa key obtained after register as device
+    """
+    date = datetime.utcnow().isoformat("T") + "Z"
+
+    data = f"{method}\n{path}\n{date}\n"
+    if body:
+        if isinstance(body, bytes):
+            body = body.decode('utf-8')
+        data += body
+    data += "\n"
+    data += adp_token
+
+    key = rsa.PrivateKey.load_pkcs1(private_key)
+    cipher = rsa.pkcs1.sign(data.encode(), key, "SHA-256")
+    signed_encoded = base64.b64encode(cipher)
+
+    signature = f"{signed_encoded.decode()}:{date}"
+
+    return {"x-adp-token": adp_token,
+            "x-adp-alg": "SHA256withRSA:1.0",
+            "x-adp-signature": signature}
+
+
+class BaseAuthenticator:
+    """Base Class for retrieve and handle credentials."""
+
+    def __init__(self):
+        raise NotImplementedError()
+
+    def __getattr__(self, attr):
+        try:
+            return getattr(self._data._boxed_data, attr)
+        except AttributeError:
+            try:
+                return super().__getattr__(attr)
+            except AttributeError:
+                return None
+
+    def __getitem__(self, item):
+        try:
+            return getattr(self._data._boxed_data, item)
+        except AttributeError:
+            raise KeyError('No such key: {}'.format(item))
+
+    def to_file(self, filename=None, password=None, encryption="default",
+                indent=4, set_default=True, **kwargs):
+
+        filename = filename or self.filename
+        if not filename:
+            raise ValueError("No filename provided")
+
+        encryption = encryption if encryption != "default" else self.encryption
+
+        if encryption is None:
+            raise ValueError("No encryption provided")
+
+        data = Storage(filename=filename, encryption=encryption)
+        
+        body = {"login_cookies": self.login_cookies,
+                "adp_token": self.adp_token,
+                "access_token": self.access_token,
+                "refresh_token": self.refresh_token,
+                "device_private_key": self.device_private_key,
+                "expires": self.expires,
+                "locale_code": self.locale.locale_code}
+        json_body = json.dumps(body, indent=indent)
+
+        if data.encryption is False:
+            data.filename.write_text(json_body)
+        else:
+            if password:
+                data.update_data(crypter=AESCipher(password, **kwargs))
+            elif self.crypter:
+                data.update_data(crypter=self.crypter)
+            else:
+                raise ValueError("No password provided")
+
+            data.crypter.to_file(json_body, filename=data.filename,
+                                 encryption=encryption, indent=indent)
+
+        _auth_logger.info(f"saved data to file {filename}")
+
+        if set_default:
+            self._data.update_data(**data)
+
+        _auth_logger.info(f"set filename {filename} as default")
+
+    def re_login(self, username, password, captcha_callback=None,
+                 otp_callback=None):
+
+        login = auth_login(username,
+                           password,
+                           self.locale,
+                           captcha_callback=captcha_callback,
+                           otp_callback=otp_callback)
+
+        self._data.update_data(**login)
+
+    def register_device(self):
+        register = auth_register(access_token=self.access_token,
+                                 login_cookies=self.login_cookies,
+                                 locale=self.locale)
+
+        self._data.update_data(**register)
+
+    def deregister_device(self, deregister_all: bool = False):
+        return auth_deregister(access_token=self.access_token,
+                               deregister_all=deregister_all,
+                               locale=self.locale)
+
+    def refresh_access_token(self, force=False):
+        if force or self.access_token_expired:
+            refresh_data = refresh_access_token(
+                refresh_token=self.refresh_token,
+                locale=self.locale
+            )
+    
+            self._data.update_data(**refresh_data)
+        else:
+            print("Access Token not expired. No refresh nessessary. "
+                  "To force refresh please use force=True")
+
+    def refresh_or_register(self, force=False):
+        try:
+            self.refresh_access_token(force=force)
+        except:
+            try:
+                self.auth_deregister()
+                self.auth_register()
+            except:
+                raise Exception("Could not refresh client.")
+
+    def user_profile(self):
+        return user_profile(access_token=self.access_token,
+                            locale=self.locale)
+
+    @property
+    def access_token_expires(self):
+        return datetime.fromtimestamp(self.expires) - datetime.utcnow()
+
+    @property
+    def access_token_expired(self):
+        if datetime.fromtimestamp(self.expires) <= datetime.utcnow():
+            return True
+        else:
+            return False
+
+
+class LoginAuthenticator(BaseAuthenticator):
+    """Authenticator class to retrieve credentials from login."""
+    def __init__(self, username: str, password: str, locale, register=True,
+                 captcha_callback=None, otp_callback=None):
+
+        data = Storage(locale=locale)
+
+        resp = auth_login(
+            username, password, data.locale, captcha_callback=captcha_callback,
+            otp_callback=otp_callback
+        )
+ 
+        _auth_logger.info(f"logged in to audible as {username}")
+
+        if register:
+            resp = auth_register(**resp, locale=data.locale)
+        _auth_logger.info("registered audible device")
+
+        data.update_data(**resp)
+        self._data = data
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        self.deregister_device(deregister_all="False")
+
+
+class FileAuthenticator(BaseAuthenticator):
+    """Authenticator class to retrieve credentials from stored file."""
+    def __init__(self, filename, password=None, locale=None, encryption=False,
+                 set_default=True, **kwargs):
+    
+        data = Storage(filename=filename, encryption=encryption)
+
+        if data.encryption:
+            data.update_data(crypter=AESCipher(password, **kwargs))
+            file_data = data.crypter.from_file(data.filename, data.encryption)
+        else:
+            file_data = data.filename.read_text()
+
+        json_data = json.loads(file_data)
+
+        reset = False if set_default else True
+        data.update_data(**json_data, locale=locale, reset_storage=reset)
+
+        _auth_logger.info((f"load data from file {filename} for "
+                           f"locale {data.locale.locale_code}"))
+
+        self._data = data
 
 
 class CertAuth(AuthBase):
+    """
+    Class for use with requests module. Use it on your own.
+    Authenticates http requests with adp_token and device_cert.
+    
+    Use it with `requests.get(..., auth=CertAuth(...))
+    """
     def __init__(self, adp_token: str, device_cert: str):
         self.adp_token = adp_token
         self.device_cert = device_cert
@@ -394,39 +607,13 @@ class CertAuth(AuthBase):
         return r
 
 
-def sign_request(url: str, method: str, body: str, adp_token: str,
-                 private_key: str) -> Dict[str, str]:
-    """
-    Helper function who creates a signed header for requests.
-
-    :param url: the requested url
-    :param method: the request method (GET, POST, DELETE, ...)
-    :param body: the http message body
-    :param adp_token: the token is obtained after register as device
-    :param private_key: the rsa key obtained after register as device
-    """
-    date = datetime.utcnow().isoformat("T") + "Z"
-
-    data = f"{method}\n{url}\n{date}\n"
-    if body:
-        if isinstance(body, bytes):
-            body = body.decode('utf-8')
-        data += body
-    data += "\n"
-    data += adp_token
-
-    key = rsa.PrivateKey.load_pkcs1(private_key)
-    cipher = rsa.pkcs1.sign(data.encode(), key, "SHA-256")
-    signed_encoded = base64.b64encode(cipher)
-
-    signature = f"{signed_encoded.decode()}:{date}"
-
-    return {"x-adp-token": adp_token,
-            "x-adp-alg": "SHA256withRSA:1.0",
-            "x-adp-signature": signature}
-
-
 class AccessTokenAuth(AuthBase):
+    """
+    Class for use with requests module. Use it on your own.
+    Authenticates http requests with access_token and client_id.
+    
+    Use it with `requests.get(..., auth=AccessTokenAuth(...))
+    """
     def __init__(self, access_token: str, client_id: Union[int, str]=0):
         self.access_token = access_token
         self.client_id = client_id

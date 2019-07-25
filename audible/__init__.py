@@ -1,17 +1,17 @@
-from .client import Client
-from .auth import CertAuth, AccessTokenAuth
+from .client import AudibleAPI
+from .auth import LoginAuthenticator, FileAuthenticator
 from .cryptography import encrypt_metadata, decrypt_metadata
-from .localization import custom_locale, Locale, autodetect_locale
+from .localization import Locale, autodetect_locale
 from ._logging import set_file_logger, set_console_logger
 
 
 VERSION = (0, 2, 0)
 __version__ = ".".join(map(str, VERSION))
 
-__all__ = ["Client", "custom_locale", "Locale", "autodetect_locale",
-           "encrypt_metadata", "decrypt_metadata", "CertAuth",
-           "AccessTokenAuth", "__version__", "set_file_logger",
-           "set_console_logger"]
+__all__ = ["AudibleAPI", "LoginAuthenticator", "FileAuthenticator",
+           "encrypt_metadata", "decrypt_metadata", "Locale",
+           "autodetect_locale", "set_file_logger", "set_console_logger",
+           "__version__"]
 
 __author__ = "mkb79"
 __email__ = "mkb79@hackitall.de"
