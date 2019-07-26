@@ -4,6 +4,7 @@ import re
 import requests
 from typing import Dict, Optional
 from urllib.parse import parse_qs, urlparse
+import warnings
 
 
 _localization_logger = logging.getLogger('audible.localization')
@@ -165,6 +166,11 @@ def custom_locale(amazon_login: str, amazon_api: str, audible_api: str,
     Please use Locale class instead.
 
     """
+    warnings.warn(
+            "this function is deprecated since v0.2.0, use Locale class instead",
+            DeprecationWarning
+    )
+
     locale = {"amazon_login": amazon_login,
               "amazon_api": amazon_api,
               "audible_api": audible_api,

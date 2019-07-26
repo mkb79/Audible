@@ -16,6 +16,7 @@ log_formatter = logging.Formatter(("%(asctime)s %(levelname)s [%(name)s] "
 
 logger = logging.getLogger("audible")
 logger.setLevel(logging.CRITICAL)
+logging.captureWarnings(True)
 
 
 def set_global_level(level: Union[str, int]) -> None:

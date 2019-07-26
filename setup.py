@@ -5,7 +5,7 @@ from setuptools import setup, find_packages
 
 dirname = path.abspath(path.dirname(__file__))
 
-description = 'Interface for internal Audible API'
+description = 'A(Sync) Interface for internal Audible API written in pure Python.'
 
 try:
     with open(path.join(dirname, 'README.md')) as f:
