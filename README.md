@@ -9,71 +9,117 @@
 [![image](https://img.shields.io/pypi/implementation/audible.svg)](https://pypi.org/project/audible/)
 [![image](https://img.shields.io/pypi/dm/audible.svg)](https://pypi.org/project/audible/)
 
-**Interface for internal Audible API written in pure Python.**
+**Sync/Async Interface for internal Audible API written in pure Python.**
 
-Code including this README is forked from omarroth‘s fantastic [audible.cr](https://github.com/omarroth/audible.cr) API written in crystal.
-
-This package is written with Pythonista for iOS. 
-
+Code and README are forked from omarroth‘s fantastic [audible.cr](https://github.com/omarroth/audible.cr) API written in crystal.
+The whole code is written with Pythonista for iOS.
 
 ## Requirements
 
 - Python >= 3.6
 - depends on following packages:
-	- 	beautifulsoup4
-	- 	Pillow
-	- 	requests,
-	- 	rsa 
+	- aiohttp
+	- beautifulsoup4
+	- pbkdf2
+	- Pillow
+	- pycrypto
+	- python-box
+	- requests
+	- rsa 
 
 ## Installation
 
-`pip install audible`
+```python
+# v0.2.0
+pip install audible
+
+# development tree
+pip install git+https://github.com/mkb79/audible.git@developing
+```
 
 ## Usage
 
 ### Basis Examples
 
+- Retrieving API credentials
+
 ```python
 import audible
 
-# for US accounts
-client = audible.Client("EMAIL", "PASSWORD", local="us")
+# example for US accounts
+auth = audible.LoginAuthenticator(
+    "EMAIL", "PASSWORD", locale="us"
+)
+```
 
-# save session after initializing
-client = audible.Client("EMAIL", "PASSWORD", local="us", filename="FILENAME")
+- Instantiate API with Authenticator
 
-# restore session from file
-client = audible.Client(local="us", filename="FILENAME")
+*Hint: the Authenticator will be stored as `auth` attribute, you can access them with `client.auth`*
 
-# get library
-library = client.get("library", num_results=99, response_groups="media, sample")
+```python
+client = audible.AudibleAPI(auth)
+```
+
+- Save credentials
+
+*Hint: locale code are stored in file*
+
+```python
+auth.to_file("FILENAME", encryption=False)`
+```
+
+- Load credentials from file
+
+*Hint: uses saved locale code*
+
+```python
+auth = audible.FileAuthenticator("FILENAME")
+
+# to specify another locale code at restore
+auth = audible.FileAuthenticator(
+    "FILENAME", locale="some other locale"
+)
+```
+
+- retrieving library from API
+
+*Hint: with any request you get a list with response text and the raw response object*
+
+*Hint: audibles current API version is 1.0, the Client use this version on default*
+
+```python
+library, _ = client.get(
+    "library", num_results=99, response_groups="media, sample"
+)
 print(library)
 
-# specify a api_version on request
-# default is api_version="1.0"
-# get deprecated version of library
-library = client.get("library/books", api_version="0.0", purchaseAfterDate="01/01/1970", sortInAscendingOrder="true")
+# to specify another API version
+library, _ = client.get(
+    "library/books",
+    api_version="0.0",
+    purchaseAfterDate="01/01/1970",
+    sortInAscendingOrder="true"
+)
 print(library)
-
 ```
 
 ### Localizations
 
-At this moment api supports 5 countrys natively.
+Currently this Client have localizations for 5 countries built-in.
 
-- USA (local="us")
-- Germany (local="de")
-- United Kingdom (local="uk")
-- France (local="fr")
-- Canada (local="ca")
+- USA (locale="us")
+- Germany (locale="de")
+- United Kingdom (locale="uk")
+- France (locale="fr")
+- Canada (locale="ca")
 
-You can provide a custom local with this code:
+You can provide custom locales with this code:
 
 ```python
 import audible
 
 # example for germany
-custom_local = audible.custom_local(
+custom_locale = audible.Locale(
     amazon_login="https://www.amazon.de",
     amazon_api="https://api.amazon.de",
     audible_api="https://api.audible.de",
@@ -83,39 +129,122 @@ custom_local = audible.custom_local(
     oauth_lang="de-DE",
     auth_register_domain=".amazon.de")
 
-client = audible.Client(..., local=custom_local)
+auth = audible.LoginAuthenticator(..., locale=custom_locale)
+client = audible.AudibleAPI(auth)
 ```
 
-### Load and Save sessions
-
-Client session can be saved any time using `to_json_file("FILENAME")` and `from_json_file("FILENAME")`, like so:
+You can try to autodetect locales like so:
 
 ```python
 import audible
 
-client = audible.Client("EMAIL", "PASSWORD", local="us")
-client.to_json_file("FILENAME")
+# needs the Top Level Domain for the audible page in your country
+# example for uk
+custom_locale = audible.Locale.from_autodetect_locale("co.uk")
+
+# look if everything is fine
+print(custom_locale.to_dict())
+
+# create Authenticator
+auth = audible.LoginAuthenticator(..., locale=custom_locale)
+```
+
+
+### Load and Save Credentials
+
+#### Unencrypted Load/Save
+
+Credentials can be saved any time to file like so:
+
+```python
+import audible
+
+auth = audible.LoginAuthenticator("EMAIL", "PASSWORD", locale="us")
+auth.to_file("FILENAME", encryption=False)
 
 # Sometime later...
-client = audible.Client(local="us")
-client.from_json_file("FILENAME")
-# short alternate
-client = audible.Client(local="us", filename="FILENAME")
-
-# if restore session with client = audible.Client(local="us", filename="FILENAME")
-# simply insert
-client.to_json_file()  # no filename needed
+auth = audible.FileAuthenticator("FILENAME")
 ```
+
+Authenticator sets the filename as the default value when loading from or save to file simply run to overwrite old file
+`auth.to_file()`. No filename is needed.
+
+To prevent remembering filename (and encryption style) you can do following:
+
+```python
+auth = audible.FileAuthenticator(..., set_default=False)
+auth = audible.FileAuthenticator(..., set_default=False)
+```
+
+#### Encrypted Load/Save
+
+This Client supports file encryption now. The encryption
+algorithm used is symmetric AES in cipher-block chaining (CBC) mode. Currently json and bytes style output are supported.
+Credentials can be saved any time to encrypted file like so:
+
+```python
+import audible
+
+auth = audible.LoginAuthenticator("EMAIL", "PASSWORD", locale="us")
+# save credentials in json style
+auth.to_file("FILENAME", "PASSWORD", encryption="json")
+# in bytes style
+auth.to_file("FILENAME", "PASSWORD", encryption="bytes")
+
+# Sometime later...
+# load credentials from json style
+auth = audible.FileAuthenticator(
+    "FILENAME", "PASSWORD", encryption="json"
+)
+# from bytes style
+auth = audible.FileAuthenticator(
+    "FILENAME", "PASSWORD", encryption="bytes"
+)
+```
+
+Authenticator sets the filename and encryption style as the default values when loading from or save to file simply run to overwrite old file with same password and encryption style
+`auth.to_file()`. No filename is needed.
+
+To prevent remembering filename (and password/encryption style)
+
+```python
+auth = audible.FileAuthenticator(..., set_default=False)
+auth = audible.FileAuthenticator(..., set_default=False)
+```
+
+##### Advanced use of encryption/decryption:
+
+`auth.to_file(..., **kwargs)`
+
+`auth = audible.FileAuthenticator(..., **kwargs)`
+
+Following arguments are possible:
+
+- key_size (default = 32)
+- salt_marker (default = b"$")
+- kdf_iterations (default = 1000)
+- hashmod (default = Crypto.Hash.SHA256)
+    
+`key_size` may be 16, 24 or 32. The key is derived via the PBKDF2 key derivation function (KDF) from the password and a random salt of 16 bytes (the AES block size) minus the length of the salt header (see below).
+The hash function used by PBKDF2 is SHA256 per default. You can pass a different hash function module via the `hashmod` argument. The module must adhere to the Python API for Cryptographic Hash Functions (PEP 247).
+PBKDF2 uses a number of iterations of the hash function to derive the key, which can be set via the `kdf_iterations` keyword argumeent. The default number is 1000 and the maximum 65535.
+The header and the salt are written to the first block of the encrypted output (bytes mode) or written as key/value pairs (dict mode). The header consist of the number of KDF iterations encoded as a big-endian word bytes wrapped by `salt_marker` on both sides. With the default value of `salt_marker = b'$'`, the header size is thus 4 and the salt 12 bytes.
+The salt marker must be a byte string of 1-6 bytes length.
+The last block of the encrypted output is padded with up to 16 bytes, all having the value of the length of the padding.
+In json style all values are written as base64 encoded string.
 
 ### CAPTCHA
 
 Logging in currently requires answering a CAPTCHA. By default Pillow is used to show captcha and user prompt will be provided using `input`, which looks like:
+
 ```
 Answer for CAPTCHA:
 ```
+
 If Pillow can't display the captcha, the captcha url will be printed.
 
 A custom callback can be provided (for example submitting the CAPTCHA to an external service), like so:
+
 ```
 def custom_captcha_callback(captcha_url):
     
@@ -124,17 +253,22 @@ def custom_captcha_callback(captcha_url):
 
     return "My answer for CAPTCHA"
 
-client = audible.Client("EMAIL", "PASSWORD", local="us", captcha_callback=custom_captcha_callback)
+auth = audible.LoginAuthenticator(
+    "EMAIL", "PASSWORD", locale="us",
+    captcha_callback=custom_captcha_callback
+)
 ```
 
 ### 2FA
 
 If 2-factor-authentication by default is activated a user prompt will be provided using `input`, which looks like:
+
 ```
 "OTP Code: "
 ```
 
 A custom callback can be provided, like so:
+
 ```
 def custom_otp_callback():
     
@@ -142,16 +276,61 @@ def custom_otp_callback():
 
     return "My answer for otp code"
 
-client = audible.Client("EMAIL", "PASSWORD", local="us", otp_callback=custom_otp_callback)
+auth = audible.LoginAuthenticator(
+    "EMAIL", "PASSWORD", locale="us",
+    otp_callback=custom_otp_callback
+)
 ```
+
+
+### Logging
+
+In preparation of adding logging in near future I add following functions:
+
+```python
+import audible
+
+# console logging
+audible.set_console_logger("level")
+
+# file logging
+audible.set_file_logger("filename", "level")
+
+```
+
+Following levels will be accepted:
+
+- debug
+- info
+- warn (or warning)
+- error
+- critical
+
+You can use numeric levels too:
+
+- 10 (debug)
+- 20 (info)
+- 30 (warn)
+- 40 (error)
+- 50 (critical)
+
+### Asynchron requests
+
+By default the AudibleAPI client requests are synchron using the requests module.
+
+The client supports now asynchronous request using the aiohttp module. You can instantiate a async client with `client = audible.AudibleAPI(..., is_async=True)`. Example to use async client can be found in [example folder](https://github.com/mkb79/Audible/tree/developing/examples) on github repo.
 
 ## Authentication
 
-Clients are authenticated using OpenID. Once a client has successfully authenticated with Amazon, they are given an access token and refresh token for authenticating with Audible.
+### Informations
 
-Clients authenticate with Audible using cookies from Amazon and the given access token to `/auth/register`. Clients are given an RSA private key and adp_token used for signing subsequent requests.
+Clients are authenticated using OpenID. Once a client has successfully authenticated with Amazon, they are given an access token for authenticating with Audible.
 
-For requests to the Audible API, requests need to be signed using the provided key and adp_token. Request signing is fairly straight-forward and uses a signed SHA256 digest. Headers look like:
+### Register device
+
+Clients authenticate with Audible using cookies from Amazon and the given access token to `/auth/register`. Clients are given an refresh token, RSA private key and adp_token.
+
+For requests to the Audible API, requests need to be signed using the provided RSA private key and adp_token. Request signing is fairly straight-forward and uses a signed SHA256 digest. Headers look like:
 
 ```
 x-adp-alg: SHA256withRSA:1.0
@@ -161,20 +340,33 @@ x-adp-token: {enc:...}
 
 As reference for other implementations, a client **must** store cookies from a successful Amazon login and a working `access_token` in order to renew `refresh_token`, `adp_token`, etc from `/auth/register`.
 
+### Refresh access token
+
 An `access_token` can be renewed by making a request to `/auth/token`. `access_token`s are valid for 1 hour.
 To renew access_token with client call:
 
-```
+```python
 # refresh access_token if token already expired
-# if token valid nothing will be refreshed.
-client.refresh_token()
+# if token is valid nothing will be refreshed.
+auth.refresh_token()
 
 # to force renew of access_token if token is valid
-client.refresh_token(force=true)
-
-# if you saved your session before don't forget to save again
-
+auth.refresh_token(force=true)
 ```
+
+*Hint: If you saved your session before don't forget to save again.*
+
+
+
+### Deregister device
+
+Refresh token, RSA private key and adp_token are valid until deregister.
+
+To deregister a device with client call `auth.deregister_device()`
+
+To deregister all devices with client call `auth.deregister_device(deregister_all=True)`.
+This function is necessary to prevent hanging slots if you registered a device earlier but don‘t store the given credentials.
+This also deregister all other devices such as a audible app on mobile devices.
 
 ## Documentation:
 
@@ -316,6 +508,7 @@ For a succesful request, returns JSON body with `content_url`.
 
 ### GET /1.0/content/%{asin}/metadata
 
+- response_groups: [chapter_info]
 - acr:
 
 ### GET /1.0/customer/information
