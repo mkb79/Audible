@@ -16,7 +16,7 @@ The whole code is written with Pythonista for iOS.
 
 **This README is for the development tree only. The development tree contains many proof of concepts. Some needs still testing. Feel free to participate.**
 
-The README for the latest stable release (v0.1.6) can be found [here](https://github.com/mkb79/Audible/blob/master/README.md).
+The README for the latest stable release (v0.2.0) can be found [here](https://github.com/mkb79/Audible/blob/master/README.md).
 
 ## Requirements
 
@@ -34,10 +34,10 @@ The README for the latest stable release (v0.1.6) can be found [here](https://gi
 ## Installation
 
 ```python
-# v0.1.6
+# v0.2.0
 pip install audible
 
-# v0.2.0-alpha (development tree)
+# development tree
 pip install git+https://github.com/mkb79/audible.git@developing
 ```
 

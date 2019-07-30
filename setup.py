@@ -1,42 +1,51 @@
-from os import path
-import re
-from setuptools import setup, find_packages
+from os import system
+import pathlib
+from setuptools import setup
+import sys
 
 
-dirname = path.abspath(path.dirname(__file__))
+# 'setup.py publish' shortcut.
+if sys.argv[-1] == 'publish':
+    system('python setup.py sdist bdist_wheel')
+    system('twine upload dist/*')
+    sys.exit()
 
-description = 'A(Sync) Interface for internal Audible API written in pure Python.'
+if sys.version_info < (3, 6, 0):
+    raise RuntimeError("audible requires Python 3.6.0+")
 
-try:
-    with open(path.join(dirname, 'README.md')) as f:
-        long_description = f.read()
-except:
-    long_description = description
+here = pathlib.Path(__file__).parent
 
-with open(path.join(dirname, 'audible/__init__.py')) as f:
-    data = f.read()
-version = re.search('VERSION(.*?)\((.*?)\)', data).group(2).split(", ")
-version = ".".join(map(str, version))
+packages = ['audible']
+
+about = {}
+exec((here / 'audible' / '_version.py').read_text('utf-8'), about)
+
+long_description = (here / 'README.md').read_text('utf-8')
+
+requires = (here / 'requirements.txt').read_text('utf-8').split()
+
 
 setup(
-    name='audible',
-    version=version,
-    packages=find_packages(exclude=["tests", "*.tests", "*.tests.*", "tests.*"]),
-    description=description,
-    url='https://github.com/mkb79/audible',
-    license='AGPL',
-    author='mkb79',
-    author_email='mkb79@hackitall.de',
+    name=about['__title__'],
+    version=about['__version__'],
+    packages=packages,
+    package_dir={'audible': 'audible'},
+    description=about['__description__'],
+    url=about['__url__'],
+    license=about['__license__'],
+    author=about['__author__'],
+    author_email=about['__author_email__'],
     classifiers=[
-         'Development Status :: 3 - Alpha',
+         'Development Status :: 4 - Beta',
          'Intended Audience :: Developers',
-         'License :: OSI Approved :: GNU General Public License v3 (GPLv3)',
-         'Programming Language :: Python :: 3',
-         'Programming Language :: Python :: 3.6'
+         'License :: OSI Approved :: GNU Affero General Public License v3',
+         'Programming Language :: Python :: 3.6',
+         'Programming Language :: Python :: 3.7',
+         'Programming Language :: Python :: 3.8'
     ],
-    install_requires=open('requirements.txt').readlines(),
+    install_requires=requires,
     python_requires='>=3.6',
-    keywords='Audible, API',
+    keywords='Audible, API, async',
     include_package_data=True,
     long_description=long_description,
     long_description_content_type='text/markdown',
