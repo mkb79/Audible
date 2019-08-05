@@ -1,8 +1,14 @@
 import pathlib
-import requests
 import shutil
 
 import audible
+import requests
+
+
+# files downloaded via this script can't be converted at this moment
+# audible uses a new format (aaxc instead of aax)
+# more informations and workaround here:
+# https://github.com/mkb79/Audible/issues/3
 
 
 # get download link(s) for book
@@ -20,8 +26,6 @@ def _get_download_link(asin, quality):
     except Exception as e:
         print(f"Error: {e}")
         return
-
-    return response['content_license']['content_metadata']['content_url']['offline_url']
 
 
 def download_file(url, filename):
@@ -49,7 +53,7 @@ if __name__ == "__main__":
 
     for book in books:
         asin = book['asin']
-        title = book['title'] + f" ({asin})" + ".aax"
+        title = book['title'] + f" ({asin})" + ".aaxc"
         dl_link = _get_download_link(asin, quality="Extreme")
         if dl_link:
             filename = pathlib.Path.cwd() / "audiobooks" / title
