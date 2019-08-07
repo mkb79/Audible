@@ -6,33 +6,37 @@ import requests
 
 
 # get download link(s) for book
-def _get_download_link(asin, codec="LC_128_44100_stereo"):
+def _get_download_link(client, asin, codec="LC_128_44100_stereo"):
     try:
-        content_url = f"https://cde-ta-g7g.amazon.com/FionaCDEServiceEngine/FSDownloadContent"
+        content_url = (f"https://cde-ta-g7g.amazon.com/FionaCDEServiceEngine/"
+                       f"FSDownloadContent")
         params = {
             'type': 'AUDI',
             'currentTransportMethod': 'WIFI',
             'key': asin,
             'codec': codec
         }
-        
+
+        headers = dict()
         signed_headers = client._sign_request('GET', content_url, params, {})
-        headers = client.headers.copy()
-        for item in signed_headers:
-            headers[item] = signed_headers[item]    
+        headers.update(client.headers)
+        headers.update(signed_headers)
         
-        r = client.session.request('GET', content_url, headers=headers, params=params, json={}, allow_redirects=False)
+        r = client.session.get(
+            content_url, headers=headers, params=params,
+            json={}, allow_redirects=False
+        )
         link = r.headers['Location']
     
         # prepare link
-        # see https://github.com/mkb79/Audible/issues/3#issuecomment-518099852 
-        tld = auth.locale.audible_api.split("api.audible.")[1]
+        # see https://github.com/mkb79/Audible/issues/3#issuecomment-518099852
+        tld = client.auth.locale.audible_api.split("api.audible.")[1]
         new_link = link.replace("cds.audible.com", f"cds.audible.{tld}")
         return new_link
 
     except Exception as e:
         print(f"Error: {e}")
-        return 
+        return
 
 
 def download_file(url):

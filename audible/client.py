@@ -1,4 +1,5 @@
 import asyncio
+from datetime import datetime
 import json
 import logging
 from typing import Union, Optional
@@ -13,6 +14,7 @@ from .auth import sign_request, LoginAuthenticator, FileAuthenticator, CertAuth
 from .errors import (BadRequest, NotFoundError, NotResponding, NetworkError,
                      ServerError, Unauthorized, UnexpectedError,
                      RatelimitError)
+from .localization import Locale
 
 
 _client_logger = logging.getLogger('audible.client')
@@ -51,7 +53,7 @@ class AudibleAPI:
         return self
 
     async def __aexit__(self, exc_type, exc_value, traceback):
-        self.close()
+        await self.session.close()
 
     def __repr__(self):
         return f"<AudibleAPI Client async={self.is_async}>"
@@ -73,48 +75,48 @@ class AudibleAPI:
 
         if 300 > code >= 200:  # Request was successful
             return data, resp  # value, response
-        if code == 400:
+        elif code == 400:
             raise BadRequest(resp, data)
-        if code in (401, 403):  # Unauthorized request - Invalid credentials
+        elif code in (401, 403):  # Unauthorized request - Invalid credentials
             raise Unauthorized(resp, data)
-        if code == 404:  # not found
+        elif code == 404:  # not found
             raise NotFoundError(resp, data)
-        if code == 429:
+        elif code == 429:
             raise RatelimitError(resp, data)
-        if code == 503:  # Maintainence
+        elif code == 503:  # Maintainence
             raise ServerError(resp, data)
-
-        raise UnexpectedError(resp, data)
+        else:
+            raise UnexpectedError(resp, data)
 
     def _sign_request(self, method, url, params, json_data):
         path = urlparse(url).path
         query = urlencode(params)
-        json_body = json.dumps(json_data)
+        json_body = json.dumps(json_data) if json_data else None
     
         if query:
             path += f"?{query}"
-    
+
         return sign_request(path, method, json_body, self.adp_token,
                             self.device_private_key)
 
-    async def _arequest(self, url, **params):
-        method = params.pop('method', 'GET')
-        json_data = params.pop('json', {})
-        timeout = params.pop('timeout', None) or self.timeout
+    async def _arequest(self, method, url, **kwargs):
+        params = kwargs.pop("params", {})
+        json_data = kwargs.get('json', {})
+        timeout = kwargs.pop('timeout', self.timeout)
 
+        headers = kwargs.pop("headers", {})
         signed_headers = self._sign_request(
             method, url, params, json_data
         )
-        headers = self.headers.copy()
-        for item in signed_headers:
-            headers[item] = signed_headers[item]
+        headers.update(self.headers)
+        headers.update(signed_headers)
 
         url += "?" + urlencode(params)
         url = yarl.URL(url, encoded=True)
 
         try:
             async with self.session.request(
-                method, url, timeout=timeout, headers=headers, json=json_data
+                method, url, timeout=timeout, headers=headers, **kwargs
             ) as resp:
                 return self._raise_for_status(resp, await resp.text())
         except asyncio.TimeoutError:
@@ -122,23 +124,21 @@ class AudibleAPI:
         except aiohttp.ServerDisconnectedError:
             raise NetworkError
 
-    def _request(self, url, **params):
+    def _request(self, method, url, **kwargs):
         if self.is_async:  # return a coroutine
-            return self._arequest(url, **params)
+            return self._arequest(method, url, **kwargs)
+        params = kwargs.get("params", {})
+        json_data = kwargs.get('json', {})
+        timeout = kwargs.pop('timeout', self.timeout)
 
-        method = params.pop('method', 'GET')
-        json_data = params.pop('json', {})
-        timeout = params.pop('timeout', None) or self.timeout
-
+        headers = kwargs.pop("headers", {})
         signed_headers = self._sign_request(method, url, params, json_data)
-        headers = self.headers.copy()
-        for item in signed_headers:
-            headers[item] = signed_headers[item]
+        headers.update(self.headers)
+        headers.update(signed_headers)
 
         try:
             with self.session.request(
-                method, url, timeout=timeout, headers=headers,
-                params=params, json=json_data
+                method, url, timeout=timeout, headers=headers, **kwargs
             ) as resp:
                 return self._raise_for_status(resp, resp.text, method=method)
         except requests.Timeout:
@@ -146,20 +146,33 @@ class AudibleAPI:
         except requests.ConnectionError:
             raise NetworkError
 
-    def get(self, path, **params):
-        api_version = params.pop("api_version", "1.0")
-        url = "/".join((self.api_root_url, api_version, path))
-        return self._request(url, **params)
+    def _split_kwargs(self, **kwargs):
+        requests_kwargs = [
+            "method", "url", "params", "data", "json", "headers", "cookies",
+            "files", "auth", "timeout", "allow_redirects", "proxies", "verify",
+            "stream", "cert"
+        ]
+        params = kwargs.pop("params", {})
+        for key in list(kwargs.keys()):
+            if key not in requests_kwargs:
+                params[key] = kwargs.pop(key)
 
-    def post(self, path, body, **params):
-        api_version = params.pop("api_version", "1.0")
-        url = "/".join((self.api_root_url, api_version, path))
-        return self._request(url, method="POST", json=body, **params)
+        return params, kwargs
 
-    def delete(self, path, **params):
-        api_version = params.pop("api_version", "1.0")
+    def get(self, path, api_version="1.0", **kwargs):
+        params, kwargs = self._split_kwargs(**kwargs)
         url = "/".join((self.api_root_url, api_version, path))
-        return self._request(url, method="POST", **params)
+        return self._request("GET", url, params=params, **kwargs)
+
+    def post(self, path, body, api_version="1.0", **kwargs):
+        params, kwargs = self._split_kwargs(**kwargs)
+        url = "/".join((self.api_root_url, api_version, path))
+        return self._request("POST", url, params=params, json=body, **kwargs)
+
+    def delete(self, path, api_version="1.0", **kwargs):
+        params, kwargs = self._split_kwargs(**kwargs)
+        url = "/".join((self.api_root_url, api_version, path))
+        return self._request("DELETE", url, params=params, **kwargs)
 
 
 class DeprecatedClient:
@@ -171,12 +184,13 @@ class DeprecatedClient:
                  captcha_callback=None, otp_callback=None):
 
         warnings.warn(
-            "this Client is deprecated since v0.2.0, use AudibleAPI class instead",
+            ("this Client is deprecated since v0.2.0, "
+             "use AudibleAPI class instead"),
             DeprecationWarning
         )
 
         if isinstance(local, dict):
-            local = audible.Locale(**local)
+            local = Locale(**local)
 
         if username and password:
             self.auth = LoginAuthenticator(username, password, locale=local,

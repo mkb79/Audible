@@ -1,12 +1,11 @@
 import asyncio
 
 import aiohttp
-
 import audible
 
 
 # ASYNC FUNCTIONALITY
-async def get_book_infos(asin):
+async def get_book_infos(client, asin):
     try:
         book, _ = await client.get(
             f"library/{asin}",
@@ -38,7 +37,7 @@ async def main(auth):
         # books = await asyncio.gather(*(dl_book(asin) for asin in asins))
         tasks = []
         for asin in asins:
-            tasks.append(asyncio.ensure_future(get_book_infos(asin)))
+            tasks.append(asyncio.ensure_future(get_book_infos(client, asin)))
         books = await asyncio.gather(*tasks)
 
         for book in books:
