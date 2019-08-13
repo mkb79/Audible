@@ -1,6 +1,5 @@
 import base64
 import binascii
-import ctypes
 from datetime import datetime
 import json
 import logging
@@ -8,7 +7,7 @@ import math
 import os
 import pathlib
 import struct
-from typing import Dict, Tuple, Union
+from typing import Dict, List, Tuple, Union
 
 from Crypto.Cipher import AES
 from Crypto.Hash import SHA256
@@ -162,85 +161,64 @@ class AESCipher:
             raise ValueError("encryption must be \"json\" or \"bytes\".")
 
 
-def encrypt_metadata(metadata: str) -> str:
-    """
-    Encrypts metadata to be used to log in to amazon.
+# constants used for encrypt/decrypt metadata
+WRAP_CONSTANT = 2654435769
+CONSTANTS = [1888420705, 2576816180, 2347232058, 874813317]
 
-    """
-    checksum = binascii.crc32(metadata.encode()) & 0xffffffff
-    checksum = checksum.to_bytes(4, byteorder='big').hex().upper()
 
-    object_bytes = f"{checksum}#{metadata}".encode()
+def _data_to_int_list(data: Union[str, bytes]) -> List[int]:
+    data_bytes = data.encode() if isinstance(data, str) else data
+    data_list_int = []
+    for i in range(0, len(data_bytes), 4):
+        data_list_int.append(int.from_bytes(data_bytes[i:i+4], "little"))
 
-    temp2 = []
-    for i in range(0, len(object_bytes), 4):
-        data = int.from_bytes(object_bytes[i:i+4], 'little')
-        temp2.append(data)
+    return data_list_int
 
-    wrap_constant = 2654435769
-    constants = [1888420705, 2576816180, 2347232058, 874813317]
 
-    rounds = math.ceil(len(object_bytes) / 4)
-    minor_rounds = math.floor(6 + (52 / rounds))
-    first = temp2[0]
-    last = temp2[rounds - 1]
+def _list_int_to_bytes(data: List[int]) -> bytearray:
+    data_list = data
+    data_bytes = bytearray()
+    for i in data_list:
+        data_bytes += i.to_bytes(4, 'little')
 
+    return data_bytes
+
+
+def _encrypt_data(data: List[int]) -> List[int]:
+    temp2 = data
+    rounds = len(temp2)
+    minor_rounds = int(6 + (52 / rounds // 1))
+    last = temp2[-1]
     inner_roll = 0
-    while minor_rounds > 0:
-        minor_rounds -= 1
 
-        inner_roll += wrap_constant
+    for _ in range(minor_rounds):
+        inner_roll += WRAP_CONSTANT
         inner_variable = inner_roll >> 2 & 3
 
         for i in range(rounds):
             first = temp2[(i + 1) % rounds]
             temp2[i] += ((last >> 5 ^ first << 2)
-                         + (first >> 3 ^ last << 4) ^ (inner_roll ^ first)
-                         + (constants[i & 3 ^ inner_variable] ^ last))
-            temp2[i] = ctypes.c_uint32(temp2[i]).value
-            last = temp2[i]
+                     + (first >> 3 ^ last << 4) ^ (inner_roll ^ first)
+                     + (CONSTANTS[i & 3 ^ inner_variable] ^ last))
+            last = temp2[i] = temp2[i] & 0xffffffff
 
-    final_round = []
-    for i in range(rounds):
-        data2 = temp2[i].to_bytes(4, 'little')
-        final_round.append(data2)
-
-    final_round = b"".join(final_round)
-    base64_encoded = base64.standard_b64encode(final_round)
-
-    final = f"ECdITeCs:{base64_encoded.decode()}"
-
-    return final
+    return temp2
 
 
-def decrypt_metadata(metadata: str) -> str:
-    """Decrypt metadata. For testing purposes only."""
-    metadata = metadata.lstrip("ECdITeCs:")
-
-    final_round = base64.b64decode(metadata)
-    temp2 = []
-
-    for i in range(0, len(final_round), 4):
-        data = int.from_bytes(final_round[i:i+4], 'little')
-        temp2.append(data)
-
+def _decrypt_data(data: List[int]) -> List[int]:
+    temp2 = data
     rounds = len(temp2)
-    minor_rounds = math.floor(6 + (52 / rounds))
-
-    wrap_constant = 2654435769
-    constants = [1888420705, 2576816180, 2347232058, 874813317]
+    minor_rounds = int(6 + (52 / rounds // 1))
 
     inner_roll = 0
     inner_variable = 0
 
     for _ in range(minor_rounds + 1):
-        inner_roll += wrap_constant
+        inner_roll += WRAP_CONSTANT
         inner_variable = inner_roll >> 2 & 3
 
-    while minor_rounds > 0:
-        minor_rounds -= 1
-
-        inner_roll -= wrap_constant
+    for _ in range(minor_rounds):
+        inner_roll -= WRAP_CONSTANT
         inner_variable = inner_roll >> 2 & 3
 
         for i in range(rounds):
@@ -251,19 +229,56 @@ def decrypt_metadata(metadata: str) -> str:
 
             temp2[i] -= ((last >> 5 ^ first << 2)
                          + (first >> 3 ^ last << 4) ^ (inner_roll ^ first)
-                         + (constants[i & 3 ^ inner_variable] ^ last))
-            temp2[i] = ctypes.c_uint32(temp2[i]).value
-            last = temp2[i]
+                         + (CONSTANTS[i & 3 ^ inner_variable] ^ last))
+            last = temp2[i] = temp2[i] & 0xffffffff
 
-    object_bytes = []
-    for block in temp2:
-        for align in {0, 8, 16, 24}:
-            if block >> align & 255 != 0:
-                object_bytes.append(chr(block >> align & 255))
+    return temp2
 
-    object_bytes = "".join(object_bytes)
 
-    return object_bytes[9:]
+def  _generate_hex_checksum(data:str) -> str:
+    checksum_int = binascii.crc32(data.encode()) & 0xffffffff
+    return checksum_int.to_bytes(4, byteorder='big').hex().upper()
+
+
+def encrypt_metadata(metadata: str) -> str:
+    """
+    Encrypts metadata to be used to log in to amazon.
+
+    """
+    checksum = _generate_hex_checksum(metadata)
+
+    object_str = f"{checksum}#{metadata}"
+
+    object_list_int = _data_to_int_list(object_str)
+
+    object_list_int_enc = _encrypt_data(object_list_int)
+
+    object_bytes = _list_int_to_bytes(object_list_int_enc)
+
+    object_base64 = base64.b64encode(object_bytes)
+
+    return f"ECdITeCs:{object_base64.decode()}"
+
+
+def decrypt_metadata(metadata: str) -> str:
+    """Decrypt metadata. For testing purposes only."""
+    object_base64 = metadata.lstrip("ECdITeCs:")
+
+    object_bytes = base64.b64decode(object_base64)
+
+    object_list_int = _data_to_int_list(object_bytes)
+
+    object_list_int_dec = _decrypt_data(object_list_int)
+
+    object_bytes = _list_int_to_bytes(object_list_int_dec).rstrip(b"\0")
+
+    object_str = object_bytes.decode()
+
+    checksum, metadata = object_str.split("#", 1)
+
+    assert _generate_hex_checksum(metadata) == checksum
+
+    return metadata
 
 
 def now_to_unix_ms() -> int:
