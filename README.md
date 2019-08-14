@@ -26,7 +26,7 @@ The README for the latest stable release (v0.2.0) can be found [here](https://gi
 	- beautifulsoup4
 	- pbkdf2
 	- Pillow
-	- pycrypto
+	- pyaes
 	- python-box
 	- requests
 	- rsa 

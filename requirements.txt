@@ -2,7 +2,7 @@ aiohttp
 beautifulsoup4
 pbkdf2
 Pillow
-pycrypto
+pyaes
 python-box
 requests
 rsa

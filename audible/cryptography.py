@@ -1,6 +1,8 @@
 import base64
 import binascii
 from datetime import datetime
+from hashlib import sha256 as SHA256
+import hmac as HMAC
 import json
 import logging
 import math
@@ -9,9 +11,8 @@ import pathlib
 import struct
 from typing import Dict, List, Tuple, Union
 
-from Crypto.Cipher import AES
-from Crypto.Hash import SHA256
 from pbkdf2 import PBKDF2
+from pyaes import AESModeOfOperationCBC, Encrypter, Decrypter
 
 
 _crypto_logger = logging.getLogger('audible.crypto')
@@ -44,12 +45,13 @@ class AESCipher:
 
     def __init__(self, password: str, *, key_size: int = 32,
                  salt_marker: bytes = b"$", kdf_iterations: int = 1000,
-                 hashmod=SHA256) -> None:
+                 hashmod=SHA256, mac=HMAC) -> None:
 
         self.password = password
         self.key_size = key_size
         self.hashmod = hashmod
-        self.bs = AES.block_size
+        self.mac = mac
+        self.bs = 16
         
         if not 1 <= len(salt_marker) <= 6:
             raise ValueError('The salt_marker must be one to six bytes long.')
@@ -70,15 +72,15 @@ class AESCipher:
                   + self.salt_marker)
         salt = os.urandom(bs - len(header))
         kdf = PBKDF2(self.password, salt, min(self.kdf_iterations, 65535),
-                     self.hashmod)
+                     self.hashmod, self.mac)
         key = kdf.read(self.key_size)
         iv = os.urandom(bs)
-        cipher = AES.new(key, AES.MODE_CBC, iv)
+        encrypter = Encrypter(AESModeOfOperationCBC(key, iv))
+
+        encrypted = encrypter.feed(data)
+        encrypted += encrypter.feed()
     
-        padding_data = data + (bs - len(data) % bs) * chr(bs - len(data) % bs)
-        encrypted_data = cipher.encrypt(padding_data)
-    
-        return (header+salt), iv, encrypted_data
+        return (header+salt), iv, encrypted
 
     def _decrypt(self, salt: bytes, iv: bytes, encrypted_data: bytes) -> str:
         mlen = len(self.salt_marker)
@@ -93,14 +95,15 @@ class AESCipher:
         if kdf_iterations >= 65536:
             raise ValueError('kdf_iterations must be <= 65535.')
 
-        kdf = PBKDF2(self.password, salt, self.kdf_iterations, self.hashmod)
+        kdf = PBKDF2(self.password, salt, self.kdf_iterations,
+                     self.hashmod, self.mac)
         key = kdf.read(self.key_size)
-        cipher = AES.new(key, AES.MODE_CBC, iv)
+        decrypter = Decrypter(AESModeOfOperationCBC(key, iv))
 
-        decrypted_data = cipher.decrypt(encrypted_data)
-        unpadding_data = decrypted_data[:-ord(decrypted_data[len(decrypted_data)-1:])]
+        decrypted = decrypter.feed(encrypted_data)
+        decrypted += decrypter.feed()
 
-        return unpadding_data.decode("utf-8")
+        return decrypted.decode("utf-8")
 
     def to_dict(self, data: str) -> Dict[str, str]:
         salt, iv, encrypted_data = self._encrypt(data)
@@ -209,9 +212,7 @@ def _decrypt_data(data: List[int]) -> List[int]:
     temp2 = data
     rounds = len(temp2)
     minor_rounds = int(6 + (52 / rounds // 1))
-
     inner_roll = 0
-    inner_variable = 0
 
     for _ in range(minor_rounds + 1):
         inner_roll += WRAP_CONSTANT
@@ -235,7 +236,7 @@ def _decrypt_data(data: List[int]) -> List[int]:
     return temp2
 
 
-def  _generate_hex_checksum(data:str) -> str:
+def _generate_hex_checksum(data: str) -> str:
     checksum_int = binascii.crc32(data.encode()) & 0xffffffff
     return checksum_int.to_bytes(4, byteorder='big').hex().upper()
 
