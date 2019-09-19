@@ -3,6 +3,5 @@ beautifulsoup4
 pbkdf2
 Pillow
 pyaes
-python-box
 requests
 rsa

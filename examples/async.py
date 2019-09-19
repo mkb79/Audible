@@ -8,15 +8,17 @@ import audible
 async def get_book_infos(client, asin):
     try:
         book, _ = await client.get(
-            f"library/{asin}",
-            response_groups=(
-                "contributors, media, price, reviews, product_attrs, "
-                "product_extended_attrs, product_desc, product_plan_details, "
-                "product_plans, rating, sample, sku, series, ws4v, origin, "
-                "relationships, review_attrs, categories, badge_types, "
-                "category_ladders, claim_code_url, is_downloaded, pdf_url, "
-                "is_returnable, origin_asin, percent_complete, provided_review"
-            )
+            path=f"library/{asin}",
+            params={
+                "response_groups": (
+                    "contributors, media, price, reviews, product_attrs, "
+                    "product_extended_attrs, product_desc, product_plan_details, "
+                    "product_plans, rating, sample, sku, series, ws4v, origin, "
+                    "relationships, review_attrs, categories, badge_types, "
+                    "category_ladders, claim_code_url, is_downloaded, pdf_url, "
+                    "is_returnable, origin_asin, percent_complete, provided_review"
+                )
+            }
         )
         return book
     except Exception as e:
@@ -29,8 +31,10 @@ async def main(auth):
         print(repr(client))
 
         library, _ = await client.get(
-            "library",
-            num_results=999
+            path="library",
+            params={
+                "num_results": 999
+            }
         )
         asins = [book["asin"] for book in library["items"]]
 
@@ -70,7 +74,6 @@ if __name__ == "__main__":
     # authenticate with file
     auth = audible.FileAuthenticator(
         filename="FILENAME",
-        encryption="json",
         password="PASSWORD"
     )
     loop = asyncio.get_event_loop()

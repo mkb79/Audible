@@ -1,167 +1,219 @@
 import base64
 import binascii
 from datetime import datetime
-from hashlib import sha256 as SHA256
-import hmac as HMAC
+import io
 import json
-import logging
 import math
-import os
-import pathlib
-import struct
-from typing import Dict, List, Tuple, Union
+from typing import Any, Dict, List, Union
+from urllib.parse import urlencode, parse_qs
 
-from pbkdf2 import PBKDF2
-from pyaes import AESModeOfOperationCBC, Encrypter, Decrypter
-
-
-_crypto_logger = logging.getLogger('audible.crypto')
+from bs4 import BeautifulSoup
+from PIL import Image
+import requests
 
 
-class AESCipher:
-    """Encrypt/Decrypt data using password to generate key. The encryption
-    algorithm used is symmetric AES in cipher-block chaining (CBC) mode.
+USER_AGENT = ("Mozilla/5.0 (iPhone; CPU iPhone OS 12_3_1 like Mac OS X) "
+              "AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148")
+
+
+def default_captcha_callback(captcha_url: str) -> str:
+    """Helper function for handling captcha."""
+    # on error print captcha url instead of display captcha
+    try:
+        captcha = requests.get(captcha_url).content
+        f = io.BytesIO(captcha)
+        img = Image.open(f)
+        img.show()
+    except:
+        print(captcha_url)
+
+    guess = input("Answer for CAPTCHA: ")
+    return str(guess).strip().lower()
+
+
+def default_otp_callback() -> str:
+    """Helper function for handling 2-factor authentication."""
+    guess = input("OTP Code: ")
+    return str(guess).strip().lower()
+
+
+def get_soup(resp):
+    return BeautifulSoup(resp.text, "html.parser")
+
+
+def get_inputs_from_soup(soup) -> Dict[str, str]:
+    inputs = {}
+    for node in soup.select("input[type=hidden]"):
+        if node["name"] and node["value"]:
+            inputs[node["name"]] = node["value"]
+    return inputs
+
+
+def build_oauth_url(countryCode: str, domain: str, marketPlaceId: str) -> str:
+    oauth_params = {
+        "openid.oa2.response_type": "token",
+        "openid.return_to": f"https://www.amazon.{domain}/ap/maplanding",
+        "openid.assoc_handle": f"amzn_audible_ios_{countryCode}",
+        "openid.identity": ("http://specs.openid.net/auth/2.0/"
+                            "identifier_select"),
+        "pageId": "amzn_audible_ios",
+        "accountStatusPolicy": "P1",
+        "openid.claimed_id": ("http://specs.openid.net/auth/2.0/"
+                              "identifier_select"),
+        "openid.mode": "checkid_setup",
+        "openid.ns.oa2": "http://www.amazon.com/ap/ext/oauth/2",
+        "openid.oa2.client_id": ("device:6a52316c62706d53427a57355"
+                                 "05a76477a45375959566674327959465"
+                                 "a6374424a53497069546d45234132435"
+                                 "a4a5a474c4b324a4a564d"),
+        "openid.ns.pape": "http://specs.openid.net/extensions/pape/1.0",
+        "marketPlaceId": marketPlaceId,
+        "openid.oa2.scope": "device_auth_access",
+        "forceMobileLayout": "true",
+        "openid.ns": "http://specs.openid.net/auth/2.0",
+        "openid.pape.max_auth_age": "0"
+    }
     
-    ``key_size`` may be 16, 24 or 32 (default).
-    The key is derived via the PBKDF2 key derivation function (KDF) from the
-    password and a random salt of 16 bytes (the AES block size) minus the
-    length of the salt header (see below).
-    The hash function used by PBKDF2 is SHA256 per default. You can pass a
-    different hash function module via the ``hashmod`` argument. The module
-    must adhere to the Python API for Cryptographic Hash Functions (PEP 247).
-    PBKDF2 uses a number of iterations of the hash function to derive the key,
-    which can be set via the ``kdf_iterations` keyword argumeent. The default
-    number is 1000 and the maximum 65535.
-    The header and the salt are written to the first block of the encrypted
-    output (bytes mode) or written as key/value pairs (dict mode). The header
-    consist of the number of KDF iterations encoded as a big-endian word bytes
-    wrapped by ``salt_marker`` on both sides. With the default value of
-    ``salt_marker = b'$'``, the header size is thus 4 and the salt 12 bytes.
-    The salt marker must be a byte string of 1-6 bytes length.
-    The last block of the encrypted output is padded with up to 16 bytes, all
-    having the value of the length of the padding.
-    All values in dict mode are written as base64 encoded string.
-    """
+    return f"https://www.amazon.{domain}/ap/signin?{urlencode(oauth_params)}"
 
-    def __init__(self, password: str, *, key_size: int = 32,
-                 salt_marker: bytes = b"$", kdf_iterations: int = 1000,
-                 hashmod=SHA256, mac=HMAC) -> None:
 
-        self.password = password
-        self.key_size = key_size
-        self.hashmod = hashmod
-        self.mac = mac
-        self.bs = 16
-        
-        if not 1 <= len(salt_marker) <= 6:
-            raise ValueError('The salt_marker must be one to six bytes long.')
-        elif not isinstance(salt_marker, bytes):
-            raise TypeError('salt_marker must be a bytes instance.')
+def check_for_captcha(soup):
+    captcha = soup.find("img", alt=lambda x: x and "CAPTCHA" in x)
+    return True if captcha else False
+
+
+def extract_captcha_url(soup):
+    captcha = soup.find("img", alt=lambda x: x and "CAPTCHA" in x)
+    return captcha["src"] if captcha else None
+
+
+def check_for_mfa(soup):
+    mfa = soup.find("form", id=lambda x: x and "auth-mfa-form" in x)
+    return True if mfa else False
+
+
+def check_for_choice_mfa(soup):
+    mfa_choice = soup.find("form", id="auth-select-device-form")
+    return True if mfa_choice else False
+
+
+def check_for_cvf(soup):
+    cvf = soup.find("div", id="cvf-page-content")
+    return True if cvf else False
+
+
+def extract_cookies_from_session(session):
+    cookies = dict()
+    for cookie in session.cookies:
+        cookies[cookie.name] = cookie.value.replace(r'"', r'')
+    return cookies
+
+
+def extract_token_from_url(url):
+    parsed_url = parse_qs(url)
+    return parsed_url["openid.oa2.access_token"][0]
+
+
+def login(username: str, password: str, countryCode: str,
+          domain: str, marketPlaceId: str, captcha_callback=None,
+          otp_callback=None) -> Dict[str, Any]:
+
+    amazon_url = f"https://www.amazon.{domain}"
+    sign_in_url = amazon_url + "/ap/signin"
+    cvf_url = amazon_url + "/ap/cvf/verify"
+
+    session = requests.Session()
+    session.headers.update({"User-Agent": USER_AGENT})
+
+    while "session-token" not in session.cookies:
+        session.get(amazon_url)
+
+    oauth_url = build_oauth_url(countryCode, domain, marketPlaceId)
+    oauth_resp = session.get(oauth_url)
+    oauth_soup = get_soup(oauth_resp)
+
+    login_inputs = get_inputs_from_soup(oauth_soup)
+    login_inputs["email"] = username
+    login_inputs["password"] = password
+    metadata = meta_audible_app(USER_AGENT, amazon_url)
+    login_inputs["metadata1"] = encrypt_metadata(metadata)
+
+    login_resp = session.post(sign_in_url, data=login_inputs)
+    login_soup = get_soup(login_resp)
+
+    # check for captcha
+    while check_for_captcha(login_soup):
+        captcha_url = extract_captcha_url(login_soup)
+        if captcha_callback:
+            guess = captcha_callback(captcha_url)
         else:
-            self.salt_marker = salt_marker
+            guess = default_captcha_callback(captcha_url)
 
-        if kdf_iterations >= 65536:
-            raise ValueError('kdf_iterations must be <= 65535.')
+        inputs = get_inputs_from_soup(login_soup)
+        inputs["guess"] = guess
+        inputs["use_image_captcha"] = "true"
+        inputs["use_audio_captcha"] = "false"
+        inputs["showPasswordChecked"] = "false"
+        inputs["email"] = username
+        inputs["password"] = password
+
+        login_resp = session.post(sign_in_url, data=inputs)
+        login_soup = get_soup(login_resp)
+
+    # check for choice mfa
+    # https://www.amazon.de/ap/mfa/new-otp
+    while check_for_choice_mfa(login_soup):
+        inputs = get_inputs_from_soup(login_soup)
+        for node in login_soup.select("div[data-a-input-name=otpDeviceContext]"):
+            # auth-TOTP, auth-SMS, auth-VOICE
+            if "auth-TOTP" in node["class"]:
+                inp_node = node.find("input")
+                inputs[inp_node["name"]] = inp_node["value"]
+
+        login_resp = session.post(amazon_url + "/ap/mfa", data=inputs)
+        login_soup = get_soup(login_resp)
+
+    # check for mfa (otp_code)
+    while check_for_mfa(login_soup):
+        if otp_callback:
+            otp_code = otp_callback()
         else:
-            self.kdf_iterations = kdf_iterations
+            otp_code = default_otp_callback()
 
-    def _encrypt(self, data: str) -> Tuple[bytes, bytes, bytes]:
-        bs = self.bs
-        header = (self.salt_marker
-                  + struct.pack('>H', self.kdf_iterations)
-                  + self.salt_marker)
-        salt = os.urandom(bs - len(header))
-        kdf = PBKDF2(self.password, salt, min(self.kdf_iterations, 65535),
-                     self.hashmod, self.mac)
-        key = kdf.read(self.key_size)
-        iv = os.urandom(bs)
-        encrypter = Encrypter(AESModeOfOperationCBC(key, iv))
+            inputs = get_inputs_from_soup(login_soup)
+        inputs["otpCode"] = otp_code
+        inputs["mfaSubmit"] = "Submit"
+        inputs["rememberDevice"] = "false"
 
-        encrypted = encrypter.feed(data)
-        encrypted += encrypter.feed()
-    
-        return (header+salt), iv, encrypted
+        login_resp = session.post(sign_in_url, data=inputs)
+        login_soup = get_soup(login_resp)
 
-    def _decrypt(self, salt: bytes, iv: bytes, encrypted_data: bytes) -> str:
-        mlen = len(self.salt_marker)
-        hlen = mlen * 2 + 2
-    
-        if salt[:mlen] == self.salt_marker and salt[mlen + 2:hlen] == self.salt_marker:
-            kdf_iterations = struct.unpack('>H', salt[mlen:mlen + 2])[0]
-            salt = salt[hlen:]
-        else:
-            kdf_iterations = self.kdf_iterations
-    
-        if kdf_iterations >= 65536:
-            raise ValueError('kdf_iterations must be <= 65535.')
+    # check for cvf
+    while check_for_cvf(login_soup):
+        inputs = get_inputs_from_soup(login_soup)
 
-        kdf = PBKDF2(self.password, salt, self.kdf_iterations,
-                     self.hashmod, self.mac)
-        key = kdf.read(self.key_size)
-        decrypter = Decrypter(AESModeOfOperationCBC(key, iv))
+        login_resp = session.post(cvf_url, data=inputs)
+        login_soup = get_soup(login_resp)
 
-        decrypted = decrypter.feed(encrypted_data)
-        decrypted += decrypter.feed()
+        inputs = get_inputs_from_soup(login_soup)
+        inputs["action"] = "code"
+        inputs["code"] = input("Code: ")
 
-        return decrypted.decode("utf-8")
+        login_resp = session.post(cvf_url, data=inputs)
+        login_soup = get_soup(login_resp)
 
-    def to_dict(self, data: str) -> Dict[str, str]:
-        salt, iv, encrypted_data = self._encrypt(data)
+    if login_resp.status_code != 404:
+        raise Exception("Unable to login")
 
-        return {"salt": base64.b64encode(salt).decode("utf-8"),
-                "iv": base64.b64encode(iv).decode("utf-8"),
-                "ciphertext": base64.b64encode(encrypted_data).decode("utf-8"),
-                "info": 'base64-encoded AES-CBC-256 of JSON object'}
+    access_token = extract_token_from_url(login_resp.url)
+    login_cookies = extract_cookies_from_session(session)
 
-    def from_dict(self, data: dict) -> str:
-        salt = base64.b64decode(data["salt"])
-        iv = base64.b64decode(data["iv"])
-        encrypted_data = base64.b64decode(data["ciphertext"])
+    session.close()
 
-        return self._decrypt(salt, iv, encrypted_data)
-
-    def to_bytes(self, data: str) -> bytes:
-        salt, iv, encrypted_data = self._encrypt(data)
-
-        return salt + iv + encrypted_data
-
-    def from_bytes(self, data: bytes) -> str:
-        bs = self.bs
-        salt = data[:bs]
-        iv = data[bs:2*bs]
-        encrypted_data = data[2*bs:]
-
-        return self._decrypt(salt, iv, encrypted_data)
-
-    def to_file(self, data: str, filename: Union[pathlib.Path, pathlib.WindowsPath],
-                encryption="json", indent=4):
-        if encryption == "json":
-            encrypted_dict = self.to_dict(data)
-            data_json = json.dumps(encrypted_dict, indent=indent)
-            filename.write_text(data_json)
-
-        elif encryption == "bytes":
-            encrypted_data = self.to_bytes(data)
-            filename.write_bytes(encrypted_data)
-
-        else:
-            raise ValueError("encryption must be \"json\" or \"bytes\"..")
-
-    def from_file(self, filename: Union[pathlib.Path, pathlib.WindowsPath],
-                  encryption="json"):
-        if encryption == "json":
-            encrypted_json = filename.read_text()
-            encrypted_dict = json.loads(encrypted_json)
-
-            return self.from_dict(encrypted_dict)
-
-        elif encryption == "bytes":
-            encrypted_data = filename.read_bytes()
-    
-            return self.from_bytes(encrypted_data)
-
-        else:
-            raise ValueError("encryption must be \"json\" or \"bytes\".")
+    return {
+        "access_token": access_token,
+        "login_cookies": login_cookies
+    }
 
 
 # constants used for encrypt/decrypt metadata
@@ -201,8 +253,8 @@ def _encrypt_data(data: List[int]) -> List[int]:
         for i in range(rounds):
             first = temp2[(i + 1) % rounds]
             temp2[i] += ((last >> 5 ^ first << 2)
-                     + (first >> 3 ^ last << 4) ^ (inner_roll ^ first)
-                     + (CONSTANTS[i & 3 ^ inner_variable] ^ last))
+                         + (first >> 3 ^ last << 4) ^ (inner_roll ^ first)
+                         + (CONSTANTS[i & 3 ^ inner_variable] ^ last))
             last = temp2[i] = temp2[i] & 0xffffffff
 
     return temp2
