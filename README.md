@@ -14,10 +14,6 @@
 Code and README are forked from omarroth‘s fantastic [audible.cr](https://github.com/omarroth/audible.cr) API written in crystal.
 The whole code is written with Pythonista for iOS.
 
-**This README is for the development tree only. The development tree contains many proof of concepts. Some needs still testing. Feel free to participate.**
-
-The README for the latest stable release (v0.2.0) can be found [here](https://github.com/mkb79/Audible/blob/master/README.md).
-
 ## Requirements
 
 - Python >= 3.6
@@ -32,13 +28,7 @@ The README for the latest stable release (v0.2.0) can be found [here](https://gi
 
 ## Installation
 
-```python
-# v0.2.0
-pip install audible
-
-# development tree
-pip install git+https://github.com/mkb79/audible.git@developing
-```
+`pip install audible`
 
 ## Usage
 
@@ -143,7 +133,6 @@ You can try to autodetect locales like so:
 
 ```python
 import audible
-from audible.localization import autodetect_locale
 
 # needs the Top Level Domain for the audible page in your country
 # example for uk
