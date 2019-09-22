@@ -1,17 +1,13 @@
-__all__ = [
-    'RequestError', 'StatusError', 'NotResponding', 'NetworkError',
-    'BadRequest', 'NotFoundError', 'ServerError', 'Unauthorized',
-    'RatelimitError', 'UnexpectedError'
-]
-
-
 class RequestError(Exception):
     """Base class for all errors"""
     pass
 
 
 class StatusError(RequestError):
-    """Base class for all errors except NotResponding and RatelimitDetectedError"""
+    """
+    Base class for all errors except NotResponding and
+    RatelimitDetectedError
+    """
     def __init__(self, resp, data):
         self.response = resp
         self.code = getattr(resp, 'status', None) or getattr(resp, 'status_code')

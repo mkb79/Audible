@@ -4,21 +4,25 @@ import audible
 # get library
 def get_library():
     books, _ = client.get(
-        "library",
-        response_groups=(
-            "contributors, media, product_desc, series,"
-            "product_extended_attrs, product_attrs"
-        ),
-        num_results=999,
-        page=1
+        path="library",
+        params={
+            "response_groups": (
+                "contributors, media, product_desc, series,"
+                "product_extended_attrs, product_attrs"
+            ),
+            "num_results": 999,
+            "page": 1
+        }
     )
     return books
 
 
 def _get_book_infos(asin):
     book, _ = client.get(
-        f"library/{asin}",
-        response_groups="relationships, product_desc, product_attrs, media"
+        path=f"library/{asin}",
+        params={
+            "response_groups": "relationships, product_desc, product_attrs, media"
+        }
     )
     book = book["item"]
 
@@ -44,7 +48,7 @@ def _get_book_infos(asin):
 
 def _get_download_link(asin, quality):
     data, _ = client.post(
-        f"content/{asin}/licenserequest",
+        path=f"content/{asin}/licenserequest",
         body={
             "drm_type": "Adrm",
             "consumption_type": "Download",
@@ -76,7 +80,6 @@ if __name__ == "__main__":
 
     auth = audible.FileAuthenticator(
         filename="FILENAME",
-        encryption="json",
         password=password
     )
     client = audible.AudibleAPI(auth)

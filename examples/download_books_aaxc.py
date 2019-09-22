@@ -46,9 +46,11 @@ if __name__ == "__main__":
     client = audible.AudibleAPI(auth)
 
     books, _ = client.get(
-        "library/books",
+        path="library/books",
         api_version="0.0",
-        purchaseAfterDate="01/01/1970"
+        params={
+            "purchaseAfterDate": "01/01/1970"
+        }
     )["books"]["book"]
 
     for book in books:

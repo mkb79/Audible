@@ -3,12 +3,14 @@ import pathlib
 from typing import Union
 
 
-LEVELS = {"debug": logging.DEBUG,
-          "info": logging.INFO,
-          "warn": logging.WARNING,
-          "warning": logging.WARNING,
-          "error": logging.ERROR,
-          "critical": logging.CRITICAL}
+LEVELS = {
+    "debug": logging.DEBUG,
+    "info": logging.INFO,
+    "warn": logging.WARNING,
+    "warning": logging.WARNING,
+    "error": logging.ERROR,
+    "critical": logging.CRITICAL
+}
 
 
 log_formatter = logging.Formatter(("%(asctime)s %(levelname)s [%(name)s] "

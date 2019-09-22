@@ -14,6 +14,10 @@
 Code and README are forked from omarroth‘s fantastic [audible.cr](https://github.com/omarroth/audible.cr) API written in crystal.
 The whole code is written with Pythonista for iOS.
 
+**This README is for the development tree only. The development tree contains many proof of concepts. Some needs still testing. Feel free to participate.**
+
+The README for the latest stable release (v0.2.0) can be found [here](https://github.com/mkb79/Audible/blob/master/README.md).
+
 ## Requirements
 
 - Python >= 3.6
@@ -22,8 +26,7 @@ The whole code is written with Pythonista for iOS.
 	- beautifulsoup4
 	- pbkdf2
 	- Pillow
-	- pycrypto
-	- python-box
+	- pyaes
 	- requests
 	- rsa 
 
@@ -48,7 +51,9 @@ import audible
 
 # example for US accounts
 auth = audible.LoginAuthenticator(
-    "EMAIL", "PASSWORD", locale="us"
+    "EMAIL",
+    "PASSWORD",
+    locale="us"
 )
 ```
 
@@ -62,10 +67,10 @@ client = audible.AudibleAPI(auth)
 
 - Save credentials
 
-*Hint: locale code are stored in file*
+*Hint: locale (country) code are stored in file*
 
 ```python
-auth.to_file("FILENAME", encryption=False)`
+auth.to_file("FILENAME", encryption=False)
 ```
 
 - Load credentials from file
@@ -77,7 +82,8 @@ auth = audible.FileAuthenticator("FILENAME")
 
 # to specify another locale code at restore
 auth = audible.FileAuthenticator(
-    "FILENAME", locale="some other locale"
+    "FILENAME",
+    locale="some other locale"
 )
 ```
 
@@ -89,18 +95,22 @@ auth = audible.FileAuthenticator(
 
 ```python
 library, _ = client.get(
-    "library", num_results=99, response_groups="media, sample"
+    path="library",
+    params={
+        "num_results": 999,
+        "response_groups": "media, sample"
+    }
 )
-print(library)
 
 # to specify another API version
 library, _ = client.get(
-    "library/books",
+    path="library/books",
     api_version="0.0",
-    purchaseAfterDate="01/01/1970",
-    sortInAscendingOrder="true"
+    params={
+        "purchaseAfterDate": "01/01/1970",
+        "sortInAscendingOrder": "true"
+    }
 )
-print(library)
 ```
 
 ### Localizations
@@ -118,16 +128,12 @@ You can provide custom locales with this code:
 ```python
 import audible
 
-# example for germany
+# example for uk
 custom_locale = audible.Locale(
-    amazon_login="https://www.amazon.de",
-    amazon_api="https://api.amazon.de",
-    audible_api="https://api.audible.de",
-    accept_language="de-DE",
-    marketPlaceId="AN7V1F1VY261K",
-    openid_assoc_handle="amzn_audible_ios_de",
-    oauth_lang="de-DE",
-    auth_register_domain=".amazon.de")
+    countryCode="uk",
+    domain="co.uk",
+    marketPlaceId="A2I9A3Q2GNFNGQ",
+)
 
 auth = audible.LoginAuthenticator(..., locale=custom_locale)
 client = audible.AudibleAPI(auth)
@@ -137,20 +143,37 @@ You can try to autodetect locales like so:
 
 ```python
 import audible
+from audible.localization import autodetect_locale
 
 # needs the Top Level Domain for the audible page in your country
 # example for uk
-custom_locale = audible.Locale.from_autodetect_locale("co.uk")
+custom_locale = autodetect_locale("co.uk")
 
 # look if everything is fine
-print(custom_locale.to_dict())
+print(custom_locale)
 
 # create Authenticator
+custom_locale = audible.Locale(**custom_locale)
 auth = audible.LoginAuthenticator(..., locale=custom_locale)
 ```
 
 
 ### Load and Save Credentials
+
+#### Saved data
+
+If you save a session following data will be stored in file:
+
+- login_cookies
+- access_token
+- refresh_token
+- adp_token
+- device_private_key
+- locale_code
+- store_authentication_cookie (*new*)
+- device_info (*new*)
+- customer_info (*new*)
+- expires
 
 #### Unencrypted Load/Save
 
@@ -159,7 +182,7 @@ Credentials can be saved any time to file like so:
 ```python
 import audible
 
-auth = audible.LoginAuthenticator("EMAIL", "PASSWORD", locale="us")
+auth = audible.LoginAuthenticator(...)
 auth.to_file("FILENAME", encryption=False)
 
 # Sometime later...
@@ -168,13 +191,6 @@ auth = audible.FileAuthenticator("FILENAME")
 
 Authenticator sets the filename as the default value when loading from or save to file simply run to overwrite old file
 `auth.to_file()`. No filename is needed.
-
-To prevent remembering filename (and encryption style) you can do following:
-
-```python
-auth = audible.FileAuthenticator(..., set_default=False)
-auth = audible.FileAuthenticator(..., set_default=False)
-```
 
 #### Encrypted Load/Save
 
@@ -185,32 +201,33 @@ Credentials can be saved any time to encrypted file like so:
 ```python
 import audible
 
-auth = audible.LoginAuthenticator("EMAIL", "PASSWORD", locale="us")
+auth = audible.LoginAuthenticator(...)
+
 # save credentials in json style
-auth.to_file("FILENAME", "PASSWORD", encryption="json")
+auth.to_file(
+    "FILENAME",
+    "PASSWORD",
+    encryption="json"
+)
+
 # in bytes style
-auth.to_file("FILENAME", "PASSWORD", encryption="bytes")
+auth.to_file(
+    "FILENAME",
+    "PASSWORD",
+    encryption="bytes"
+)
 
 # Sometime later...
-# load credentials from json style
+# load credentials
+# encryption style are autodetected
 auth = audible.FileAuthenticator(
-    "FILENAME", "PASSWORD", encryption="json"
-)
-# from bytes style
-auth = audible.FileAuthenticator(
-    "FILENAME", "PASSWORD", encryption="bytes"
+    "FILENAME",
+    "PASSWORD"
 )
 ```
 
-Authenticator sets the filename and encryption style as the default values when loading from or save to file simply run to overwrite old file with same password and encryption style
+Authenticator sets the filename, password and encryption style as the default values when loading from or save to file simply run to overwrite old file with same password and encryption style
 `auth.to_file()`. No filename is needed.
-
-To prevent remembering filename (and password/encryption style)
-
-```python
-auth = audible.FileAuthenticator(..., set_default=False)
-auth = audible.FileAuthenticator(..., set_default=False)
-```
 
 ##### Advanced use of encryption/decryption:
 
@@ -233,6 +250,24 @@ The salt marker must be a byte string of 1-6 bytes length.
 The last block of the encrypted output is padded with up to 16 bytes, all having the value of the length of the padding.
 In json style all values are written as base64 encoded string.
 
+#### Remove encryption
+
+To remove encryption from file (or save as new file):
+
+```python
+from audible.aescipher import remove_file_encryption
+
+encrypted_file = "FILENAME"
+decrypted_file = "FILENAME"
+password = "PASSWORD"
+
+remove_file_encryption(
+    encrypted_file,
+    decrypted_file,
+    password
+)
+```
+
 ### CAPTCHA
 
 Logging in currently requires answering a CAPTCHA. By default Pillow is used to show captcha and user prompt will be provided using `input`, which looks like:
@@ -254,7 +289,9 @@ def custom_captcha_callback(captcha_url):
     return "My answer for CAPTCHA"
 
 auth = audible.LoginAuthenticator(
-    "EMAIL", "PASSWORD", locale="us",
+    "EMAIL",
+    "PASSWORD",
+    locale="us",
     captcha_callback=custom_captcha_callback
 )
 ```
@@ -277,7 +314,9 @@ def custom_otp_callback():
     return "My answer for otp code"
 
 auth = audible.LoginAuthenticator(
-    "EMAIL", "PASSWORD", locale="us",
+    "EMAIL",
+    "PASSWORD",
+    locale="us",
     otp_callback=custom_otp_callback
 )
 ```
@@ -338,7 +377,7 @@ x-adp-signature: AAAAAAAA...:2019-02-16T00:00:01.000000000Z,
 x-adp-token: {enc:...}
 ```
 
-As reference for other implementations, a client **must** store cookies from a successful Amazon login and a working `access_token` in order to renew `refresh_token`, `adp_token`, etc from `/auth/register`.
+As reference for other implementations, a client **must** store a working `access_token` from a successful Amazon login in order to renew `refresh_token`, `adp_token`, etc from `/auth/register`.
 
 ### Refresh access token
 
@@ -355,8 +394,6 @@ auth.refresh_token(force=true)
 ```
 
 *Hint: If you saved your session before don't forget to save again.*
-
-
 
 ### Deregister device
 
@@ -392,11 +429,15 @@ Responses will often provide very little info without `response_groups` specifie
 
 #### Deprecated: Use `/1.0/library`
 
+params:
+
 - purchaseAfterDate: mm/dd/yyyy
 - sortByColumn: [SHORT_TITLE, strTitle, DOWNLOAD_STATUS, RUNNING_TIME, sortPublishDate, SHORT_AUTHOR, sortPurchDate, DATE_AVAILABLE]
 - sortInAscendingOrder: [true, false]
 
 ### GET /1.0/library
+
+params:
 
 - num_results: \\d+ (max: 1000)
 - page: \\d+
@@ -405,6 +446,8 @@ Responses will often provide very little info without `response_groups` specifie
 - sort_by: [-Author, -Length, -Narrator, -PurchaseDate, -Title, Author, Length, Narrator, PurchaseDate, Title]
 
 ### GET /1.0/library/%{asin}
+
+params:
 
 - response_groups: [contributors, media, price, product_attrs, product_desc, product_extended_attrs, product_plan_details, product_plans, rating, sample, sku, series, reviews, ws4v, origin, relationships, review_attrs, categories, badge_types, category_ladders, claim_code_url, is_downloaded, is_finished, is_returnable, origin_asin, pdf_url, percent_complete, provided_review]
 
@@ -416,6 +459,8 @@ Responses will often provide very little info without `response_groups` specifie
 
 ### GET /1.0/wishlist
 
+params:
+
 - num_results: \\d+ (max: 50)
 - page: \\d+
 - response_groups: [contributors, media, price, product_attrs, product_desc, product_extended_attrs, product_plan_details, product_plans, rating, sample, sku]
@@ -423,7 +468,9 @@ Responses will often provide very little info without `response_groups` specifie
 
 ### POST /1.0/wishlist
 
-- B asin : String
+body:
+
+- asin : String
 
 Example request body:
 
@@ -441,16 +488,22 @@ Returns 204 and removes the item from the wishlist using the given `asin`.
 
 ### GET /1.0/badges/progress
 
+params:
+
 - locale: en_US
 - response_groups: brag_message
 - store: Audible
 
 ### GET /1.0/badges/metadata
 
+params:
+
 - locale: en_US
 - response_groups: all_levels_metadata
 
 ### GET /1.0/account/information
+
+params:
 
 - response_groups: [delinquency_status, customer_benefits, subscription_details_payment_instrument, plan_summary, subscription_details]
 - source: [Enterprise, RodizioFreeBasic, AyceRomance, AllYouCanEat, AmazonEnglish, ComplimentaryOriginalMemberBenefit, Radio, SpecialBenefit, Rodizio]
