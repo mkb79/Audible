@@ -140,6 +140,8 @@ class AudibleAPI:
             with self.session.request(
                 method, url, timeout=timeout, headers=headers, **kwargs
             ) as resp:
+                if resp.encoding == None:
+                    resp.encoding = "utf-8"
                 return self._raise_for_status(resp, resp.text, method=method)
         except requests.Timeout:
             raise NotResponding
