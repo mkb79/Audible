@@ -7,6 +7,7 @@ import requests
 
 # get download link(s) for book
 def _get_download_link(client, asin, codec="LC_128_44100_stereo"):
+    # need at least v0.2.1a4
     try:
         content_url = (f"https://cde-ta-g7g.amazon.com/FionaCDEServiceEngine/"
                        f"FSDownloadContent")
@@ -15,42 +16,30 @@ def _get_download_link(client, asin, codec="LC_128_44100_stereo"):
             'currentTransportMethod': 'WIFI',
             'key': asin,
             'codec': codec
-        }
-
-        try:
-            # since v0.2.1a4
-            r = client._request(
-                "GET",
-                url=content_url,
-                params=params,
-                allow_redirects=False
-            )
-        except:
-            # before v0.2.1a4
-            headers = dict()
-            signed_headers = client._sign_request('GET', content_url, params, {})
-            headers.update(client.headers)
-            headers.update(signed_headers)
-
-            r = client.session.get(
-                content_url,
-                headers=headers,
-                params=params,
-                json={},
-                allow_redirects=False
-            )
-
+        }            
+        r, _ = client._request(
+            "GET",
+            url=content_url,
+            params=params,
+            allow_redirects=False
+        )
         link = r.headers['Location']
-    
-        # prepare link
-        # see https://github.com/mkb79/Audible/issues/3#issuecomment-518099852
-        tld = client.auth.locale.audible_api.split("api.audible.")[1]
+        tld = client.auth.locale.domain
         new_link = link.replace("cds.audible.com", f"cds.audible.{tld}")
         return new_link
-
     except Exception as e:
-        print(f"Error: {e}")
-        return
+        try:
+            link = e.response.headers['Location']
+        
+            # prepare link
+            # see https://github.com/mkb79/Audible/issues/3#issuecomment-518099852
+            tld = client.auth.locale.domain
+            new_link = link.replace("cds.audible.com", f"cds.audible.{tld}")
+            return new_link
+
+        except Exception as e:
+            print(f"Error: {e}")
+            return
 
 
 def download_file(url):
