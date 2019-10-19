@@ -1,6 +1,7 @@
 import logging
 import pathlib
 import re
+import time
 from typing import Any, Optional, Union
 
 from .localization import Locale
@@ -140,3 +141,11 @@ def _check_encryption(value) -> None:
         raise TypeError("encryption has wrong type")
     if value not in allowed_values:
         raise ValueError("encryption has wrong value")
+
+
+class ElapsedTime:
+    def __init__(self):
+        self.start_time = time.time()
+
+    def __call__(self):
+        return time.time() - self.start_time
