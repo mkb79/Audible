@@ -1,6 +1,6 @@
 from os import system
 import pathlib
-from setuptools import setup
+from setuptools import setup, find_packages
 import sys
 
 
@@ -15,10 +15,8 @@ if sys.version_info < (3, 6, 0):
 
 here = pathlib.Path(__file__).parent
 
-packages = ['audible']
-
 about = {}
-exec((here / 'audible' / '_version.py').read_text('utf-8'), about)
+exec((here / 'src' / 'audible' / '_version.py').read_text('utf-8'), about)
 
 long_description = (here / 'README.md').read_text('utf-8')
 
@@ -28,8 +26,9 @@ requires = (here / 'requirements.txt').read_text('utf-8').split()
 setup(
     name=about['__title__'],
     version=about['__version__'],
-    packages=packages,
-    package_dir={'audible': 'audible'},
+    packages=find_packages('src'),
+    package_dir={'': 'src'},
+    include_package_data=True,
     description=about['__description__'],
     url=about['__url__'],
     license=about['__license__'],
@@ -46,7 +45,6 @@ setup(
     install_requires=requires,
     python_requires='>=3.6',
     keywords='Audible, API, async',
-    include_package_data=True,
     long_description=long_description,
     long_description_content_type='text/markdown',
 )
