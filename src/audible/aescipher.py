@@ -217,13 +217,3 @@ def remove_file_encryption(source, target, password, **kwargs):
         pathlib.Path(target).write_text(decrypted)
     else:
         raise Exception("file is not encrypted")
-
-
-cipher = AESCipher('audible', kdf_iterations=65535)
-text = 'super secret text'
-enc = cipher.to_dict(text)
-
-cipher = AESCipher('audible')
-dec = cipher.from_dict(enc)
-print(dec)
-
