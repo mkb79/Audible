@@ -64,6 +64,34 @@ class AudibleAPI:
     def close(self):
         return self.session.close()
 
+    def switch_marketplace(self, locale):
+        locale = test_convert("locale", locale)
+        domain = locale.domain
+        self.api_root_url = f"https://api.audible.{domain}"
+
+    @property
+    def marketplace(self):
+        for value in LOCALE_TEMPLATES.values():
+            domain = value["domain"]
+            api_root_for_domain = f"https://api.audible.{domain}"
+
+            if api_root_for_domain == self.api_root_url:
+                return value["countryCode"]
+
+    def switch_user(self, auth: Union[LoginAuthenticator, FileAuthenticator]):
+        self.auth = auth
+        self.adp_token = auth.get("adp_token")
+        self.device_private_key = auth.get("device_private_key")
+
+    def get_user_profile(self):
+        self.auth.refresh_access_token()
+        return self.auth.user_profile()
+
+    @property
+    def user_name(self):
+        user_profile = self.get_user_profile()
+        return user_profile['name']
+
     def _raise_for_status(self, resp, text, *, method=None):
         try:
             data = json.loads(text)
@@ -126,34 +154,6 @@ class AudibleAPI:
             raise NotResponding
         except aiohttp.ServerDisconnectedError:
             raise NetworkError
-
-    def switch_marketplace(self, locale):
-        locale = test_convert("locale", locale)
-        domain = locale.domain
-        self.api_root_url = f"https://api.audible.{domain}"
-
-    @property
-    def marketplace(self):
-        for value in LOCALE_TEMPLATES.values():
-            domain = value["domain"]
-            api_root_for_domain = f"https://api.audible.{domain}"
-
-            if api_root_for_domain == self.api_root_url:
-                return value["countryCode"]
-
-    def switch_user(self, auth: Union[LoginAuthenticator, FileAuthenticator]):
-        self.auth = auth
-        self.adp_token = auth.get("adp_token")
-        self.device_private_key = auth.get("device_private_key")
-
-    def get_user_profile(self):
-        self.auth.refresh_access_token()
-        return self.auth.user_profile()
-
-    @property
-    def user_name(self):
-        user_profile = self.get_user_profile()
-        return user_profile['name']
 
     def _request(self, method, url, **kwargs):
         if self.is_async:  # return a coroutine
