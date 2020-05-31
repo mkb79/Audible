@@ -306,9 +306,9 @@ auth = audible.LoginAuthenticator(
 )
 ```
 
-### 2FA
+### 2FA (OTP Code)
 
-If 2-factor-authentication by default is activated a user prompt will be provided using `input`, which looks like:
+If 2-factor-authentication is activated a user prompt will be provided using `input`, which looks like:
 
 ```
 "OTP Code: "
@@ -331,6 +331,30 @@ auth = audible.LoginAuthenticator(
 )
 ```
 
+### CVF Code
+
+If amazon detects some issues (too many logins in short times, etc.) and 2FA is deactivated, amazon asks for a CVF verify code. in this cases, amazon sends a Mail or SMS with a code, you have to enter here
+
+```
+"CVF Code: "
+```
+
+A custom callback can be provided, like so:
+
+```
+def custom_cvf_callback():
+    
+    # Do some things to insert cvf code
+
+    return "My answer for cvf code"
+
+auth = audible.LoginAuthenticator(
+    "EMAIL",
+    "PASSWORD",
+    locale="us",
+    cvf_callback=custom_cvf_callback
+)
+```
 
 ### Logging
 

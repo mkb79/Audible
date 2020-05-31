@@ -37,6 +37,15 @@ def default_otp_callback() -> str:
     return str(guess).strip().lower()
 
 
+def default_cvf_callback() -> str:
+    """
+    Helper function for handling cvf verifys.
+    Amazon sends a verify code via Mail or SMS.
+    """
+    guess = input("CVF Code: ")
+    return str(guess).strip().lower()
+
+
 def get_soup(resp):
     return BeautifulSoup(resp.text, "html.parser")
 
@@ -116,7 +125,8 @@ def extract_token_from_url(url):
 
 def login(username: str, password: str, countryCode: str,
           domain: str, marketPlaceId: str, captcha_callback=None,
-          otp_callback=None) -> Dict[str, Any]:
+          otp_callback=None,
+          cvf_callback=None) -> Dict[str, Any]:
 
     amazon_url = f"https://www.amazon.{domain}"
     sign_in_url = amazon_url + "/ap/signin"
@@ -180,7 +190,7 @@ def login(username: str, password: str, countryCode: str,
         else:
             otp_code = default_otp_callback()
 
-            inputs = get_inputs_from_soup(login_soup)
+        inputs = get_inputs_from_soup(login_soup)
         inputs["otpCode"] = otp_code
         inputs["mfaSubmit"] = "Submit"
         inputs["rememberDevice"] = "false"
@@ -190,6 +200,11 @@ def login(username: str, password: str, countryCode: str,
 
     # check for cvf
     while check_for_cvf(login_soup):
+        if cvf_callback:
+            cvf_code = cvf_callback()
+        else:
+            cvf_code = default_cvf_callback()
+
         inputs = get_inputs_from_soup(login_soup)
 
         login_resp = session.post(cvf_url, data=inputs)
@@ -197,7 +212,7 @@ def login(username: str, password: str, countryCode: str,
 
         inputs = get_inputs_from_soup(login_soup)
         inputs["action"] = "code"
-        inputs["code"] = input("Code: ")
+        inputs["code"] = cvf_code
 
         login_resp = session.post(cvf_url, data=inputs)
         login_soup = get_soup(login_resp)

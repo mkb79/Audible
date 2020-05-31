@@ -251,7 +251,8 @@ class BaseAuthenticator(MutableMapping):
 class LoginAuthenticator(BaseAuthenticator):
     """Authenticator class to retrieve credentials from login."""
     def __init__(self, username: str, password: str, locale, register=True,
-                 captcha_callback=None, otp_callback=None):
+                 captcha_callback=None, otp_callback=None,
+                 cvf_callback=None):
 
         self.locale = locale
 
@@ -262,7 +263,8 @@ class LoginAuthenticator(BaseAuthenticator):
             domain = self.locale.domain,
             marketPlaceId = self.locale.marketPlaceId,
             captcha_callback=captcha_callback,
-            otp_callback=otp_callback
+            otp_callback=otp_callback,
+            cvf_callback=cvf_callback
         )
  
         logger.info(f"logged in to audible as {username}")
