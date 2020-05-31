@@ -6,7 +6,7 @@ from bs4 import BeautifulSoup
 import requests
 
 
-logger = logging.getLogger('audible.localization')
+logger = logging.getLogger("audible.localization")
 
 
 LOCALE_TEMPLATES = {
@@ -34,6 +34,26 @@ LOCALE_TEMPLATES = {
         "countryCode": "ca",
         "domain": "ca",
         "marketPlaceId": "A2CQZ5RBY40XE"
+    },
+    "italy": {
+        "countryCode": "it",
+        "domain": "it",
+        "marketPlaceId": "A2N7FU2W2BU2ZC"
+    },
+    "australia": {
+        "countryCode": "au",
+        "domain": "com.au",
+        "marketPlaceId": "AN7EY7DTAW63G"
+    },
+    "india": {
+        "countryCode": "in",
+        "domain": "in",
+        "marketPlaceId": "AJO3FBRUE6J4S"
+    },
+    "japan": {
+        "countryCode": "jp",
+        "domain": "co.jp",
+        "marketPlaceId": "A1QAP3MOU4173J"
     }
 }
 
