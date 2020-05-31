@@ -107,7 +107,9 @@ client.switch_marketplace("de")  # switch to german marketplace
 
 ```
 
-# to specify another API version
+- to specify another API version
+
+```
 library, _ = client.get(
     path="library/books",
     api_version="0.0",
