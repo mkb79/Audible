@@ -105,13 +105,17 @@ library, _ = client.get(
 
 ### Localizations
 
-Currently this Client have localizations for 5 countries built-in.
+Currently this Client have localizations for 9 countries built-in.
 
 - USA (locale="us")
 - Germany (locale="de")
 - United Kingdom (locale="uk")
 - France (locale="fr")
 - Canada (locale="ca")
+- Italy (locale="it")
+- Australia (locale="au")
+- India (locale="in")
+- Japan (locale="jp")
 
 You can provide custom locales with this code:
 
