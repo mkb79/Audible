@@ -14,6 +14,7 @@ from .errors import (BadRequest, NotFoundError, NotResponding, NetworkError,
                      ServerError, Unauthorized, UnexpectedError,
                      RatelimitError)
 from .utils import test_convert
+from .localization import LOCALE_TEMPLATES
 
 
 logger = logging.getLogger('audible.client')
@@ -130,6 +131,15 @@ class AudibleAPI:
         locale = test_convert("locale", locale)
         domain = locale.domain
         self.api_root_url = f"https://api.audible.{domain}"
+
+    @property
+    def marketplace(self):
+        for value in LOCALE_TEMPLATES.values():
+            domain = value["domain"]
+            api_root_for_domain = f"https://api.audible.{domain}"
+
+            if api_root_for_domain == self.api_root_url:
+                return value["countryCode"]
 
     def switch_user(self, auth: Union[LoginAuthenticator, FileAuthenticator]):
         self.auth = auth

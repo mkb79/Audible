@@ -101,9 +101,13 @@ library, _ = client.get(
 
 ```python
 # read Localizations for available country codes
+print(client.marketplace_country_code)
 
 client.switch_marketplace("us")  # switch to us marketplace
+print(client.marketplace)
+
 client.switch_marketplace("de")  # switch to german marketplace
+print(client.marketplace)
 
 ```
 
