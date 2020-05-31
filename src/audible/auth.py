@@ -219,7 +219,7 @@ class BaseAuthenticator(MutableMapping):
     
             self.update(**refresh_data)
         else:
-            print("Access Token not expired. No refresh nessessary. "
+            logger.info("Access Token not expired. No refresh nessessary. "
                   "To force refresh please use force=True")
 
     def refresh_or_register(self, force=False):

@@ -131,6 +131,20 @@ class AudibleAPI:
         domain = locale.domain
         self.api_root_url = f"https://api.audible.{domain}"
 
+    def switch_user(self, auth: Union[LoginAuthenticator, FileAuthenticator]:
+        self.auth = auth
+        self.adp_token = auth.get("adp_token")
+        self.device_private_key = auth.get("device_private_key")
+
+    def get_user_profile(self):
+        self.auth.refresh_access_token()
+        return self.auth.user_profile()
+
+    @property
+    def user_name(self):
+        user_profile = self.get_user_profile()
+        return user_profile['name']
+
     def _request(self, method, url, **kwargs):
         if self.is_async:  # return a coroutine
             return self._arequest(method, url, **kwargs)

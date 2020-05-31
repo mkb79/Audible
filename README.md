@@ -107,9 +107,47 @@ client.switch_marketplace("de")  # switch to german marketplace
 
 ```
 
+- get user profile / username
+
+To get the profile for the user, which credentials are used you can do this
+
+```python
+# with a instance from LoginAuthenticator or FileAuthenticator
+# make sure you have a valid access token
+# if you are sure, you can skip refreshing the access token
+auth.refresh_access_token()
+user_profile = auth.user_profile()
+user_name = user_profile['name]
+
+# with a instance from AudibleApi class
+user_profile = client.get_user_profile()
+user_name = client.user_name  # this is a property, so don't use ()
+```
+
+- switch user
+
+If you work with multiple users you can do this
+
+```python
+# instantiate 1st user
+auth = audible.FileAuthenticator(FILENAME)
+
+# instantiate 2nd user
+auth2 = audible.FileAuthenticator(FILENAME2)
+
+
+# instantiate client with 1st user
+client = audible.AudibleAPI(auth)
+print(client.user_name)
+
+# now change user with auth2
+client.switch_user(auth2)
+print(client.user_name)
+```
+
 - to specify another API version
 
-```
+```python
 library, _ = client.get(
     path="library/books",
     api_version="0.0",
