@@ -13,6 +13,7 @@ from .auth import sign_request, LoginAuthenticator, FileAuthenticator
 from .errors import (BadRequest, NotFoundError, NotResponding, NetworkError,
                      ServerError, Unauthorized, UnexpectedError,
                      RatelimitError)
+from .utils import test_convert
 
 
 logger = logging.getLogger('audible.client')
@@ -38,7 +39,8 @@ class AudibleAPI:
             "Content-Type": "application/json"
         }
 
-        domain = options.get("domain", auth.locale.domain)
+        locale = test_convert("locale", options.get("locale", auth.locale))
+        domain = options.get("domain", locale.domain)
         self.api_root_url = options.get("url", f"https://api.audible.{domain}")
 
         self.timeout = options.get('timeout', 10)
@@ -123,6 +125,11 @@ class AudibleAPI:
             raise NotResponding
         except aiohttp.ServerDisconnectedError:
             raise NetworkError
+
+    def switch_marketplace(self, locale):
+        locale = test_convert("locale", locale)
+        domain = locale.domain
+        self.api_root_url = f"https://api.audible.{domain}"
 
     def _request(self, method, url, **kwargs):
         if self.is_async:  # return a coroutine

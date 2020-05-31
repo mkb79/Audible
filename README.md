@@ -36,6 +36,10 @@ The whole code is written with Pythonista for iOS.
 
 - Retrieving API credentials
 
+*Hint: With every LoginAuthenticator init a new audible device will be registered on amazon by default. This client needs the credentials obtained by device registration process to use sign request authentication on audible api (access token authentication are not supported at this moment by this client. Please use LoginAuthenticator only once and then save your credentials.*
+
+*Hint: If you want to use multiple audible marketplaces, only one device registration is needed. The credentials from device registration process are valid for all audible marketplaces.*
+
 ```python
 import audible
 
@@ -45,14 +49,6 @@ auth = audible.LoginAuthenticator(
     "PASSWORD",
     locale="us"
 )
-```
-
-- Instantiate API with Authenticator
-
-*Hint: the Authenticator will be stored as `auth` attribute, you can access them with `client.auth`*
-
-```python
-client = audible.AudibleAPI(auth)
 ```
 
 - Save credentials
@@ -77,6 +73,14 @@ auth = audible.FileAuthenticator(
 )
 ```
 
+- Instantiate API with Authenticator
+
+*Hint: the Authenticator will be stored as `auth` attribute, you can access them with `client.auth`*
+
+```python
+client = audible.AudibleAPI(auth)
+```
+
 - retrieving library from API
 
 *Hint: with any request you get a list with response text and the raw response object*
@@ -91,6 +95,17 @@ library, _ = client.get(
         "response_groups": "media, sample"
     }
 )
+```
+
+- change requested marketplace without instantiate new client
+
+```python
+# read Localizations for available country codes
+
+client.switch_marketplace("us")  # switch to us marketplace
+client.switch_marketplace("de")  # switch to german marketplace
+
+```
 
 # to specify another API version
 library, _ = client.get(
@@ -105,7 +120,7 @@ library, _ = client.get(
 
 ### Localizations
 
-Currently this Client have localizations for 9 countries built-in.
+Currently this Client have localizations for 9 audible marketplaces built-in.
 
 - USA (locale="us")
 - Germany (locale="de")
@@ -136,7 +151,7 @@ client = audible.AudibleAPI(auth)
 You can try to autodetect locales like so:
 
 ```python
-import audible
+from audible.localization import autodetect_locale
 
 # needs the Top Level Domain for the audible page in your country
 # example for uk
