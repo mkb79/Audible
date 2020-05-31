@@ -131,7 +131,7 @@ class AudibleAPI:
         domain = locale.domain
         self.api_root_url = f"https://api.audible.{domain}"
 
-    def switch_user(self, auth: Union[LoginAuthenticator, FileAuthenticator]:
+    def switch_user(self, auth: Union[LoginAuthenticator, FileAuthenticator]):
         self.auth = auth
         self.adp_token = auth.get("adp_token")
         self.device_private_key = auth.get("device_private_key")
