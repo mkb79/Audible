@@ -1,2 +1,4 @@
 /examples/log.log
 /examples/credentials_enc.json
+/src/credentials.json
+/src/test.py

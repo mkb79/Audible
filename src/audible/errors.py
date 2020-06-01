@@ -72,3 +72,4 @@ class RatelimitError(StatusError):
 class UnexpectedError(StatusError):
     """Raised if the error was not caught"""
     pass
+

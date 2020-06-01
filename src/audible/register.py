@@ -3,7 +3,7 @@ from random import choices
 import string
 from typing import Any, Dict
 
-import requests
+import httpx
 
 
 def get_random_device_serial() -> str:
@@ -48,7 +48,7 @@ def register(access_token: str, domain: str) -> Dict[str, Any]:
         "requested_extensions": ["device_info", "customer_info"]
     }
 
-    resp = requests.post(
+    resp = httpx.post(
         f"https://api.amazon.{domain}/auth/register", json=body
     )
 
@@ -101,7 +101,7 @@ def deregister(access_token: str, domain: str,
     body = {"deregister_all_existing_accounts": deregister_all}
     headers = {"Authorization": f"Bearer {access_token}"}
 
-    resp = requests.post(
+    resp = httpx.post(
         f"https://api.amazon.{domain}/auth/deregister",
         json=body, headers=headers
     )

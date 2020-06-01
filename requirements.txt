@@ -1,7 +1,6 @@
-aiohttp
 beautifulsoup4
+httpx==0.13.*
 pbkdf2
 Pillow
 pyaes
-requests
 rsa

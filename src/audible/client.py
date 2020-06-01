@@ -1,13 +1,9 @@
-import asyncio
 import json
 import logging
 from typing import Union, Optional
 from urllib.parse import urlencode, urlparse
 
-
-import aiohttp
-import requests
-import yarl
+import httpx
 
 from .auth import sign_request, LoginAuthenticator, FileAuthenticator
 from .errors import (BadRequest, NotFoundError, NotResponding, NetworkError,
@@ -33,8 +29,8 @@ class AudibleAPI:
         )
 
         self.is_async = is_async
-        self.session = (session or (aiohttp.ClientSession() if is_async
-                        else requests.Session()))
+        self.session = (session or (httpx.AsyncClient() if is_async
+                        else httpx.Client()))
         self.headers = {
             "Accept": "application/json",
             "Content-Type": "application/json"
@@ -131,29 +127,29 @@ class AudibleAPI:
                             self.device_private_key)
 
     async def _arequest(self, method, url, **kwargs):
-        params = kwargs.pop("params", {})
+        params = kwargs.get("params", {})
         json_data = kwargs.get('json', {})
         timeout = kwargs.pop('timeout', self.timeout)
 
         headers = kwargs.pop("headers", {})
-        signed_headers = self._sign_request(
-            method, url, params, json_data
-        )
+        signed_headers = self._sign_request(method, url, params, json_data)
         headers.update(self.headers)
         headers.update(signed_headers)
 
-        url += "?" + urlencode(params)
-        url = yarl.URL(url, encoded=True)
-
         try:
-            async with self.session.request(
+            resp = await self.session.request(
                 method, url, timeout=timeout, headers=headers, **kwargs
-            ) as resp:
-                return self._raise_for_status(resp, await resp.text())
-        except asyncio.TimeoutError:
+            )
+            return self._raise_for_status(resp, resp.text, method=method)
+        except (httpx.ConnectTimeout,
+                httpx.ReadTimeout,
+                httpx.WriteTimeout,
+                httpx.PoolTimeout):
             raise NotResponding
-        except aiohttp.ServerDisconnectedError:
+        except httpx.NetworkError:
             raise NetworkError
+        finally:
+            resp.aclose()
 
     def _request(self, method, url, **kwargs):
         if self.is_async:  # return a coroutine
@@ -168,16 +164,19 @@ class AudibleAPI:
         headers.update(signed_headers)
 
         try:
-            with self.session.request(
+            resp = self.session.request(
                 method, url, timeout=timeout, headers=headers, **kwargs
-            ) as resp:
-                if resp.encoding == None:
-                    resp.encoding = "utf-8"
-                return self._raise_for_status(resp, resp.text, method=method)
-        except requests.Timeout:
+            )
+            return self._raise_for_status(resp, resp.text, method=method)
+        except (httpx.ConnectTimeout,
+                httpx.ReadTimeout,
+                httpx.WriteTimeout,
+                httpx.PoolTimeout):
             raise NotResponding
-        except requests.ConnectionError:
+        except httpx.NetworkError:
             raise NetworkError
+        finally:
+            resp.close()
 
     def _split_kwargs(self, **kwargs):
         requests_kwargs = [

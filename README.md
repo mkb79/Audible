@@ -18,12 +18,11 @@ The whole code is written with Pythonista for iOS.
 
 - Python >= 3.6
 - depends on following packages:
-	- aiohttp
 	- beautifulsoup4
+	- httpx
 	- pbkdf2
 	- Pillow
 	- pyaes
-	- requests
 	- rsa 
 
 ## Installation
@@ -121,7 +120,7 @@ To get the profile for the user, which credentials are used you can do this
 # if you are sure, you can skip refreshing the access token
 auth.refresh_access_token()
 user_profile = auth.user_profile()
-user_name = user_profile['name]
+user_name = user_profile["name"]
 
 # with a instance from AudibleApi class
 user_profile = client.get_user_profile()

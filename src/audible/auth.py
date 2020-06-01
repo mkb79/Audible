@@ -5,7 +5,7 @@ import json
 import logging
 from typing import Any, Dict
 
-import requests
+import httpx
 import rsa
 
 from .aescipher import AESCipher, detect_file_encryption
@@ -33,7 +33,7 @@ def refresh_access_token(refresh_token: str, domain: str) -> Dict[str, Any]:
         "source_token_type": "refresh_token"
     }
 
-    resp = requests.post(
+    resp = httpx.post(
         f"https://api.amazon.{domain}/auth/token", data=body
     )
     resp.raise_for_status()
@@ -55,7 +55,7 @@ def user_profile(access_token: str, domain: str) -> Dict[str, Any]:
         "Authorization": f"Bearer {access_token}"
     }
 
-    resp = requests.get(
+    resp = httpx.get(
         f"https://api.amazon.{domain}/user/profile", headers=headers
     )
     resp.raise_for_status()
