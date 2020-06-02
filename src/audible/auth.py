@@ -49,6 +49,27 @@ def refresh_access_token(refresh_token: str, domain: str) -> Dict[str, Any]:
     }
 
 
+def refresh_website_cookies(refresh_token: str, domain: str, cookies_domain: str):
+    url = f"https://www.amazon.{domain}/ap/exchangetoken"
+
+    body = {
+        "app_name": "Audible",
+        "app_version": "3.7",
+        "source_token": refresh_token,
+        "requested_token_type": "auth_cookies",
+        "source_token_type": "refresh_token",
+        "domain": f".amazon.{cookies_domain}"
+    }
+
+    resp = httpx.post(url, data=body)
+    resp.raise_for_status()
+    resp_json = resp.json()
+
+    cookies = resp_json["response"]["tokens"]["cookies"]
+
+    return cookies
+
+
 def user_profile(access_token: str, domain: str) -> Dict[str, Any]:
     """Returns user profile."""
 
