@@ -48,13 +48,18 @@ class AudibleAPI:
         return self
 
     async def __aexit__(self, exc_type, exc_value, traceback):
-        await self.session.close()
+        await self.aclose()
 
     def __repr__(self):
         return f"<AudibleAPI Client async={self.is_async}>"
 
     def close(self):
+        if self.is_async:
+            logger.warn("Please use aclose() method to close a async client.")
         return self.session.close()
+
+    async def aclose(self):
+        await self.session.aclose()
 
     def switch_marketplace(self, locale):
         locale = test_convert("locale", locale)
