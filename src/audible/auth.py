@@ -10,7 +10,7 @@ import rsa
 
 from .aescipher import AESCipher, detect_file_encryption
 from .login import login
-from .errors import NoAuthFlow
+from .errors import NoAuthFlow, NoRefreshToken
 from .register import deregister as deregister_
 from .register import register as register_
 from .utils import test_convert
@@ -245,7 +245,7 @@ class BaseAuthenticator(MutableMapping, httpx.Auth):
         logger.info(f"set filename {filename} as default")
 
     def re_login(self, username, password, captcha_callback=None,
-                 otp_callback=None):
+                 otp_callback=None, cvf_callback=None):
 
         login_device = login(
             username=username,
@@ -254,7 +254,8 @@ class BaseAuthenticator(MutableMapping, httpx.Auth):
             domain = self.locale.domain,
             marketPlaceId = self.locale.marketPlaceId,
             captcha_callback=captcha_callback,
-            otp_callback=otp_callback
+            otp_callback=otp_callback,
+            cvf_callback=cvf_callback
         )
 
         self.update(**login_device)
@@ -272,6 +273,10 @@ class BaseAuthenticator(MutableMapping, httpx.Auth):
 
     def refresh_access_token(self, force=False):
         if force or self.access_token_expired:
+            if self.refresh_token is None:
+                message = "No refresh token found. Can't refresh access token."
+                logger.critical(message)
+                raise NoRefreshToken(message)
             refresh_data = refresh_access_token(
                 refresh_token=self.refresh_token,
                 domain=self.locale.domain
@@ -281,16 +286,6 @@ class BaseAuthenticator(MutableMapping, httpx.Auth):
         else:
             logger.info("Access Token not expired. No refresh nessessary. "
                   "To force refresh please use force=True")
-
-    def refresh_or_register(self, force=False):
-        try:
-            self.refresh_access_token(force=force)
-        except:
-            try:
-                self.deregister_device()
-                self.register_device()
-            except:
-                raise Exception("Could not refresh client.")
 
     def user_profile(self):
         return user_profile(access_token=self.access_token,

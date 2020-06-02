@@ -77,3 +77,8 @@ class UnexpectedError(StatusError):
 class NoAuthFlow(Exception):
     """Raised if no auth method available"""
     pass
+
+
+class NoRefreshToken(Exception):
+    """Raised if refresh token is needed but not provided"""
+    pass
