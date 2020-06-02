@@ -11,8 +11,8 @@ logger = logging.getLogger('audible.utils')
 
 
 def test_convert(key: str, value: Any) -> Any:
-    if key == "login_cookies":
-        return _check_login_cookies(value) or value
+    if key == "website_cookies":
+        return _check_website_cookies(value) or value
 
     elif key == "adp_token":
         return _check_adp_token(value) or value
@@ -45,7 +45,7 @@ def test_convert(key: str, value: Any) -> Any:
         return value
 
 
-def _check_login_cookies(value) -> None:
+def _check_website_cookies(value) -> None:
     if not isinstance(value, dict):
         raise TypeError("type of login_cookies is not dict")
     if not set(map(type, value.values())) == {str}:

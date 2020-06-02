@@ -65,9 +65,9 @@ def refresh_website_cookies(refresh_token: str, domain: str, cookies_domain: str
     resp.raise_for_status()
     resp_json = resp.json()
 
-    cookies = resp_json["response"]["tokens"]["cookies"]
+    website_cookies = resp_json["response"]["tokens"]["cookies"]
 
-    return cookies
+    return website_cookies
 
 
 def user_profile(access_token: str, domain: str) -> Dict[str, Any]:
@@ -208,7 +208,7 @@ class BaseAuthenticator(MutableMapping, httpx.Auth):
             raise ValueError("No encryption provided")
         
         body = {
-            "login_cookies": self.login_cookies,
+            "website_cookies": self.website_cookies,
             "adp_token": self.adp_token,
             "access_token": self.access_token,
             "refresh_token": self.refresh_token,
@@ -351,6 +351,12 @@ class FileAuthenticator(BaseAuthenticator):
         locale_code = json_data.pop("locale_code", None)
         locale = locale or locale_code
         self.locale = locale
+
+        # login cookies where renamed to website cookies
+        # old names must be adjusted
+        login_cookies = json_data.pop("login_cookies", None)
+        if login_cookies:
+            json_data["website_cookies"] = login_cookies
 
         self.update(**json_data)
 

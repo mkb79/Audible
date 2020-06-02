@@ -71,9 +71,9 @@ def register(access_token: str, domain: str) -> Dict[str, Any]:
     device_info = extensions["device_info"]
     customer_info = extensions["customer_info"]
 
-    login_cookies_new = dict()
+    website_cookies = dict()
     for cookie in tokens["website_cookies"]:
-        login_cookies_new[cookie["Name"]] = cookie["Value"].replace(r'"', r'')
+        website_cookies[cookie["Name"]] = cookie["Value"].replace(r'"', r'')
 
     return {
         "adp_token": adp_token,
@@ -81,7 +81,7 @@ def register(access_token: str, domain: str) -> Dict[str, Any]:
         "access_token": access_token,
         "refresh_token": refresh_token,
         "expires": expires,
-        "login_cookies": login_cookies_new,
+        "website_cookies": website_cookies,
         "store_authentication_cookie": store_authentication_cookie,
         "device_info": device_info,
         "customer_info": customer_info

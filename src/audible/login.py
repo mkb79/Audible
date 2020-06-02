@@ -221,14 +221,14 @@ def login(username: str, password: str, countryCode: str,
         raise Exception("Unable to login")
 
     access_token = extract_token_from_url(login_resp.url)
-    login_cookies = extract_cookies_from_session(session)
+    website_cookies = extract_cookies_from_session(session)
     expires = (datetime.utcnow() + timedelta(seconds=3600)).timestamp()
 
     session.close()
 
     return {
         "access_token": access_token,
-        "login_cookies": login_cookies,
+        "website_cookies": website_cookies,
         "expires": expires
     }
 
