@@ -10,9 +10,9 @@ class StatusError(RequestError):
     """
     def __init__(self, resp, data):
         self.response = resp
-        self.code = getattr(resp, 'status', None) or getattr(resp, 'status_code')
+        self.code = getattr(resp, 'status_code')
         self.method = getattr(resp, 'method', None)
-        self.reason = resp.reason
+        self.reason = resp.reason_phrase
         if isinstance(data, dict):
             self.error = data.get('error')
             if 'message' in data:

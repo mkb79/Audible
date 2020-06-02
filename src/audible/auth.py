@@ -97,8 +97,10 @@ def sign_request(path: str, method: str, body: str, adp_token: str,
     }
 
 
-class BaseAuthenticator(MutableMapping):
+class BaseAuthenticator(MutableMapping, httpx.Auth):
     """Base Class for retrieve and handle credentials."""
+
+    requires_request_body = True
 
     def __init__(self):
         raise NotImplementedError()
@@ -129,6 +131,24 @@ class BaseAuthenticator(MutableMapping):
 
     def __repr__(self):
         return f"{type(self).__name__}({self.__dict__})"
+
+    def auth_flow(self, request):
+        return self.sign_request(request)
+
+    def sign_request(self, request):
+        method = request.method
+        path = request.url.path
+        query = request.url.query
+        body = request.content if request.content else None
+    
+        if query:
+            path += f"?{query}"
+
+        headers = sign_request(path, method, body, self.adp_token,
+                               self.device_private_key)
+
+        request.headers.update(headers)
+        yield request
 
     def to_file(self, filename=None, password=None, encryption="default",
                 indent=4, set_default=True, **kwargs):

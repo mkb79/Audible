@@ -1,7 +1,6 @@
 import json
 import logging
 from typing import Union, Optional
-from urllib.parse import urlencode, urlparse
 
 import httpx
 
@@ -23,18 +22,15 @@ class AudibleAPI:
     def __init__(self, auth: Optional[Union[LoginAuthenticator, FileAuthenticator]] = None,
                  session=None, is_async=False, **options) -> None:
         self.auth = auth
-        self.adp_token = options.get("adp_token", auth.adp_token)
-        self.device_private_key = options.get(
-            "device_private_key", auth.device_private_key
-        )
 
         self.is_async = is_async
         self.session = (session or (httpx.AsyncClient() if is_async
                         else httpx.Client()))
-        self.headers = {
+        headers = {
             "Accept": "application/json",
             "Content-Type": "application/json"
         }
+        self.session.headers.update(headers)
 
         locale = test_convert("locale", options.get("locale", auth.locale))
         domain = options.get("domain", locale.domain)
@@ -76,8 +72,6 @@ class AudibleAPI:
 
     def switch_user(self, auth: Union[LoginAuthenticator, FileAuthenticator]):
         self.auth = auth
-        self.adp_token = auth.get("adp_token")
-        self.device_private_key = auth.get("device_private_key")
 
     def get_user_profile(self):
         self.auth.refresh_access_token()
@@ -115,30 +109,11 @@ class AudibleAPI:
         else:
             raise UnexpectedError(resp, data)
 
-    def _sign_request(self, method, url, params, json_data):
-        path = urlparse(url).path
-        query = urlencode(params)
-        json_body = json.dumps(json_data) if json_data else None
-    
-        if query:
-            path += f"?{query}"
-
-        return sign_request(path, method, json_body, self.adp_token,
-                            self.device_private_key)
-
     async def _arequest(self, method, url, **kwargs):
-        params = kwargs.get("params", {})
-        json_data = kwargs.get('json', {})
         timeout = kwargs.pop('timeout', self.timeout)
-
-        headers = kwargs.pop("headers", {})
-        signed_headers = self._sign_request(method, url, params, json_data)
-        headers.update(self.headers)
-        headers.update(signed_headers)
-
         try:
             resp = await self.session.request(
-                method, url, timeout=timeout, headers=headers, **kwargs
+                method, url, timeout=timeout, auth=self.auth, **kwargs
             )
             return self._raise_for_status(resp, resp.text, method=method)
         except (httpx.ConnectTimeout,
@@ -154,18 +129,11 @@ class AudibleAPI:
     def _request(self, method, url, **kwargs):
         if self.is_async:  # return a coroutine
             return self._arequest(method, url, **kwargs)
-        params = kwargs.get("params", {})
-        json_data = kwargs.get('json', {})
         timeout = kwargs.pop('timeout', self.timeout)
-
-        headers = kwargs.pop("headers", {})
-        signed_headers = self._sign_request(method, url, params, json_data)
-        headers.update(self.headers)
-        headers.update(signed_headers)
 
         try:
             resp = self.session.request(
-                method, url, timeout=timeout, headers=headers, **kwargs
+                method, url, timeout=timeout, auth=self.auth, **kwargs
             )
             return self._raise_for_status(resp, resp.text, method=method)
         except (httpx.ConnectTimeout,
