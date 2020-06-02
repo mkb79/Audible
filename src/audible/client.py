@@ -129,7 +129,10 @@ class AudibleAPI:
         except httpx.NetworkError:
             raise NetworkError
         finally:
-            resp.aclose()
+            try:
+                resp.aclose()
+            except:
+                pass
 
     def _request(self, method, url, **kwargs):
         if self.is_async:  # return a coroutine
@@ -149,7 +152,10 @@ class AudibleAPI:
         except httpx.NetworkError:
             raise NetworkError
         finally:
-            resp.close()
+            try:
+                resp.aclose()
+            except:
+                pass
 
     def _split_kwargs(self, **kwargs):
         requests_kwargs = [

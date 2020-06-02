@@ -73,3 +73,7 @@ class UnexpectedError(StatusError):
     """Raised if the error was not caught"""
     pass
 
+
+class NoAuthFlow(Exception):
+    """Raised if no auth method available"""
+    pass

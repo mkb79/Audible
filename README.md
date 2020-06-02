@@ -35,7 +35,9 @@ The whole code is written with Pythonista for iOS.
 
 - Retrieving API credentials
 
-*Hint: With every LoginAuthenticator init a new audible device will be registered on amazon by default. This client needs the credentials obtained by device registration process to use sign request authentication on audible api (access token authentication are not supported at this moment by this client. Please use LoginAuthenticator only once and then save your credentials.*
+*Hint: With every LoginAuthenticator init a new audible device will be registered on amazon by default. This is the preferred option. Please use LoginAuthenticator with device registration only once and then save your credentials. Otherwise your device list on amazon will grow every time.*
+
+*Hint: To disable device registration, instantiate LoginAuthenticator with register=False option. In this cases you will get only a access token who is valid for 60 minutes. You can save your credentials and load with FileAuthenticator in this time. You will get no refresh token on this way, so you have to do this step every time after access token is expired. With a valid access token you can make requests to AudibleAPI. But remember, not all api calls are allowed with a access token auth.*
 
 *Hint: If you want to use multiple audible marketplaces, only one device registration is needed. The credentials from device registration process are valid for all audible marketplaces.*
 
@@ -46,7 +48,8 @@ import audible
 auth = audible.LoginAuthenticator(
     "EMAIL",
     "PASSWORD",
-    locale="us"
+    locale="us",
+    register=True  # optional, True by default
 )
 ```
 

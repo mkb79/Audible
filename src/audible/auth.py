@@ -10,6 +10,7 @@ import rsa
 
 from .aescipher import AESCipher, detect_file_encryption
 from .login import login
+from .errors import NoAuthFlow
 from .register import deregister as deregister_
 from .register import register as register_
 from .utils import test_convert
@@ -133,7 +134,26 @@ class BaseAuthenticator(MutableMapping, httpx.Auth):
         return f"{type(self).__name__}({self.__dict__})"
 
     def auth_flow(self, request):
-        return self.sign_request(request)
+        if self.adp_token and self.device_private_key: 
+            logger.info("Use sign request auth flow.")
+            self.sign_request(request)
+
+        elif self.access_token:
+            if self.access_token_expired:
+                self.refresh_access_token()
+            logger.info("Use access token auth flow.")
+            headers = {
+                "Authorization": "Bearer " + self.access_token,
+                "client-id": "0"
+            }
+            request.headers.update(headers)
+
+        else:
+            message = "No auth flow method available."
+            logger.critical(message)
+            raise NoAuthFlow(message)
+
+        yield request
 
     def sign_request(self, request):
         method = request.method
@@ -148,7 +168,6 @@ class BaseAuthenticator(MutableMapping, httpx.Auth):
                                self.device_private_key)
 
         request.headers.update(headers)
-        yield request
 
     def to_file(self, filename=None, password=None, encryption="default",
                 indent=4, set_default=True, **kwargs):

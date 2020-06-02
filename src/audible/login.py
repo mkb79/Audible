@@ -1,6 +1,6 @@
 import base64
 import binascii
-from datetime import datetime
+from datetime import datetime, timedelta
 import io
 import json
 import math
@@ -222,12 +222,14 @@ def login(username: str, password: str, countryCode: str,
 
     access_token = extract_token_from_url(login_resp.url)
     login_cookies = extract_cookies_from_session(session)
+    expires = (datetime.utcnow() + timedelta(seconds=3600)).timestamp()
 
     session.close()
 
     return {
         "access_token": access_token,
-        "login_cookies": login_cookies
+        "login_cookies": login_cookies,
+        "expires": expires
     }
 
 
