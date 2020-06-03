@@ -10,7 +10,7 @@ import rsa
 
 from .aescipher import AESCipher, detect_file_encryption
 from .login import login
-from .errors import NoAuthFlow, NoRefreshToken
+from .exceptions import NoAuthFlow, NoRefreshToken
 from .register import deregister as deregister_
 from .register import register as register_
 from .utils import test_convert

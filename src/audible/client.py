@@ -5,9 +5,9 @@ from typing import Union, Optional
 import httpx
 
 from .auth import sign_request, LoginAuthenticator, FileAuthenticator
-from .errors import (BadRequest, NotFoundError, NotResponding, NetworkError,
-                     ServerError, Unauthorized, UnexpectedError,
-                     RatelimitError)
+from .exceptions import (BadRequest, NotFoundError, NotResponding,
+                         NetworkError, ServerError, Unauthorized,
+                         UnexpectedError, RatelimitError)
 from .utils import test_convert
 from .localization import LOCALE_TEMPLATES
 
