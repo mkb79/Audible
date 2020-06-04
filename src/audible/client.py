@@ -131,7 +131,7 @@ class AudibleAPI:
         finally:
             try:
                 resp.aclose()
-            except:
+            except UnboundLocalError:
                 pass
 
     def _request(self, method, url, **kwargs):
@@ -153,8 +153,8 @@ class AudibleAPI:
             raise NetworkError
         finally:
             try:
-                resp.aclose()
-            except:
+                resp.close()
+            except UnboundLocalError:
                 pass
 
     def _split_kwargs(self, **kwargs):
