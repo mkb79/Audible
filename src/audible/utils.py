@@ -10,41 +10,6 @@ from .localization import Locale
 logger = logging.getLogger('audible.utils')
 
 
-def test_convert(key: str, value: Any) -> Any:
-    if key == "website_cookies":
-        return _check_website_cookies(value) or value
-
-    elif key == "adp_token":
-        return _check_adp_token(value) or value
-
-    elif key == "access_token":
-        return _check_access_token(value) or value
-
-    elif key == "refresh_token":
-        return _check_refresh_token(value) or value
-
-    elif key == "device_private_key":
-        return _check_device_private_key(value) or value
-
-    elif key == "expires":
-        return _check_expires(value) or value
-
-    elif key == "locale":
-        return _check_locales(value) or value
-
-    elif key == "filename":
-        return _check_filename(value) or value
-
-    elif key == "crypter":
-        return _check_crypter(value) or value
-
-    elif key == "encryption":
-        return _check_encryption(value) or value
-
-    else:
-        return value
-
-
 def _check_website_cookies(value) -> None:
     if not isinstance(value, dict):
         raise TypeError("type of login_cookies is not dict")
@@ -141,6 +106,27 @@ def _check_encryption(value) -> None:
         raise TypeError("encryption has wrong type")
     if value not in allowed_values:
         raise ValueError("encryption has wrong value")
+
+
+string_function_map = {
+    "website_cookies": _check_website_cookies,
+    "adp_token": _check_adp_token,
+    "access_token": _check_access_token,
+    "refresh_token": _check_refresh_token,
+    "device_private_key": _check_device_private_key,
+    "expires": _check_expires,
+    "locale": _check_locales,
+    "filename": _check_filename,
+    "crypter": _check_crypter,
+    "encryption": _check_encryption
+}
+
+
+def test_convert(key: str, value: Any) -> Any:
+    if key in string_function_map:
+        return string_function_map[key](value) or value
+
+    return value
 
 
 class ElapsedTime:
