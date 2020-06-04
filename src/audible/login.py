@@ -1,6 +1,6 @@
 import base64
 import binascii
-from datetime import datetime
+from datetime import datetime, timedelta
 import io
 import json
 import math
@@ -9,7 +9,7 @@ from urllib.parse import urlencode, parse_qs
 
 from bs4 import BeautifulSoup
 from PIL import Image
-import requests
+import httpx
 
 
 USER_AGENT = ("Mozilla/5.0 (iPhone; CPU iPhone OS 12_3_1 like Mac OS X) "
@@ -20,7 +20,7 @@ def default_captcha_callback(captcha_url: str) -> str:
     """Helper function for handling captcha."""
     # on error print captcha url instead of display captcha
     try:
-        captcha = requests.get(captcha_url).content
+        captcha = httpx.get(captcha_url).content
         f = io.BytesIO(captcha)
         img = Image.open(f)
         img.show()
@@ -113,13 +113,13 @@ def check_for_cvf(soup):
 
 def extract_cookies_from_session(session):
     cookies = dict()
-    for cookie in session.cookies:
+    for cookie in session.cookies.jar:
         cookies[cookie.name] = cookie.value.replace(r'"', r'')
     return cookies
 
 
 def extract_token_from_url(url):
-    parsed_url = parse_qs(url)
+    parsed_url = parse_qs(url.query)
     return parsed_url["openid.oa2.access_token"][0]
 
 
@@ -132,8 +132,8 @@ def login(username: str, password: str, countryCode: str,
     sign_in_url = amazon_url + "/ap/signin"
     cvf_url = amazon_url + "/ap/cvf/verify"
 
-    session = requests.Session()
-    session.headers.update({"User-Agent": USER_AGENT})
+    default_headers = {"User-Agent": USER_AGENT}
+    session = httpx.Client(headers=default_headers)
 
     while "session-token" not in session.cookies:
         session.get(amazon_url)
@@ -221,13 +221,15 @@ def login(username: str, password: str, countryCode: str,
         raise Exception("Unable to login")
 
     access_token = extract_token_from_url(login_resp.url)
-    login_cookies = extract_cookies_from_session(session)
+    website_cookies = extract_cookies_from_session(session)
+    expires = (datetime.utcnow() + timedelta(seconds=3600)).timestamp()
 
     session.close()
 
     return {
         "access_token": access_token,
-        "login_cookies": login_cookies
+        "website_cookies": website_cookies,
+        "expires": expires
     }
 
 

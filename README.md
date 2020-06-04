@@ -6,7 +6,7 @@
 [![image](https://img.shields.io/pypi/status/audible.svg)](https://pypi.org/project/audible/)
 [![image](https://img.shields.io/pypi/wheel/audible.svg)](https://pypi.org/project/audible/)
 [![Travis](https://img.shields.io/travis/mkb79/audible/master.svg?logo=travis)](https://travis-ci.org/mkb79/audible)
-[![image](https://img.shields.io/pypi/implementation/audible.svg)](https://pypi.org/project/audible/)
+[![CodeFactor](https://www.codefactor.io/repository/github/mkb79/audible/badge)](https://www.codefactor.io/repository/github/mkb79/audible)
 [![image](https://img.shields.io/pypi/dm/audible.svg)](https://pypi.org/project/audible/)
 
 **Sync/Async Interface for internal Audible API written in pure Python.**
@@ -18,12 +18,11 @@ The whole code is written with Pythonista for iOS.
 
 - Python >= 3.6
 - depends on following packages:
-	- aiohttp
 	- beautifulsoup4
+	- httpx
 	- pbkdf2
 	- Pillow
 	- pyaes
-	- requests
 	- rsa 
 
 ## Installation
@@ -36,7 +35,9 @@ The whole code is written with Pythonista for iOS.
 
 - Retrieving API credentials
 
-*Hint: With every LoginAuthenticator init a new audible device will be registered on amazon by default. This client needs the credentials obtained by device registration process to use sign request authentication on audible api (access token authentication are not supported at this moment by this client. Please use LoginAuthenticator only once and then save your credentials.*
+*Hint: With every LoginAuthenticator init a new audible device will be registered on amazon by default. This is the preferred option. Please use LoginAuthenticator with device registration only once and then save your credentials. Otherwise your device list on amazon will grow every time.*
+
+*Hint: To disable device registration, instantiate LoginAuthenticator with register=False option. In this cases you will get only a access token who is valid for 60 minutes. You can save your credentials and load with FileAuthenticator in this time. You will get no refresh token on this way, so you have to do this step every time after access token is expired. With a valid access token you can make requests to AudibleAPI. But remember, not all api calls are allowed with a access token auth.*
 
 *Hint: If you want to use multiple audible marketplaces, only one device registration is needed. The credentials from device registration process are valid for all audible marketplaces.*
 
@@ -47,7 +48,8 @@ import audible
 auth = audible.LoginAuthenticator(
     "EMAIL",
     "PASSWORD",
-    locale="us"
+    locale="us",
+    register=True  # optional, True by default
 )
 ```
 
@@ -121,7 +123,7 @@ To get the profile for the user, which credentials are used you can do this
 # if you are sure, you can skip refreshing the access token
 auth.refresh_access_token()
 user_profile = auth.user_profile()
-user_name = user_profile['name]
+user_name = user_profile["name"]
 
 # with a instance from AudibleApi class
 user_profile = client.get_user_profile()

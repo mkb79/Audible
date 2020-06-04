@@ -1,6 +1,5 @@
 class RequestError(Exception):
     """Base class for all errors"""
-    pass
 
 
 class StatusError(RequestError):
@@ -10,9 +9,9 @@ class StatusError(RequestError):
     """
     def __init__(self, resp, data):
         self.response = resp
-        self.code = getattr(resp, 'status', None) or getattr(resp, 'status_code')
+        self.code = getattr(resp, 'status_code')
         self.method = getattr(resp, 'method', None)
-        self.reason = resp.reason
+        self.reason = resp.reason_phrase
         if isinstance(data, dict):
             self.error = data.get('error')
             if 'message' in data:
@@ -46,29 +45,31 @@ class BadRequest(StatusError):
     Typically when at least one search parameter
     was not provided
     """
-    pass
 
 
 class NotFoundError(StatusError):
     """Raised if no result is found"""
-    pass
 
 
 class ServerError(StatusError):
     """Raised if the api service is having issues"""
-    pass
 
 
 class Unauthorized(StatusError):
     """Raised if you passed invalid credentials."""
-    pass
 
 
 class RatelimitError(StatusError):
     """Raised if ratelimit is hit"""
-    pass
 
 
 class UnexpectedError(StatusError):
     """Raised if the error was not caught"""
-    pass
+
+
+class NoAuthFlow(Exception):
+    """Raised if no auth method available"""
+
+
+class NoRefreshToken(Exception):
+    """Raised if refresh token is needed but not provided"""

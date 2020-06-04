@@ -5,11 +5,12 @@ import json
 import logging
 from typing import Any, Dict
 
-import requests
+import httpx
 import rsa
 
 from .aescipher import AESCipher, detect_file_encryption
 from .login import login
+from .exceptions import NoAuthFlow, NoRefreshToken
 from .register import deregister as deregister_
 from .register import register as register_
 from .utils import test_convert
@@ -33,7 +34,7 @@ def refresh_access_token(refresh_token: str, domain: str) -> Dict[str, Any]:
         "source_token_type": "refresh_token"
     }
 
-    resp = requests.post(
+    resp = httpx.post(
         f"https://api.amazon.{domain}/auth/token", data=body
     )
     resp.raise_for_status()
@@ -48,6 +49,27 @@ def refresh_access_token(refresh_token: str, domain: str) -> Dict[str, Any]:
     }
 
 
+def refresh_website_cookies(refresh_token: str, domain: str, cookies_domain: str):
+    url = f"https://www.amazon.{domain}/ap/exchangetoken"
+
+    body = {
+        "app_name": "Audible",
+        "app_version": "3.7",
+        "source_token": refresh_token,
+        "requested_token_type": "auth_cookies",
+        "source_token_type": "refresh_token",
+        "domain": f".amazon.{cookies_domain}"
+    }
+
+    resp = httpx.post(url, data=body)
+    resp.raise_for_status()
+    resp_json = resp.json()
+
+    website_cookies = resp_json["response"]["tokens"]["cookies"]
+
+    return website_cookies
+
+
 def user_profile(access_token: str, domain: str) -> Dict[str, Any]:
     """Returns user profile."""
 
@@ -55,7 +77,7 @@ def user_profile(access_token: str, domain: str) -> Dict[str, Any]:
         "Authorization": f"Bearer {access_token}"
     }
 
-    resp = requests.get(
+    resp = httpx.get(
         f"https://api.amazon.{domain}/user/profile", headers=headers
     )
     resp.raise_for_status()
@@ -97,8 +119,10 @@ def sign_request(path: str, method: str, body: str, adp_token: str,
     }
 
 
-class BaseAuthenticator(MutableMapping):
+class BaseAuthenticator(MutableMapping, httpx.Auth):
     """Base Class for retrieve and handle credentials."""
+
+    requires_request_body = True
 
     def __init__(self):
         raise NotImplementedError()
@@ -130,6 +154,42 @@ class BaseAuthenticator(MutableMapping):
     def __repr__(self):
         return f"{type(self).__name__}({self.__dict__})"
 
+    def auth_flow(self, request):
+        if self.adp_token and self.device_private_key: 
+            logger.info("Use sign request auth flow.")
+            self.sign_request(request)
+
+        elif self.access_token:
+            if self.access_token_expired:
+                self.refresh_access_token()
+            logger.info("Use access token auth flow.")
+            headers = {
+                "Authorization": "Bearer " + self.access_token,
+                "client-id": "0"
+            }
+            request.headers.update(headers)
+
+        else:
+            message = "No auth flow method available."
+            logger.critical(message)
+            raise NoAuthFlow(message)
+
+        yield request
+
+    def sign_request(self, request):
+        method = request.method
+        path = request.url.path
+        query = request.url.query
+        body = request.content if request.content else None
+    
+        if query:
+            path += f"?{query}"
+
+        headers = sign_request(path, method, body, self.adp_token,
+                               self.device_private_key)
+
+        request.headers.update(headers)
+
     def to_file(self, filename=None, password=None, encryption="default",
                 indent=4, set_default=True, **kwargs):
 
@@ -148,7 +208,7 @@ class BaseAuthenticator(MutableMapping):
             raise ValueError("No encryption provided")
         
         body = {
-            "login_cookies": self.login_cookies,
+            "website_cookies": self.website_cookies,
             "adp_token": self.adp_token,
             "access_token": self.access_token,
             "refresh_token": self.refresh_token,
@@ -185,7 +245,7 @@ class BaseAuthenticator(MutableMapping):
         logger.info(f"set filename {filename} as default")
 
     def re_login(self, username, password, captcha_callback=None,
-                 otp_callback=None):
+                 otp_callback=None, cvf_callback=None):
 
         login_device = login(
             username=username,
@@ -194,7 +254,8 @@ class BaseAuthenticator(MutableMapping):
             domain = self.locale.domain,
             marketPlaceId = self.locale.marketPlaceId,
             captcha_callback=captcha_callback,
-            otp_callback=otp_callback
+            otp_callback=otp_callback,
+            cvf_callback=cvf_callback
         )
 
         self.update(**login_device)
@@ -212,6 +273,10 @@ class BaseAuthenticator(MutableMapping):
 
     def refresh_access_token(self, force=False):
         if force or self.access_token_expired:
+            if self.refresh_token is None:
+                message = "No refresh token found. Can't refresh access token."
+                logger.critical(message)
+                raise NoRefreshToken(message)
             refresh_data = refresh_access_token(
                 refresh_token=self.refresh_token,
                 domain=self.locale.domain
@@ -221,16 +286,6 @@ class BaseAuthenticator(MutableMapping):
         else:
             logger.info("Access Token not expired. No refresh nessessary. "
                   "To force refresh please use force=True")
-
-    def refresh_or_register(self, force=False):
-        try:
-            self.refresh_access_token(force=force)
-        except:
-            try:
-                self.deregister_device()
-                self.register_device()
-            except:
-                raise Exception("Could not refresh client.")
 
     def user_profile(self):
         return user_profile(access_token=self.access_token,
@@ -296,6 +351,12 @@ class FileAuthenticator(BaseAuthenticator):
         locale_code = json_data.pop("locale_code", None)
         locale = locale or locale_code
         self.locale = locale
+
+        # login cookies where renamed to website cookies
+        # old names must be adjusted
+        login_cookies = json_data.pop("login_cookies", None)
+        if login_cookies:
+            json_data["website_cookies"] = login_cookies
 
         self.update(**json_data)
 

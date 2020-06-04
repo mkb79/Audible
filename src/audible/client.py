@@ -1,18 +1,13 @@
-import asyncio
 import json
 import logging
 from typing import Union, Optional
-from urllib.parse import urlencode, urlparse
 
-
-import aiohttp
-import requests
-import yarl
+import httpx
 
 from .auth import sign_request, LoginAuthenticator, FileAuthenticator
-from .errors import (BadRequest, NotFoundError, NotResponding, NetworkError,
-                     ServerError, Unauthorized, UnexpectedError,
-                     RatelimitError)
+from .exceptions import (BadRequest, NotFoundError, NotResponding,
+                         NetworkError, ServerError, Unauthorized,
+                         UnexpectedError, RatelimitError)
 from .utils import test_convert
 from .localization import LOCALE_TEMPLATES
 
@@ -27,18 +22,15 @@ class AudibleAPI:
     def __init__(self, auth: Optional[Union[LoginAuthenticator, FileAuthenticator]] = None,
                  session=None, is_async=False, **options) -> None:
         self.auth = auth
-        self.adp_token = options.get("adp_token", auth.adp_token)
-        self.device_private_key = options.get(
-            "device_private_key", auth.device_private_key
-        )
 
         self.is_async = is_async
-        self.session = (session or (aiohttp.ClientSession() if is_async
-                        else requests.Session()))
-        self.headers = {
+        self.session = (session or (httpx.AsyncClient() if is_async
+                        else httpx.Client()))
+        headers = {
             "Accept": "application/json",
             "Content-Type": "application/json"
         }
+        self.session.headers.update(headers)
 
         locale = test_convert("locale", options.get("locale", auth.locale))
         domain = options.get("domain", locale.domain)
@@ -56,13 +48,18 @@ class AudibleAPI:
         return self
 
     async def __aexit__(self, exc_type, exc_value, traceback):
-        await self.session.close()
+        await self.aclose()
 
     def __repr__(self):
         return f"<AudibleAPI Client async={self.is_async}>"
 
     def close(self):
+        if self.is_async:
+            logger.warn("Please use aclose() method to close a async client.")
         return self.session.close()
+
+    async def aclose(self):
+        await self.session.aclose()
 
     def switch_marketplace(self, locale):
         locale = test_convert("locale", locale)
@@ -80,8 +77,6 @@ class AudibleAPI:
 
     def switch_user(self, auth: Union[LoginAuthenticator, FileAuthenticator]):
         self.auth = auth
-        self.adp_token = auth.get("adp_token")
-        self.device_private_key = auth.get("device_private_key")
 
     def get_user_profile(self):
         self.auth.refresh_access_token()
@@ -119,65 +114,48 @@ class AudibleAPI:
         else:
             raise UnexpectedError(resp, data)
 
-    def _sign_request(self, method, url, params, json_data):
-        path = urlparse(url).path
-        query = urlencode(params)
-        json_body = json.dumps(json_data) if json_data else None
-    
-        if query:
-            path += f"?{query}"
-
-        return sign_request(path, method, json_body, self.adp_token,
-                            self.device_private_key)
-
     async def _arequest(self, method, url, **kwargs):
-        params = kwargs.pop("params", {})
-        json_data = kwargs.get('json', {})
         timeout = kwargs.pop('timeout', self.timeout)
-
-        headers = kwargs.pop("headers", {})
-        signed_headers = self._sign_request(
-            method, url, params, json_data
-        )
-        headers.update(self.headers)
-        headers.update(signed_headers)
-
-        url += "?" + urlencode(params)
-        url = yarl.URL(url, encoded=True)
-
         try:
-            async with self.session.request(
-                method, url, timeout=timeout, headers=headers, **kwargs
-            ) as resp:
-                return self._raise_for_status(resp, await resp.text())
-        except asyncio.TimeoutError:
+            resp = await self.session.request(
+                method, url, timeout=timeout, auth=self.auth, **kwargs
+            )
+            return self._raise_for_status(resp, resp.text, method=method)
+        except (httpx.ConnectTimeout,
+                httpx.ReadTimeout,
+                httpx.WriteTimeout,
+                httpx.PoolTimeout):
             raise NotResponding
-        except aiohttp.ServerDisconnectedError:
+        except httpx.NetworkError:
             raise NetworkError
+        finally:
+            try:
+                resp.aclose()
+            except UnboundLocalError:
+                pass
 
     def _request(self, method, url, **kwargs):
         if self.is_async:  # return a coroutine
             return self._arequest(method, url, **kwargs)
-        params = kwargs.get("params", {})
-        json_data = kwargs.get('json', {})
         timeout = kwargs.pop('timeout', self.timeout)
 
-        headers = kwargs.pop("headers", {})
-        signed_headers = self._sign_request(method, url, params, json_data)
-        headers.update(self.headers)
-        headers.update(signed_headers)
-
         try:
-            with self.session.request(
-                method, url, timeout=timeout, headers=headers, **kwargs
-            ) as resp:
-                if resp.encoding == None:
-                    resp.encoding = "utf-8"
-                return self._raise_for_status(resp, resp.text, method=method)
-        except requests.Timeout:
+            resp = self.session.request(
+                method, url, timeout=timeout, auth=self.auth, **kwargs
+            )
+            return self._raise_for_status(resp, resp.text, method=method)
+        except (httpx.ConnectTimeout,
+                httpx.ReadTimeout,
+                httpx.WriteTimeout,
+                httpx.PoolTimeout):
             raise NotResponding
-        except requests.ConnectionError:
+        except httpx.NetworkError:
             raise NetworkError
+        finally:
+            try:
+                resp.close()
+            except UnboundLocalError:
+                pass
 
     def _split_kwargs(self, **kwargs):
         requests_kwargs = [

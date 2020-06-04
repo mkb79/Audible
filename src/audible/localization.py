@@ -2,8 +2,9 @@ import logging
 from typing import Any, Dict, Optional
 from urllib.parse import parse_qs, urlparse
 
+import httpx
 from bs4 import BeautifulSoup
-import requests
+from httpcore import ConnectError
 
 
 logger = logging.getLogger("audible.localization")
@@ -79,12 +80,16 @@ def autodetect_locale(domain: str) -> Dict[str, str]:
     """
     domain = domain.lstrip(".")
     site = f"https://www.audible.{domain}"
+    params = {
+        "ipRedirectOverride": True,
+        "overrideBaseCountry": True
+    }
 
     try:
-        resp = requests.get(site)
-    except requests.exceptions.ConnectionError:
+        resp = httpx.get(site, params=params)
+    except ConnectError as e:
         logger.warn(f"site {site} doesn\'t exists or Network Error occours")
-        return None
+        raise e
 
     soup = BeautifulSoup(resp.text, "html.parser")
 

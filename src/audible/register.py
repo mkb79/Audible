@@ -3,7 +3,7 @@ from random import choices
 import string
 from typing import Any, Dict
 
-import requests
+import httpx
 
 
 def get_random_device_serial() -> str:
@@ -48,7 +48,7 @@ def register(access_token: str, domain: str) -> Dict[str, Any]:
         "requested_extensions": ["device_info", "customer_info"]
     }
 
-    resp = requests.post(
+    resp = httpx.post(
         f"https://api.amazon.{domain}/auth/register", json=body
     )
 
@@ -71,9 +71,9 @@ def register(access_token: str, domain: str) -> Dict[str, Any]:
     device_info = extensions["device_info"]
     customer_info = extensions["customer_info"]
 
-    login_cookies_new = dict()
+    website_cookies = dict()
     for cookie in tokens["website_cookies"]:
-        login_cookies_new[cookie["Name"]] = cookie["Value"].replace(r'"', r'')
+        website_cookies[cookie["Name"]] = cookie["Value"].replace(r'"', r'')
 
     return {
         "adp_token": adp_token,
@@ -81,7 +81,7 @@ def register(access_token: str, domain: str) -> Dict[str, Any]:
         "access_token": access_token,
         "refresh_token": refresh_token,
         "expires": expires,
-        "login_cookies": login_cookies_new,
+        "website_cookies": website_cookies,
         "store_authentication_cookie": store_authentication_cookie,
         "device_info": device_info,
         "customer_info": customer_info
@@ -101,13 +101,13 @@ def deregister(access_token: str, domain: str,
     body = {"deregister_all_existing_accounts": deregister_all}
     headers = {"Authorization": f"Bearer {access_token}"}
 
-    resp = requests.post(
+    resp = httpx.post(
         f"https://api.amazon.{domain}/auth/deregister",
         json=body, headers=headers
     )
 
     resp_json = resp.json()
-    if resp.status_code == 200:
-        return resp_json
-    else:
+    if not resp.status_code == 200:
         raise Exception(resp_json)
+
+    return resp_json
