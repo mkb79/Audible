@@ -107,7 +107,7 @@ def deregister(access_token: str, domain: str,
     )
 
     resp_json = resp.json()
-    if resp.status_code == 200:
-        return resp_json
-    else:
+    if not resp.status_code == 200:
         raise Exception(resp_json)
+
+    return resp_json

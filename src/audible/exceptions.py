@@ -1,6 +1,5 @@
 class RequestError(Exception):
     """Base class for all errors"""
-    pass
 
 
 class StatusError(RequestError):
@@ -46,39 +45,31 @@ class BadRequest(StatusError):
     Typically when at least one search parameter
     was not provided
     """
-    pass
 
 
 class NotFoundError(StatusError):
     """Raised if no result is found"""
-    pass
 
 
 class ServerError(StatusError):
     """Raised if the api service is having issues"""
-    pass
 
 
 class Unauthorized(StatusError):
     """Raised if you passed invalid credentials."""
-    pass
 
 
 class RatelimitError(StatusError):
     """Raised if ratelimit is hit"""
-    pass
 
 
 class UnexpectedError(StatusError):
     """Raised if the error was not caught"""
-    pass
 
 
 class NoAuthFlow(Exception):
     """Raised if no auth method available"""
-    pass
 
 
 class NoRefreshToken(Exception):
     """Raised if refresh token is needed but not provided"""
-    pass
