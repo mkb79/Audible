@@ -4,7 +4,7 @@ from typing import Union, Optional
 
 import httpx
 
-from .auth import sign_request, LoginAuthenticator, FileAuthenticator
+from .auth import LoginAuthenticator, FileAuthenticator
 from .exceptions import (BadRequest, NotFoundError, NotResponding,
                          NetworkError, ServerError, Unauthorized,
                          UnexpectedError, RatelimitError)
@@ -85,9 +85,9 @@ class AudibleAPI:
     @property
     def user_name(self):
         user_profile = self.get_user_profile()
-        return user_profile['name']
+        return user_profile["name"]
 
-    def _raise_for_status(self, resp, text, *, method=None):
+    def _raise_for_status(self, resp, text, *, method=None, return_raw=True):
         try:
             data = json.loads(text)
         except json.JSONDecodeError:
@@ -100,7 +100,9 @@ class AudibleAPI:
         ))
 
         if 300 > code >= 200:  # Request was successful
-            return data, resp  # value, response
+            if not return_raw:
+                return data
+            return data, resp  # value, response 
         elif code == 400:
             raise BadRequest(resp, data)
         elif code in (401, 403):  # Unauthorized request - Invalid credentials
@@ -116,11 +118,15 @@ class AudibleAPI:
 
     async def _arequest(self, method, url, **kwargs):
         timeout = kwargs.pop('timeout', self.timeout)
+        return_raw = kwargs.pop("return_raw", True)
+
         try:
             resp = await self.session.request(
                 method, url, timeout=timeout, auth=self.auth, **kwargs
             )
-            return self._raise_for_status(resp, resp.text, method=method)
+            return self._raise_for_status(
+                resp, resp.text, method=method, return_raw=return_raw
+            )
         except (httpx.ConnectTimeout,
                 httpx.ReadTimeout,
                 httpx.WriteTimeout,
@@ -138,12 +144,15 @@ class AudibleAPI:
         if self.is_async:  # return a coroutine
             return self._arequest(method, url, **kwargs)
         timeout = kwargs.pop('timeout', self.timeout)
+        return_raw = kwargs.pop("return_raw", True)
 
         try:
             resp = self.session.request(
                 method, url, timeout=timeout, auth=self.auth, **kwargs
             )
-            return self._raise_for_status(resp, resp.text, method=method)
+            return self._raise_for_status(
+                resp, resp.text, method=method, return_raw=return_raw
+            )
         except (httpx.ConnectTimeout,
                 httpx.ReadTimeout,
                 httpx.WriteTimeout,
@@ -158,14 +167,14 @@ class AudibleAPI:
                 pass
 
     def _split_kwargs(self, **kwargs):
-        requests_kwargs = [
+        protected_kwargs = [
             "method", "url", "params", "data", "json", "headers", "cookies",
             "files", "auth", "timeout", "allow_redirects", "proxies", "verify",
-            "stream", "cert"
+            "stream", "cert", "return_raw"
         ]
         params = kwargs.pop("params", {})
         for key in list(kwargs.keys()):
-            if key not in requests_kwargs:
+            if key not in protected_kwargs:
                 params[key] = kwargs.pop(key)
 
         return params, kwargs
