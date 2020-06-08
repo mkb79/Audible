@@ -21,18 +21,18 @@ def _check_adp_token(value) -> None:
     if not isinstance(value, str):
         raise TypeError("type of adp_token is not str")
 
-    parts = re.findall(r"\{.*?\}", value)
+    parts = re.findall(r"{.*?}", value)
     if len(parts) != 5:
         raise ValueError("adp_token have wrong format")
 
     adp_token_as_dict = dict()
     for part in parts:
-        search_pieces = re.search('\{(.*?)\:(.*?)\}', part)
+        search_pieces = re.search('{(.*?):(.*?)}', part)
         key = search_pieces.group(1)
         value = search_pieces.group(2)
         adp_token_as_dict[key] = value
 
-        allowed_keys = {"enc", "key", "iv", "name", "serial"}
+    allowed_keys = {"enc", "key", "iv", "name", "serial"}
     if not adp_token_as_dict.keys() == allowed_keys:
         raise ValueError("adp_token have wrong format")
 
@@ -94,9 +94,9 @@ def _check_filename(value) -> Union[pathlib.Path, pathlib.WindowsPath]:
             raise Exception("File error")
 
 
-def _check_crypter(value) -> None:
+def _check_crypter(value) -> Any:
     # TODO: write checks
-    pass
+    return value
 
 
 def _check_encryption(value) -> None:

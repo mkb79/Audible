@@ -4,3 +4,4 @@ pbkdf2
 Pillow
 pyaes
 rsa
+httpcore

@@ -23,7 +23,8 @@ The whole code is written with Pythonista for iOS.
 	- pbkdf2
 	- Pillow
 	- pyaes
-	- rsa 
+	- rsa
+	- httpcore
 
 ## Installation
 
@@ -185,9 +186,9 @@ import audible
 
 # example for uk
 custom_locale = audible.Locale(
-    countryCode="uk",
+    country_code="uk",
     domain="co.uk",
-    marketPlaceId="A2I9A3Q2GNFNGQ",
+    market_pace_id="A2I9A3Q2GNFNGQ"
 )
 
 auth = audible.LoginAuthenticator(..., locale=custom_locale)

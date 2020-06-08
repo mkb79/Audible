@@ -58,11 +58,11 @@ def get_inputs_from_soup(soup) -> Dict[str, str]:
     return inputs
 
 
-def build_oauth_url(countryCode: str, domain: str, marketPlaceId: str) -> str:
+def build_oauth_url(country_code: str, domain: str, market_place_id: str) -> str:
     oauth_params = {
         "openid.oa2.response_type": "token",
         "openid.return_to": f"https://www.amazon.{domain}/ap/maplanding",
-        "openid.assoc_handle": f"amzn_audible_ios_{countryCode}",
+        "openid.assoc_handle": f"amzn_audible_ios_{country_code}",
         "openid.identity": ("http://specs.openid.net/auth/2.0/"
                             "identifier_select"),
         "pageId": "amzn_audible_ios",
@@ -76,7 +76,7 @@ def build_oauth_url(countryCode: str, domain: str, marketPlaceId: str) -> str:
                                  "a6374424a53497069546d45234132435"
                                  "a4a5a474c4b324a4a564d"),
         "openid.ns.pape": "http://specs.openid.net/extensions/pape/1.0",
-        "marketPlaceId": marketPlaceId,
+        "marketPlaceId": market_place_id,
         "openid.oa2.scope": "device_auth_access",
         "forceMobileLayout": "true",
         "openid.ns": "http://specs.openid.net/auth/2.0",
@@ -123,8 +123,8 @@ def extract_token_from_url(url):
     return parsed_url["openid.oa2.access_token"][0]
 
 
-def login(username: str, password: str, countryCode: str,
-          domain: str, marketPlaceId: str, captcha_callback=None,
+def login(username: str, password: str, country_code: str,
+          domain: str, market_place_id: str, captcha_callback=None,
           otp_callback=None,
           cvf_callback=None) -> Dict[str, Any]:
 
@@ -138,7 +138,7 @@ def login(username: str, password: str, countryCode: str,
     while "session-token" not in session.cookies:
         session.get(amazon_url)
 
-    oauth_url = build_oauth_url(countryCode, domain, marketPlaceId)
+    oauth_url = build_oauth_url(country_code, domain, market_place_id)
     oauth_resp = session.get(oauth_url)
     oauth_soup = get_soup(oauth_resp)
 
@@ -285,7 +285,6 @@ def _decrypt_data(data: List[int]) -> List[int]:
 
     for _ in range(minor_rounds + 1):
         inner_roll += WRAP_CONSTANT
-        inner_variable = inner_roll >> 2 & 3
 
     for _ in range(minor_rounds):
         inner_roll -= WRAP_CONSTANT
@@ -300,7 +299,7 @@ def _decrypt_data(data: List[int]) -> List[int]:
             temp2[i] -= ((last >> 5 ^ first << 2)
                          + (first >> 3 ^ last << 4) ^ (inner_roll ^ first)
                          + (CONSTANTS[i & 3 ^ inner_variable] ^ last))
-            last = temp2[i] = temp2[i] & 0xffffffff
+            temp2[i] &= 0xffffffff
 
     return temp2
 

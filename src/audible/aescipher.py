@@ -36,7 +36,7 @@ def create_salt(salt_marker: bytes, kdf_iterations: int):
 
 
 def pack_salt(header, unpacked_salt):
-    return (header+unpacked_salt)
+    return header+unpacked_salt
 
 
 def unpack_salt(packed_salt, salt_marker):

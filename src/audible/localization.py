@@ -12,49 +12,49 @@ logger = logging.getLogger("audible.localization")
 
 LOCALE_TEMPLATES = {
     "germany": {
-        "countryCode": "de",
+        "country_code": "de",
         "domain": "de",
-        "marketPlaceId": "AN7V1F1VY261K"
+        "market_place_id": "AN7V1F1VY261K"
     },
     "united_states": {
-        "countryCode": "us",
+        "country_code": "us",
         "domain": "com",
-        "marketPlaceId": "AF2M0KC94RCEA"
+        "market_place_id": "AF2M0KC94RCEA"
     },
     "united_kingdom": {
-        "countryCode": "uk",
+        "country_code": "uk",
         "domain": "co.uk",
-        "marketPlaceId": "A2I9A3Q2GNFNGQ"
+        "market_place_id": "A2I9A3Q2GNFNGQ"
     },
     "france": {
-        "countryCode": "fr",
+        "country_code": "fr",
         "domain": "fr",
-        "marketPlaceId": "A2728XDNODOQ8T"
+        "market_place_id": "A2728XDNODOQ8T"
     },
     "canada": {
-        "countryCode": "ca",
+        "country_code": "ca",
         "domain": "ca",
-        "marketPlaceId": "A2CQZ5RBY40XE"
+        "market_place_id": "A2CQZ5RBY40XE"
     },
     "italy": {
-        "countryCode": "it",
+        "country_code": "it",
         "domain": "it",
-        "marketPlaceId": "A2N7FU2W2BU2ZC"
+        "market_place_id": "A2N7FU2W2BU2ZC"
     },
     "australia": {
-        "countryCode": "au",
+        "country_code": "au",
         "domain": "com.au",
-        "marketPlaceId": "AN7EY7DTAW63G"
+        "market_place_id": "AN7EY7DTAW63G"
     },
     "india": {
-        "countryCode": "in",
+        "country_code": "in",
         "domain": "in",
-        "marketPlaceId": "AJO3FBRUE6J4S"
+        "market_place_id": "AJO3FBRUE6J4S"
     },
     "japan": {
-        "countryCode": "jp",
+        "country_code": "jp",
         "domain": "co.jp",
-        "marketPlaceId": "A1QAP3MOU4173J"
+        "market_place_id": "A1QAP3MOU4173J"
     }
 }
 
@@ -88,7 +88,7 @@ def autodetect_locale(domain: str) -> Dict[str, str]:
     try:
         resp = httpx.get(site, params=params)
     except ConnectError as e:
-        logger.warn(f"site {site} doesn\'t exists or Network Error occours")
+        logger.warning(f"site {site} doesn\'t exists or Network Error occours")
         raise e
 
     soup = BeautifulSoup(resp.text, "html.parser")
@@ -96,13 +96,13 @@ def autodetect_locale(domain: str) -> Dict[str, str]:
     login_link = soup.find("a", class_="ui-it-sign-in-link")["href"]
     parsed_link = urlparse(login_link)
     query_string = parse_qs(parsed_link.query)
-    marketPlaceId = query_string['marketPlaceId'][0]
-    countryCode = query_string['pageId'][0].split("_")[-1]
+    market_place_id = query_string['marketPlaceId'][0]
+    country_code = query_string['pageId'][0].split("_")[-1]
 
     return {
-        "countryCode": countryCode,
+        "country_code": country_code,
         "domain": domain,
-        "marketPlaceId": marketPlaceId
+        "market_place_id": market_place_id
     }
 
 
@@ -114,43 +114,43 @@ class Locale:
     ``autodetect_locale`` if your marketplace is not in `locales.json`.
     
     """
-    def __init__(self, countryCode: Optional[str] = None,
+    def __init__(self, country_code: Optional[str] = None,
                  domain: Optional[str] = None,
-                 marketPlaceId: Optional[str] = None) -> None:
+                 market_place_id: Optional[str] = None) -> None:
 
-        if not all([countryCode, domain, marketPlaceId]):
+        if not all([country_code, domain, market_place_id]):
             locale = None
-            if countryCode:
-                locale = search_template("countryCode", countryCode)
+            if country_code:
+                locale = search_template("country_code", country_code)
             elif domain:
                 locale = search_template("domain", domain)
 
             if locale is None:
                 raise Exception("can\'t find locale")
 
-        self._countryCode = countryCode or locale["countryCode"]
+        self._country_code = country_code or locale["country_code"]
         self._domain = domain or locale["domain"]
-        self._marketPlaceId = marketPlaceId or locale["marketPlaceId"]
+        self._market_place_id = market_place_id or locale["market_place_id"]
 
     def __repr__(self):
         return (f"Locale class for domain: {self.domain}, "
-                f"marketplace: {self.marketPlaceId}")
+                f"marketplace: {self.market_place_id}")
 
     def to_dict(self) -> Dict[str, str]:
         return {
-            "countryCode": self.countryCode,
+            "country_code": self.country_code,
             "domain": self.domain,
-            "marketPlaceId": self.marketPlaceId
+            "market_place_id": self.market_place_id
         }
 
     @property
-    def countryCode(self) -> str:
-        return self._countryCode
+    def country_code(self) -> str:
+        return self._country_code
 
     @property
     def domain(self) -> str:
         return self._domain
 
     @property
-    def marketPlaceId(self) -> str:
-        return self._marketPlaceId
+    def market_place_id(self) -> str:
+        return self._market_place_id

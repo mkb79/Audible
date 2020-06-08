@@ -55,7 +55,7 @@ class AudibleAPI:
 
     def close(self):
         if self.is_async:
-            logger.warn("Please use aclose() method to close a async client.")
+            logger.warning("Please use aclose() method to close a async client.")
         return self.session.close()
 
     async def aclose(self):
@@ -73,7 +73,7 @@ class AudibleAPI:
             api_root_for_domain = f"https://api.audible.{domain}"
 
             if api_root_for_domain == self.api_root_url:
-                return value["countryCode"]
+                return value["country_code"]
 
     def switch_user(self, auth: Union[LoginAuthenticator, FileAuthenticator]):
         self.auth = auth
@@ -136,7 +136,7 @@ class AudibleAPI:
             raise NetworkError
         finally:
             try:
-                resp.aclose()
+                await resp.aclose()
             except UnboundLocalError:
                 pass
 

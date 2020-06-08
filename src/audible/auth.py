@@ -217,7 +217,7 @@ class BaseAuthenticator(MutableMapping, httpx.Auth):
             "device_info": self.device_info,
             "customer_info": self.customer_info,
             "expires": self.expires,
-            "locale_code": self.locale.countryCode
+            "locale_code": self.locale.country_code
         }
         json_body = json.dumps(body, indent=indent)
 
@@ -250,9 +250,9 @@ class BaseAuthenticator(MutableMapping, httpx.Auth):
         login_device = login(
             username=username,
             password=password,
-            countryCode = self.locale.countryCode,
-            domain = self.locale.domain,
-            marketPlaceId = self.locale.marketPlaceId,
+            country_code=self.locale.country_code,
+            domain=self.locale.domain,
+            market_place_id=self.locale.market_place_id,
             captcha_callback=captcha_callback,
             otp_callback=otp_callback,
             cvf_callback=cvf_callback
@@ -285,7 +285,7 @@ class BaseAuthenticator(MutableMapping, httpx.Auth):
             self.update(**refresh_data)
         else:
             logger.info("Access Token not expired. No refresh nessessary. "
-                  "To force refresh please use force=True")
+                        "To force refresh please use force=True")
 
     def user_profile(self):
         return user_profile(access_token=self.access_token,
@@ -314,9 +314,9 @@ class LoginAuthenticator(BaseAuthenticator):
         resp = login(
             username=username,
             password=password,
-            countryCode = self.locale.countryCode,
-            domain = self.locale.domain,
-            marketPlaceId = self.locale.marketPlaceId,
+            country_code=self.locale.country_code,
+            domain=self.locale.domain,
+            market_place_id=self.locale.market_place_id,
             captcha_callback=captcha_callback,
             otp_callback=otp_callback,
             cvf_callback=cvf_callback
@@ -338,7 +338,7 @@ class FileAuthenticator(BaseAuthenticator):
 
         self.filename = filename
 
-        self.encryption = detect_file_encryption(self.filename)
+        self.encryption = encryption or detect_file_encryption(self.filename)
 
         if self.encryption:
             self.crypter = AESCipher(password, **kwargs)
@@ -361,4 +361,4 @@ class FileAuthenticator(BaseAuthenticator):
         self.update(**json_data)
 
         logger.info((f"load data from file {self.filename} for "
-                     f"locale {self.locale.countryCode}"))
+                     f"locale {self.locale.country_code}"))
