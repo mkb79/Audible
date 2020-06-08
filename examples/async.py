@@ -1,6 +1,5 @@
 import asyncio
 
-import aiohttp
 import audible
 
 
@@ -26,8 +25,7 @@ async def get_book_infos(client, asin):
 
 
 async def main(auth):
-    async with aiohttp.ClientSession() as session:
-        client = audible.AudibleAPI(auth, is_async=True, session=session)
+    async with audible.AudibleAPI(auth, is_async=True) as client:
         print(repr(client))
 
         library, _ = await client.get(
@@ -51,30 +49,37 @@ async def main(auth):
 
 
 if __name__ == "__main__":
-    # authenticate with login and deregister after job
-    # don't stores any credentials on your system
-    # don't use `with`-statement if you want to store credentials
-    with audible.LoginAuthenticator(
-        "USERNAME", "PASSWORD", locale="us"
-    ) as auth:
-        loop = asyncio.get_event_loop()
-        loop.run_until_complete(main(auth))
-
     # authenticate with login
-    # store credentials to file
+    # don't stores any credentials on your system
     auth = audible.LoginAuthenticator(
-        "USERNAME", "PASSWORD", locale="us"
+        "USERNAME",
+        "PASSWORD",
+        locale="us",
+        register=False
     )
+    loop = asyncio.get_event_loop()
+    loop.run_until_complete(main(auth))
+
+    # store credentials to file
     auth.to_file(
         filename="FILENAME",
         encryption="json",
         password="PASSWORD"
     )
 
-    # authenticate with file
+    # register device
+    auth.register_device()
+
+    # save again
+    auth.to_file()
+
+    # load credentials from file
     auth = audible.FileAuthenticator(
         filename="FILENAME",
         password="PASSWORD"
     )
     loop = asyncio.get_event_loop()
     loop.run_until_complete(main(auth))
+
+    # deregister device
+    auth.deregister_device()
