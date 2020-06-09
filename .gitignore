@@ -1,5 +1,3 @@
-/examples/log.log
-/examples/credentials_enc.json
 /src/credentials.json
 /src/test.py
-/docs/_build/*
+/docs/build/*
