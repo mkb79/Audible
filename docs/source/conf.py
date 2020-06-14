@@ -23,7 +23,7 @@ copyright = '2020, mkb79'
 author = 'mkb79'
 
 # The full version, including alpha/beta/rc tags
-release = audible.__version__
+version = audible.__version__
 
 
 # -- General configuration ---------------------------------------------------
