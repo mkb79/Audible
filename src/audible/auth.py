@@ -305,7 +305,7 @@ class BaseAuthenticator(MutableMapping, httpx.Auth):
 
 class LoginAuthenticator(BaseAuthenticator):
     """Authenticator class to retrieve credentials from login."""
-    def __init__(self, username: str, password: str, locale, register=True,
+    def __init__(self, username: str, password: str, locale, register=False,
                  captcha_callback=None, otp_callback=None,
                  cvf_callback=None):
 
