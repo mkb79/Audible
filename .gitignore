@@ -1,3 +1,4 @@
 /src/credentials.json
 /src/test.py
-/docs/build/*
+/docs/build
+/src/audible/__pycache__/*

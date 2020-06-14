@@ -8,6 +8,13 @@ General Informations
 Audible offers his service on 9 different marketplaces. You can read 
 more about marketplaces `here <https://audible.custhelp.com/app/answers/detail/a_id/7267/~/what-is-an-audible-marketplace-and-which-is-best-for-me%3F>`_.
 
+.. note::
+
+   Credentials from authentication or device registration are valid 
+   for all marketplaces, no matter which country code are used.
+
+.. _country_codes:
+
 Country Codes
 =============
 

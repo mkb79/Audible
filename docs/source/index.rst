@@ -37,24 +37,12 @@ done in sync or async mode. The code are ported from omarroth‘s
 
 .. toctree::
    :maxdepth: 2
-   :caption: First steps
 
    intro/install
    intro/getting_started
-   intro/marketplaces
-
-
-.. toctree::
-   :maxdepth: 2
-   :caption: Authentication / Authorization
-
-   auth/auth
-
-
-.. toctree::
-   :maxdepth: 2
-   :caption: API Documentation
-
+   auth/authenticate
+   auth/register
+   marketplaces/marketplaces
    external_api
 
 

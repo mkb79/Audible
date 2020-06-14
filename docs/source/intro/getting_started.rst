@@ -29,6 +29,10 @@ Hello Library
    for book in library["items"]:
        print(book)
 
+.. note::
+
+   For available country codes take a look at :ref:`country_codes`.
+
 The example above will get the audible library for the authenticated user and 
 the selected marketplace.
 
