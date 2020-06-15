@@ -209,9 +209,9 @@ def detect_file_encryption(filename: Union[pathlib.Path, pathlib.WindowsPath]):
 
 
 def remove_file_encryption(source, target, password, **kwargs):
-    encryption = detect_file_encryption(source)
+    source_file = pathlib.Path(source)
+    encryption = detect_file_encryption(source_file)
     if encryption:
-        source_file = pathlib.Path(source)
         crypter = AESCipher(password, **kwargs)
         decrypted = crypter.from_file(source_file, encryption=encryption)
         pathlib.Path(target).write_text(decrypted)
