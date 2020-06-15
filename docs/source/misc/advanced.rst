@@ -39,7 +39,7 @@ getting wrong. If you only want the response text you can do ::
 .. versionadded:: v0.3.1a0
    The *return_raw* parameter
 
-.. code-block::
+.. code-block:: python
 
    response_text = client.get(..., return_raw=False)
 
