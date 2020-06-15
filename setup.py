@@ -47,4 +47,8 @@ setup(
     keywords='Audible, API, async',
     long_description=long_description,
     long_description_content_type='text/markdown',
+    project_urls={
+        "Documentation": "https://audible.readthedocs.io/",
+        "Source Code": "https://github.com/mkb79/Audible",
+    }
 )
