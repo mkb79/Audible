@@ -49,6 +49,7 @@ done in sync or async mode. The code are ported from omarroth‘s
    misc/advanced
    misc/logging
    misc/external_api
+   misc/examples
 
 .. toctree::
    :caption: Readme <= v0.3.0
