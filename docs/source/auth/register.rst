@@ -1,8 +1,9 @@
+=================
 Register a Device
 =================
 
 Register
---------
+========
 
 Clients with an `master` access token can register a new audible device. 
 Clients are given an refresh token, RSA private key, adp_token and more 
@@ -34,7 +35,7 @@ straight-forward and uses a signed SHA256 digest. Headers look like::
    register device only once and then reuse (save/load) credentials.
 
 Deregister
-----------
+==========
 
 Refresh token, RSA private key and adp_token are valid until deregister.
 

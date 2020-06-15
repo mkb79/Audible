@@ -37,13 +37,24 @@ done in sync or async mode. The code are ported from omarroth‘s
 
 .. toctree::
    :maxdepth: 2
+   :caption: Table of Contents
 
    intro/install
    intro/getting_started
+   marketplaces/marketplaces
    auth/authenticate
    auth/register
-   marketplaces/marketplaces
-   external_api
+   misc/load_save
+   misc/async
+   misc/advanced
+   misc/logging
+   misc/external_api
+
+.. toctree::
+   :caption: Readme <= v0.3.0
+   :hidden:
+
+   misc/README_OLD
 
 
 Indices and tables

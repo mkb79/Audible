@@ -21,6 +21,11 @@ Country Codes
 This app supports all marketplaces provided by Audible. For every 
 marketplace a country code is specified.
 
+.. note::
+
+   When saving credentials the country code will be stored in file. After 
+   loading credentials from file this country code will be used by default.
+
 .. list-table:: Marketplaces with country codes
    :widths: 20 50 15
    :header-rows: 1

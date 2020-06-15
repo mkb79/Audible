@@ -39,6 +39,8 @@ When providing an invalid response group, the server will return an error
 response but will not provide information on available response groups.
 
 
+.. _api_endpoints:
+
 API Endpoints
 =============
 

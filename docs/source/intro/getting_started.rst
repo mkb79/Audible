@@ -12,7 +12,7 @@ too much detail here, just some important basics.
 Hello Library
 =============
 
-.. code-block:: python
+First step is to authenticate the user::
 
    import audible
    
@@ -21,20 +21,26 @@ Hello Library
        password,
        locale=country_code,
        register=False)
-   
+
+After authenticating, the client can be instantiated::
+
    client = audible.AudibleAPI(auth)
+
+Now make our first API call::
    
    library, _ = client.get("library")
    
    for book in library["items"]:
        print(book)
 
+The example above will get the audible library for the authenticated user and 
+the selected marketplace.
+
 .. note::
 
    For available country codes take a look at :ref:`country_codes`.
-
-The example above will get the audible library for the authenticated user and 
-the selected marketplace.
+   Authentication needs to solve a captcha. Here you can find some 
+   informations :ref:`captcha`.
 
 Register a device
 =================

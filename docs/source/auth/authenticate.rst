@@ -1,6 +1,6 @@
-**************
+==============
 Authentication
-**************
+==============
 
 Informations
 ============
@@ -31,6 +31,8 @@ To authenticate with amazon you can do::
 .. note::
 
    For available country codes take a look at :ref:`country_codes`. 
+
+.. _captcha:
 
 CAPTCHA
 -------
