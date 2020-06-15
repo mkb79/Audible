@@ -123,7 +123,7 @@ string_function_map = {
 
 
 def test_convert(key: str, value: Any) -> Any:
-    if key in string_function_map:
+    if key in string_function_map and value is not None:
         return string_function_map[key](value) or value
 
     return value
