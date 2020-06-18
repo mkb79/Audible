@@ -310,8 +310,11 @@ GET /1.0/content/%{asin}/metadata
 ---------------------------------
 
 :params:
-   - response_groups: [chapter_info]
+   - response_groups: [chapter_info, always-returned, content_reference, content_url]
    - acr:
+   - quality: [High, Normal, Extreme, Low]
+   - drm_type: [Hls, Dash, HlsCmaf, Adrm]
+   
 
 GET /1.0/annotations/lastpositions
 ----------------------------------
