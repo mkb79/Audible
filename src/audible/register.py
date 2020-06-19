@@ -1,25 +1,22 @@
 from datetime import datetime, timedelta
-from random import choices
-import string
 from typing import Any, Dict
+import uuid
 
 import httpx
 
 
 def get_random_device_serial() -> str:
     """
-    Generates a random text (str + int) with a length of 40 chars.
+    Generates and prepares a random uuid version 4.
     
     Use of random serial prevents unregister device by other users
     with same `device_serial`.
     """
-    return "".join(choices(string.ascii_uppercase + string.digits, k=40))
-
+    return str(uuid.uuid4()).replace("-", "")
 
 def register(access_token: str, domain: str) -> Dict[str, Any]:
     """
-    Register a dummy audible device with access token and cookies
-    from ``auth_login``.
+    Register a dummy audible device with access token  from ``auth.login``.
     Returns important credentials needed for access audible api.
     """
     body = {
@@ -33,12 +30,12 @@ def register(access_token: str, domain: str) -> Dict[str, Any]:
         },
         "registration_data": {
             "domain": "Device",
-            "app_version": "3.7",
+            "app_version": "3.26.1",
             "device_serial": get_random_device_serial(),
             "device_type": "A2CZJZGLK2JJVM",
             "device_name": ("%FIRST_NAME%%FIRST_NAME_POSSESSIVE_STRING%%DUPE_"
                             "STRATEGY_1ST%Audible for iPhone"),
-            "os_version": "12.3.1",
+            "os_version": "13.5.1",
             "device_model": "iPhone",
             "app_name": "Audible"
         },

@@ -28,7 +28,7 @@ def refresh_access_token(refresh_token: str, domain: str) -> Dict[str, Any]:
     
     body = {
         "app_name": "Audible",
-        "app_version": "3.7",
+        "app_version": "3.26.1",
         "source_token": refresh_token,
         "requested_token_type": "access_token",
         "source_token_type": "refresh_token"
@@ -54,7 +54,7 @@ def refresh_website_cookies(refresh_token: str, domain: str, cookies_domain: str
 
     body = {
         "app_name": "Audible",
-        "app_version": "3.7",
+        "app_version": "3.26.1",
         "source_token": refresh_token,
         "requested_token_type": "auth_cookies",
         "source_token_type": "refresh_token",
@@ -65,13 +65,18 @@ def refresh_website_cookies(refresh_token: str, domain: str, cookies_domain: str
     resp.raise_for_status()
     resp_json = resp.json()
 
-    website_cookies = resp_json["response"]["tokens"]["cookies"]
+    raw_cookies = resp_json["response"]["tokens"]["cookies"]
+
+    website_cookies = dict()
+    for domain in raw_cookies:    
+        for cookie in raw_cookies[domain]:
+            website_cookies[cookie["Name"]] = cookie["Value"].replace(r'"', r'')
 
     return website_cookies
 
 
 def user_profile(access_token: str, domain: str) -> Dict[str, Any]:
-    """Returns user profile."""
+    """Returns user profile from amazon."""
 
     headers = {
         "Authorization": f"Bearer {access_token}"
@@ -79,6 +84,21 @@ def user_profile(access_token: str, domain: str) -> Dict[str, Any]:
 
     resp = httpx.get(
         f"https://api.amazon.{domain}/user/profile", headers=headers
+    )
+    resp.raise_for_status()
+
+    return resp.json()
+
+
+def user_profile_audible(access_token: str, domain: str) -> Dict[str, Any]:
+    """Returns user profile from amazon."""
+
+    headers = {
+        "Authorization": f"Bearer {access_token}"
+    }
+
+    resp = httpx.get(
+        f"https://api.audible.{domain}/user/profile", headers=headers
     )
     resp.raise_for_status()
 
@@ -296,10 +316,7 @@ class BaseAuthenticator(MutableMapping, httpx.Auth):
 
     @property
     def access_token_expired(self):
-        if datetime.fromtimestamp(self.expires) <= datetime.utcnow():
-            return True
-        else:
-            return False
+        return datetime.fromtimestamp(self.expires) <= datetime.utcnow()
 
 
 class LoginAuthenticator(BaseAuthenticator):

@@ -49,6 +49,6 @@ setup(
     long_description_content_type='text/markdown',
     project_urls={
         "Documentation": "https://audible.readthedocs.io/",
-        "Source Code": "https://github.com/mkb79/Audible",
+        "Source": "https://github.com/mkb79/Audible",
     }
 )

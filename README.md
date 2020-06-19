@@ -32,4 +32,4 @@ The whole code is written with Pythonista for iOS.
 
 ## Read the Doc
 
-The doc can be found at [Read the Docs](https://audible.readthedocs.io/en/latest)
+The documentation can be found at [Read the Docs](https://audible.readthedocs.io/en/latest)
