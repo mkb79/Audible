@@ -193,19 +193,18 @@ class BaseAuthenticator(MutableMapping, httpx.Auth):
     def to_file(self, filename=None, password=None, encryption="default",
                 indent=4, set_default=True, **kwargs):
 
+        if not any([filename, self.filename]):
+            raise ValueError("No filename provided")
+
         if filename:
             filename = test_convert("filename", filename)
-        elif self.filename:
-            filename = self.filename
-        else:
-            raise ValueError("No filename provided")
+
+        target_file = filename or self.filename            
 
         if encryption != "default":
             encryption = test_convert("encryption", encryption)
-        elif self.encryption:
-            encryption = self.encryption
         else:
-            raise ValueError("No encryption provided")
+            encryption = self.encryption or False
         
         body = {
             "website_cookies": self.website_cookies,
@@ -222,7 +221,7 @@ class BaseAuthenticator(MutableMapping, httpx.Auth):
         json_body = json.dumps(body, indent=indent)
 
         if encryption is False:
-            filename.write_text(json_body)
+            target_file.write_text(json_body)
             crypter = None
         else:
             if password:
@@ -232,33 +231,17 @@ class BaseAuthenticator(MutableMapping, httpx.Auth):
             else:
                 raise ValueError("No password provided")
 
-            crypter.to_file(json_body, filename=filename,
+            crypter.to_file(json_body, filename=target_file,
                             encryption=encryption, indent=indent)
 
         logger.info(f"saved data to file {filename}")
 
         if set_default:
-            self.filename = filename
+            self.filename = target_file
             self.encryption = encryption
             self.crypter = crypter
 
-        logger.info(f"set filename {filename} as default")
-
-    def re_login(self, username, password, captcha_callback=None,
-                 otp_callback=None, cvf_callback=None):
-
-        login_device = login(
-            username=username,
-            password=password,
-            country_code=self.locale.country_code,
-            domain=self.locale.domain,
-            market_place_id=self.locale.market_place_id,
-            captcha_callback=captcha_callback,
-            otp_callback=otp_callback,
-            cvf_callback=cvf_callback
-        )
-
-        self.update(**login_device)
+        logger.info(f"set filename {target_file} as default")
 
     def register_device(self):
         register_device = register_(access_token=self.access_token,
