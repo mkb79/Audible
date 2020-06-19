@@ -203,6 +203,20 @@ class BaseAuthenticator(MutableMapping, httpx.Auth):
 
         if encryption != "default":
             encryption = test_convert("encryption", encryption)
+
+    def to_file(self, filename=None, password=None, encryption="default",
+                indent=4, set_default=True, **kwargs):
+
+        if not any([filename, self.filename]):
+            raise ValueError("No filename provided")
+
+        if filename:
+            filename = test_convert("filename", filename)
+
+        target_file = filename or self.filename            
+
+        if encryption != "default":
+            encryption = test_convert("encryption", encryption)
         else:
             encryption = self.encryption or False
         
@@ -242,6 +256,22 @@ class BaseAuthenticator(MutableMapping, httpx.Auth):
             self.crypter = crypter
 
         logger.info(f"set filename {target_file} as default")
+
+    def re_login(self, username, password, captcha_callback=None,
+                 otp_callback=None, cvf_callback=None):
+
+        login_device = login(
+            username=username,
+            password=password,
+            country_code=self.locale.country_code,
+            domain=self.locale.domain,
+            market_place_id=self.locale.market_place_id,
+            captcha_callback=captcha_callback,
+            otp_callback=otp_callback,
+            cvf_callback=cvf_callback
+        )
+
+        self.update(**login_device)
 
     def register_device(self):
         register_device = register_(access_token=self.access_token,
