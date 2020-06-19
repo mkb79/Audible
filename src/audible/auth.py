@@ -203,20 +203,6 @@ class BaseAuthenticator(MutableMapping, httpx.Auth):
 
         if encryption != "default":
             encryption = test_convert("encryption", encryption)
-
-    def to_file(self, filename=None, password=None, encryption="default",
-                indent=4, set_default=True, **kwargs):
-
-        if not any([filename, self.filename]):
-            raise ValueError("No filename provided")
-
-        if filename:
-            filename = test_convert("filename", filename)
-
-        target_file = filename or self.filename            
-
-        if encryption != "default":
-            encryption = test_convert("encryption", encryption)
         else:
             encryption = self.encryption or False
         
