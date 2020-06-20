@@ -206,6 +206,13 @@ GET /1.0/catalog/categories
 ---------------------------
 
 :params:
+   - response_groups: [category_metadata, products]
+   - products_plan = [Enterprise, RodizioFreeBasic, AyceRomance, AllYouCanEat, US Minerva, Universal, AmazonEnglish, ComplimentaryOriginalMemberBenefit, Radio, SpecialBenefit, Rodizio]
+   - products_in_plan_timestamp:
+   - products_num_results:
+   - runtime_length_min:
+   - content_level:
+   - content_type:
    - categories_num_levels: \\d+ (greater than or equal to 1)
    - ids: \\d+(,\\d+)\*
    - root: [InstitutionsHpMarketing, ChannelsConfigurator, AEReadster, ShortsPrime, ExploreBy, RodizioBuckets, EditorsPicks, ClientContent, RodizioGenres, AmazonEnglishProducts, ShortsSandbox, Genres, Curated, ShortsIntroOutroRemoval, Shorts, RodizioEpisodesAndSeries, ShortsCurated]
