@@ -129,6 +129,14 @@ GET /1.0/library/collections/%s/products
    - continuation_token:
    - image_sizes:
 
+GET /1.0/orders
+----------------
+
+:params:
+   - unknown
+
+Returns order history from at least the past 6 months. Supports pagination.
+
 POST /1.0/orders
 ----------------
 
