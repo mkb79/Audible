@@ -24,6 +24,7 @@ def get_player_token(auth) -> str:
     with httpx.Client(cookies=cookies) as session:
         audible_base_url = f"https://www.audible.{auth.locale.domain}"
         params = {
+            "ipRedirectOverride": True,
             "playerType": "software",
             "bp_ua": "y",
             "playerModel": "Desktop",
