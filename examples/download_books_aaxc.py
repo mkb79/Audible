@@ -2,7 +2,7 @@ import pathlib
 import shutil
 
 import audible
-import requests
+import httpx
 
 
 # files downloaded via this script can't be converted at this moment
@@ -14,7 +14,7 @@ import requests
 # get download link(s) for book
 def _get_download_link(asin, quality):
     try:
-        response, _ = client.post(
+        response = client.post(
             f"content/{asin}/licenserequest",
             body={
                 "drm_type": "Adrm",
@@ -29,9 +29,9 @@ def _get_download_link(asin, quality):
 
 
 def download_file(url, filename):
-    r = requests.get(url, stream=True)
+    r = httpx.get(url)
     with open(filename, 'wb') as f:
-        shutil.copyfileobj(r.raw, f)
+        shutil.copyfileobj(r.iter_raw, f)
     return filename
 
 
@@ -45,9 +45,8 @@ if __name__ == "__main__":
     )
     client = audible.AudibleAPI(auth)
 
-    books, _ = client.get(
-        path="library/books",
-        api_version="0.0",
+    books = client.get(
+        path="0.0/library/books",
         params={
             "purchaseAfterDate": "01/01/1970"
         }
@@ -55,7 +54,7 @@ if __name__ == "__main__":
 
     for book in books:
         asin = book['asin']
-        title = book['title'] + f" ({asin})" + ".aaxc"
+        title = book['title'] + f"( {asin}).aaxc"
         dl_link = _get_download_link(asin, quality="Extreme")
         if dl_link:
             filename = pathlib.Path.cwd() / "audiobooks" / title

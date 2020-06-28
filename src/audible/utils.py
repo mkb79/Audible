@@ -80,7 +80,7 @@ def _check_locales(value) -> Optional[Locale]:
         return Locale(value.lower())
 
     if not isinstance(value, Locale):
-        raise TypeError("Locale error")        
+        raise TypeError("Locale error")
 
 
 def _check_filename(value) -> Union[pathlib.Path, pathlib.WindowsPath]:

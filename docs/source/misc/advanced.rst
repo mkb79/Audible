@@ -2,46 +2,42 @@
 Advanced Usage
 ==============
 
-AudibleAPI class
-================
+Client classes
+==============
 
-Here are some things to be known about the ``AudibleAPI`` class.
+Here are some things to be known about the ``Client`` and 
+the ``AsyncClient`` class.
 
 
 Some informations
 -----------------
 
-The ``AudibleAPI`` class has the following methods to send requests to the
-external API:
+Both client classes have the following methods to send requests 
+to the external API:
 
 - get
 - post
 - delete
 
 The external Audible API offers currently two API versions, `0.0` and 
-`1.0`. ``AudibleAPI`` use the newest `1.0` by default. The older API 
-version can be choosen with::
+`1.0`. The Client use the newest `1.0` by default::
 
-   resp, _ = client.get(..., api_version="0.0")
+   resp = client.get("library")
 
-But usually it's not needed.
+Long term can be used too::
+
+   resp = client.get("1.0/library")
+
+The older API version can be choosen with::
+
+   resp = client.get(path="0.0/library/books")
+
+But usually old API is not needed anymore.
 
 Make requests
 -------------
 
-The response for all requests with this Client is a tuple with 
-response text and the raw response object. The raw response 
-object is only needed for further informations if somethings 
-getting wrong. If you only want the response text you can do ::
-
-   response_text, _ = client.get(...)
-
-.. versionadded:: v0.3.1a0
-   The *return_raw* parameter
-
-.. code-block:: python
-
-   response_text = client.get(..., return_raw=False)
+The response for all requests with this Client is a dict.
 
 For known api endpoints take a look at :ref:`api_endpoints`.
 
@@ -54,21 +50,21 @@ Here are some examples how to use the endpoints with this client:
 
 GET /1.0/library::
 
-   resp, _ = client.get(
+   resp = client.get(
       "library",
       num_results=999,
       response_groups="media, price")
 
 POST /1.0/wishlist::
 
-   resp, _ = client.post(
+   resp = client.post(
        "wishlist",
        body={"asin": "B002V02KPU"}
    )
 
 DELETE /1.0/wishlist/%{asin}::
 
-   resp, _ = client.delete(
+   resp = client.delete(
        "wishlist/B002V02KPU"
    )
 
@@ -117,7 +113,7 @@ If you work with multiple users you can do this::
 Misc
 ----
 
-The underlying Authenticator class can be accessed via the auth attribute.
+The underlying Authenticator class can be accessed via the `auth` attribute.
 
 Authenticator classes
 =====================
@@ -167,10 +163,8 @@ needed.
 
 With an auth instance, Activation bytes can be obtained like so::
 
-   from audible.activation_bytes import get_activation_bytes
-
-   activation_bytes = get_activation_bytes(auth)
+   activation_bytes = auth.get_activation_bytes()
 
 The activation blob can be saved to file too::
 
-activation_bytes = get_activation_bytes(auth, filename)
+activation_bytes = auth.get_activation_bytes(filename)

@@ -19,16 +19,15 @@ First step is to authenticate the user::
    auth = audible.LoginAuthenticator(
        username,
        password,
-       locale=country_code,
-       register=False)
+       locale=country_code)
 
 After authenticating, the client can be instantiated::
 
-   client = audible.AudibleAPI(auth)
+   client = audible.Client(auth)
 
 Now make our first API call::
    
-   library, _ = client.get("library")
+   library = client.get("1.0/library")
    
    for book in library["items"]:
        print(book)

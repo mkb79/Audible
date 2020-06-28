@@ -14,6 +14,7 @@ def get_random_device_serial() -> str:
     """
     return str(uuid.uuid4()).replace("-", "")
 
+
 def register(access_token: str, domain: str) -> Dict[str, Any]:
     """
     Register a dummy audible device with access token  from ``auth.login``.

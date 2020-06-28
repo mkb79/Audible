@@ -203,6 +203,7 @@ class AudibleAPI:
 class Client:
 
     _API_URL_TEMP = "https://api.audible."
+    _API_VERSION = "1.0"
     _SESSION = httpx.Client
     _REQUEST_LOG = '{method} {url} has received {text}, has returned {status}'
 
@@ -280,7 +281,14 @@ class Client:
         else:
             raise UnexpectedError(resp, data)
 
-    def _request(self, method, url, **kwargs):
+    def _prepare_path(self, path):
+        if path.startswith(self._API_VERSION):
+            return path
+        return "/".join((self._API_VERSION, path))
+
+    def _request(self, method: str, path: str, **kwargs):
+        url = self._prepare_path(path)
+
         try:
             resp = self.session.request(method, url, **kwargs)
 
@@ -292,7 +300,7 @@ class Client:
             )
 
             try:
-                data = json.loads(resp.content)
+                data = resp.json()
             except json.JSONDecodeError:
                 data = resp.text
 
@@ -327,20 +335,17 @@ class Client:
 
         return params, kwargs
 
-    def get(self, path, api_version="1.0", **kwargs):
+    def get(self, path, **kwargs):
         params, kwargs = self._split_kwargs(**kwargs)
-        url = "/".join((api_version, path))
-        return self._request("GET", url, params=params, **kwargs)
+        return self._request("GET", path, params=params, **kwargs)
 
-    def post(self, path, body, api_version="1.0", **kwargs):
+    def post(self, path, body, **kwargs):
         params, kwargs = self._split_kwargs(**kwargs)
-        url = "/".join((api_version, path))
-        return self._request("POST", url, params=params, json=body, **kwargs)
+        return self._request("POST", path, params=params, json=body, **kwargs)
 
-    def delete(self, path, api_version="1.0", **kwargs):
-        params, kwargs = self._split_kwargs(**kwargs)
-        url = "/".join((api_version, path))
-        return self._request("DELETE", url, params=params, **kwargs)
+    def delete(self, path, **kwargs):
+        params, kwargs = self._split_kwargs(**kwargs)      
+        return self._request("DELETE", path, params=params, **kwargs)
 
 
 class AsyncClient(Client):
@@ -358,7 +363,9 @@ class AsyncClient(Client):
     async def close(self):
         await self.session.aclose()
 
-    async def _request(self, method, url, **kwargs):
+    async def _request(self, method: str, path: str, **kwargs):
+        url = self._prepare_path(path)
+
         try:
             resp = await self.session.request(method, url, **kwargs)
 
@@ -370,7 +377,7 @@ class AsyncClient(Client):
             )
 
             try:
-                data = json.loads(resp.content)
+                data = resp.json()
             except json.JSONDecodeError:
                 data = resp.text
 
@@ -391,31 +398,3 @@ class AsyncClient(Client):
                 resp.aclose()
             except UnboundLocalError:
                 pass
-
-    @property
-    def library(self):
-        return Library(self)
-
-
-class Library:
-    def __init__(self, client):
-        self.client = client
-
-    def get_all(self, **kwargs):
-        return self.client.get(
-            "library",
-            **kwargs
-        )
-
-    def get_book(self, asin, **kwargs):
-        return self.client.get(
-            f"library/{asin}",
-            **kwargs
-        )
-
-    def collections(self, **kwargs):
-        return self.client.get(
-            "library/collections",
-            response_groups="media",
-            **kwargs
-        )

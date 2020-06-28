@@ -8,6 +8,7 @@ from typing import Any, Dict
 import httpx
 import rsa
 
+from .activation_bytes import get_activation_bytes as get_ab
 from .aescipher import AESCipher, detect_file_encryption
 from .login import login
 from .exceptions import NoAuthFlow, NoRefreshToken
@@ -305,6 +306,9 @@ class BaseAuthenticator(MutableMapping, httpx.Auth):
         else:
             logger.info("Access Token not expired. No refresh nessessary. "
                         "To force refresh please use force=True")
+
+    def get_activation_bytes(self, filename=None):
+        return get_ab(self, filename)
 
     def user_profile(self):
         return user_profile(access_token=self.access_token,

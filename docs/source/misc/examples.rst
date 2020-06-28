@@ -10,12 +10,12 @@ Print number of books for every marketplace::
    import audible
    
    auth = audible.FileAuthenticator(filename)
-   client = audible.AudibleAPI(auth)
+   client = audible.Client(auth)
    country_codes = ["de", "us", "ca", "uk", "au", "fr", "jp", "it", "in"]
 
    for country in country_codes:
        client.switch_marketplace(country)
-       library, _ = client.get("library", num_results=1000)
+       library = client.get("library", num_results=1000)
        asins = [book["asin"] for book in library["items"]]
        print(f"Country: {client.marketplace.upper()} | Number of books: {len(asins)}")
        print(34* "-")

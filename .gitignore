@@ -1,4 +1,5 @@
-/src/credentials.json
-/src/test.py
 /docs/build
+/src/*
+!/src/audible
 /src/audible/__pycache__/*
+/src/audible/*.bak
