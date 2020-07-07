@@ -73,3 +73,7 @@ class NoAuthFlow(Exception):
 
 class NoRefreshToken(Exception):
     """Raised if refresh token is needed but not provided"""
+
+
+class FileEncryptionError(Exception):
+    """Raised if something is wrong with file encryption"""

@@ -11,7 +11,7 @@ import rsa
 from .activation_bytes import get_activation_bytes as get_ab
 from .aescipher import AESCipher, detect_file_encryption
 from .login import login
-from .exceptions import NoAuthFlow, NoRefreshToken
+from .exceptions import FileEncryptionError, NoAuthFlow, NoRefreshToken
 from .register import deregister as deregister_
 from .register import register as register_
 from .utils import test_convert
@@ -361,6 +361,10 @@ class FileAuthenticator(BaseAuthenticator):
         self.encryption = encryption or detect_file_encryption(self.filename)
 
         if self.encryption:
+            if password is None:
+                message = "File is encrypted but no password provided."
+                logger.critical(message)
+                raise FileEncryptionError(message)
             self.crypter = AESCipher(password, **kwargs)
             file_data = self.crypter.from_file(self.filename, self.encryption)
         else:
