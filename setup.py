@@ -21,6 +21,7 @@ exec((here / 'src' / 'audible' / '_version.py').read_text('utf-8'), about)
 long_description = (here / 'README.md').read_text('utf-8')
 
 requires = (here / 'requirements.txt').read_text('utf-8').split()
+requires.append("colorama; sys_platform == 'win32'")
 
 
 setup(
@@ -50,5 +51,12 @@ setup(
     project_urls={
         "Documentation": "https://audible.readthedocs.io/",
         "Source": "https://github.com/mkb79/Audible",
-    }
+    },
+    entry_points={
+        'console_scripts': [
+            'audible-quickstart = audible.cmd.quickstart:main',
+            'audible-config = audible.cmd.config:main',
+            'audible-api = audible.cmd.api:main',
+        ]
+    },
 )
