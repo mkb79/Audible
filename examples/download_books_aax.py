@@ -2,12 +2,15 @@ import pathlib
 import shutil
 
 import audible
-import requests
+import httpx
 
 
 # get download link(s) for book
-def _get_download_link(client, asin, codec="LC_128_44100_stereo"):
-    # need at least v0.2.1a4
+def _get_download_link(auth, asin, codec="LC_128_44100_stereo"):
+    # need at least v0.3.1
+    if auth.adp_token is None:
+        raise Exception("No adp token present. Can't get download link.")
+
     try:
         content_url = (f"https://cde-ta-g7g.amazon.com/FionaCDEServiceEngine/"
                        f"FSDownloadContent")
@@ -17,40 +20,36 @@ def _get_download_link(client, asin, codec="LC_128_44100_stereo"):
             'key': asin,
             'codec': codec
         }            
-        r, _ = client._request(
-            "GET",
+        r = httpx.get(
             url=content_url,
             params=params,
-            allow_redirects=False
+            allow_redirects=False,
+            auth=auth
         )
+
+        # prepare link
+        # see https://github.com/mkb79/Audible/issues/3#issuecomment-518099852
         link = r.headers['Location']
-        tld = client.auth.locale.domain
+        tld = auth.locale.domain
         new_link = link.replace("cds.audible.com", f"cds.audible.{tld}")
         return new_link
     except Exception as e:
-        try:
-            link = e.response.headers['Location']
-        
-            # prepare link
-            # see https://github.com/mkb79/Audible/issues/3#issuecomment-518099852
-            tld = client.auth.locale.domain
-            new_link = link.replace("cds.audible.com", f"cds.audible.{tld}")
-            return new_link
-
-        except Exception as e:
-            print(f"Error: {e}")
-            return
+        print(f"Error: {e}")
+        return
 
 
 def download_file(url):
-    r = requests.get(url, stream=True)
+    r = httpx.get(url)
 
-    title = r.headers["Content-Disposition"].split("filename=")[1]
-    filename = pathlib.Path.cwd() / "audiobooks" / title
-
-    with open(filename, 'wb') as f:
-        shutil.copyfileobj(r.raw, f)
-    return filename
+    try:
+        title = r.headers["Content-Disposition"].split("filename=")[1]
+        filename = pathlib.Path.cwd() / "audiobooks" / title
+    
+        with open(filename, 'wb') as f:
+            shutil.copyfileobj(r.iter_raw, f)
+        return filename
+    except KeyError:
+        return "Nothing downloaded"
 
 
 if __name__ == "__main__":
@@ -77,5 +76,5 @@ if __name__ == "__main__":
 
         if dl_link:
             print(f"download link now: {dl_link}")
-            status = download_file(dl_link)
+            status = download_file(auth, dl_link)
             print(f"downloaded file: {status}")
