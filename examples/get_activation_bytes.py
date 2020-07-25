@@ -23,7 +23,7 @@ def get_player_token(auth) -> str:
     if auth.website_cookies is None:
         raise Exception(
             ("No cookies found in auth instance. Please use a new auth "
-             "instance from `audible.LoginAuthenticator`.")
+             "instance from `audible.LoginAuthenticator`."))
  
     with httpx.Client(cookies=auth.website_cookies) as session:
         audible_base_url = f"https://www.audible.{auth.locale.domain}"
