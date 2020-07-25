@@ -12,8 +12,8 @@ def _get_download_link(auth, asin, codec="LC_128_44100_stereo"):
         raise Exception("No adp token present. Can't get download link.")
 
     try:
-        content_url = (f"https://cde-ta-g7g.amazon.com/FionaCDEServiceEngine/"
-                       f"FSDownloadContent")
+        content_url = ("https://cde-ta-g7g.amazon.com/FionaCDEServiceEngine/"
+                       "FSDownloadContent")
         params = {
             'type': 'AUDI',
             'currentTransportMethod': 'WIFI',
@@ -72,9 +72,9 @@ if __name__ == "__main__":
 
     for book in books["items"]:
         asin = book["asin"]
-        dl_link = _get_download_link(asin)
+        dl_link = _get_download_link(auth, asin)
 
         if dl_link:
             print(f"download link now: {dl_link}")
-            status = download_file(auth, dl_link)
+            status = download_file(dl_link)
             print(f"downloaded file: {status}")
