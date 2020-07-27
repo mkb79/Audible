@@ -53,10 +53,8 @@ setup(
         "Source": "https://github.com/mkb79/Audible",
     },
     entry_points={
-        'console_scripts': [
-            'audible-quickstart = audible.cmd.quickstart:main',
-            'audible-config = audible.cmd.config:main',
-            'audible-api = audible.cmd.api:main',
+        "console_scripts": [
+            "audible = audible.cli.main:main"
         ]
     },
 )

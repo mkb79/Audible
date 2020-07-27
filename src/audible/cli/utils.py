@@ -2,6 +2,7 @@
 This module is inspired from sphinx.cmd.quickstart
 """
 
+from getpass import getpass
 import pathlib
 import sys
 from typing import Any, Callable, Union
@@ -17,7 +18,7 @@ try:
 except ImportError:
     USE_LIBEDIT = False
 
-from audible.cmd.console import colorize, red
+from audible.cli.console import colorize, red
 
 PROMPT_PREFIX = '> '
 
@@ -29,15 +30,15 @@ else:
 
 
 # function to get input from terminal -- overridden by the test suite
-def term_input(prompt: str) -> str:
+def term_input(prompt: str, use_getpass: bool) -> str:
     if sys.platform == 'win32':
         # Important: On windows, readline is not enabled by default.  In these
         #            environment, escape sequences have been broken.  To avoid the
         #            problem, quickstart uses ``print()`` to show prompt.
         print(prompt, end='')
-        return input('')
+        return input('') if not use_getpass else getpass('')
     else:
-        return input(prompt)
+        return input(prompt) if not use_getpass else getpass(prompt)
 
 
 class ValidationError(Exception):
@@ -74,17 +75,16 @@ def boolean(x: str) -> bool:
     return x.upper() in ('Y', 'YES')
 
 
-def suffix(x: str) -> str:
-    if not (x[0:1] == '.' and len(x) > 1):
-        raise ValidationError("Please enter a file suffix, e.g. '.rst' or '.txt'.")
-    return x
-
-
 def ok(x: str) -> str:
     return x
 
 
-def do_prompt(text: str, default: str = None, validator: Callable[[str], Any] = nonempty) -> Union[str, bool]:  # NOQA
+def do_prompt(
+    text: str,
+    default: str = None,
+    validator: Callable[[str], Any] = nonempty,
+    use_getpass = False
+) -> Union[str, bool]:  # NOQA
     while True:
         if default is not None:
             prompt = PROMPT_PREFIX + '%s [%s]: ' % (text, default)
@@ -97,7 +97,7 @@ def do_prompt(text: str, default: str = None, validator: Callable[[str], Any] = 
             pass
         else:
             prompt = colorize(COLOR_QUESTION, prompt, input_mode=True)
-        x = term_input(prompt).strip()
+        x = term_input(prompt, use_getpass).strip()
         if default and not x:
             x = default
         try:
