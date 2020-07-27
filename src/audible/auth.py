@@ -92,7 +92,7 @@ def user_profile(access_token: str, domain: str) -> Dict[str, Any]:
 
 
 def user_profile_audible(access_token: str, domain: str) -> Dict[str, Any]:
-    """Returns user profile from amazon."""
+    """Returns user profile from audible."""
 
     headers = {
         "Authorization": f"Bearer {access_token}"
@@ -106,8 +106,8 @@ def user_profile_audible(access_token: str, domain: str) -> Dict[str, Any]:
     return resp.json()
 
 
-def sign_request(path: str, method: str, body: str, adp_token: str,
-                 private_key: str) -> Dict[str, str]:
+def sign_request(method: str, path: str, body: bytes,
+                 adp_token: str, private_key: str) -> Dict[str, str]:
     """
     Helper function who creates a signed header for requests.
 
@@ -119,13 +119,8 @@ def sign_request(path: str, method: str, body: str, adp_token: str,
     """
     date = datetime.utcnow().isoformat("T") + "Z"
 
-    data = f"{method}\n{path}\n{date}\n"
-    if body:
-        if isinstance(body, bytes):
-            body = body.decode('utf-8')
-        data += body
-    data += "\n"
-    data += adp_token
+    body = body.decode("utf-8")
+    data = f"{method}\n{path}\n{date}\n{body}\n{adp_token}"
 
     key = rsa.PrivateKey.load_pkcs1(private_key)
     cipher = rsa.pkcs1.sign(data.encode(), key, "SHA-256")
@@ -201,12 +196,12 @@ class BaseAuthenticator(MutableMapping, httpx.Auth):
         method = request.method
         path = request.url.path
         query = request.url.query
-        body = request.content if request.content else None
+        body = request.content
     
         if query:
             path += f"?{query}"
 
-        headers = sign_request(path, method, body, self.adp_token,
+        headers = sign_request(method, path, body, self.adp_token,
                                self.device_private_key)
 
         request.headers.update(headers)

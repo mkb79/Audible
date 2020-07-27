@@ -109,6 +109,9 @@ If you work with multiple users you can do this::
    # now change user with auth2
    client.switch_user(auth2)
    print(client.user_name)
+   
+   # optional set default marketplace for 2nd user
+   client.switch_user(auth2, switch_to_default_marketplace=True)
 
 Misc
 ----

@@ -251,7 +251,13 @@ class Client:
     def auth(self):
         return self.session.auth
 
-    def switch_user(self, auth: Union[LoginAuthenticator, FileAuthenticator]):
+    def switch_user(
+        self,
+        auth: Union[LoginAuthenticator, FileAuthenticator],
+        switch_to_default_marketplace: bool = False
+    ):
+        if set_default_marketplace:
+            self.switch_marketplace(auth.locale.country_code)
         self.session.auth = auth
 
     def get_user_profile(self):
@@ -267,7 +273,7 @@ class Client:
         code = resp.status_code
 
         if 300 > code >= 200:  # Request was successful
-            pass
+            return
         elif code == 400:
             raise BadRequest(resp, data)
         elif code in (401, 403):  # Unauthorized request - Invalid credentials
@@ -282,8 +288,12 @@ class Client:
             raise UnexpectedError(resp, data)
 
     def _prepare_path(self, path):
+        if path.startswith("/"):
+            path = path[1:]
+
         if path.startswith(self._API_VERSION):
             return path
+
         return "/".join((self._API_VERSION, path))
 
     def _request(self, method: str, path: str, **kwargs):
