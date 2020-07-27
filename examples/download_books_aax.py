@@ -8,9 +8,12 @@ import httpx
 # get download link(s) for book
 def _get_download_link(auth, asin, codec="LC_128_44100_stereo"):
     # need at least v0.4.0dev
+    if auth.adp_token is None:
+        raise Exception("No adp token present. Can't get download link.")
+
     try:
-        content_url = (f"https://cde-ta-g7g.amazon.com/FionaCDEServiceEngine/"
-                       f"FSDownloadContent")
+        content_url = ("https://cde-ta-g7g.amazon.com/FionaCDEServiceEngine/"
+                       "FSDownloadContent")
         params = {
             'type': 'AUDI',
             'currentTransportMethod': 'WIFI',
