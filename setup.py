@@ -1,7 +1,8 @@
-from os import system
 import pathlib
-from setuptools import setup, find_packages
+import re
 import sys
+from os import system
+from setuptools import setup, find_packages
 
 
 # 'setup.py publish' shortcut.
@@ -15,26 +16,26 @@ if sys.version_info < (3, 6, 0):
 
 here = pathlib.Path(__file__).parent
 
-about = {}
-exec((here / 'src' / 'audible' / '_version.py').read_text('utf-8'), about)
-
 long_description = (here / 'README.md').read_text('utf-8')
 
-requires = (here / 'requirements.txt').read_text('utf-8').split()
-requires.append("colorama; sys_platform == 'win32'")
+about = (here / 'src' / 'audible' / '_version.py').read_text('utf-8')
+
+
+def read_from_file(key):
+    return re.search(f"{key} = ['\"]([^'\"]+)['\"]", about).group(1)
 
 
 setup(
-    name=about['__title__'],
-    version=about['__version__'],
+    name=read_from_file('__title__'),
+    version=read_from_file('__version__'),
     packages=find_packages('src'),
     package_dir={'': 'src'},
     include_package_data=True,
-    description=about['__description__'],
-    url=about['__url__'],
-    license=about['__license__'],
-    author=about['__author__'],
-    author_email=about['__author_email__'],
+    description=read_from_file('__description__'),
+    url=read_from_file('__url__'),
+    license=read_from_file('__license__'),
+    author=read_from_file('__author__'),
+    author_email=read_from_file('__author_email__'),
     classifiers=[
          'Development Status :: 4 - Beta',
          'Intended Audience :: Developers',
@@ -43,7 +44,17 @@ setup(
          'Programming Language :: Python :: 3.7',
          'Programming Language :: Python :: 3.8'
     ],
-    install_requires=requires,
+    install_requires=[
+        'beautifulsoup4',
+        'click',
+        'colorama; platform_system=="Windows"',
+        'httpcore',
+        'httpx==0.13.*',
+        'pbkdf2',
+        'Pillow',
+        'pyaes',
+        'rsa'
+    ],
     python_requires='>=3.6',
     keywords='Audible, API, async',
     long_description=long_description,
@@ -54,7 +65,7 @@ setup(
     },
     entry_points={
         "console_scripts": [
-            "audible = audible.cli.main:main"
+            "audible = audible.cli:main"
         ]
     },
 )
