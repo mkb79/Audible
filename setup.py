@@ -1,3 +1,4 @@
+import os
 import pathlib
 import re
 import sys
@@ -23,6 +24,14 @@ about = (here / 'src' / 'audible' / '_version.py').read_text('utf-8')
 
 def read_from_file(key):
     return re.search(f"{key} = ['\"]([^'\"]+)['\"]", about).group(1)
+
+
+install_options = os.environ.get("AUDIBLE_INSTALL", "").split(",")
+libonly_flags = set(["lib-only", "libonly", "no-cli", "without-cli"])
+if libonly_flags.intersection(install_options):
+    console_scripts = []
+else:
+    console_scripts = ["audible = audible.cli:main"]
 
 
 setup(
@@ -53,7 +62,8 @@ setup(
         'pbkdf2',
         'Pillow',
         'pyaes',
-        'rsa'
+        'rsa',
+        'tabulate'
     ],
     python_requires='>=3.6',
     keywords='Audible, API, async',
@@ -63,9 +73,5 @@ setup(
         "Documentation": "https://audible.readthedocs.io/",
         "Source": "https://github.com/mkb79/Audible",
     },
-    entry_points={
-        "console_scripts": [
-            "audible = audible.cli:main"
-        ]
-    },
+    entry_points={"console_scripts": console_scripts}
 )
