@@ -218,10 +218,9 @@ def cli(config, ctx):
         device_name = auth.device_info["device_name"]
         echo()
         secho(f"Successfully registered {device_name}.", bold=True)
-        
-        auth.to_file(**file_options)
 
     config.write_config()
+    auth.to_file(**file_options)
 
     echo()
     secho("Finished: An initial directory structure has been created.", bold=True)

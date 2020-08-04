@@ -52,7 +52,7 @@ class Config:
         path_file = pathlib.Path(filename)
 
         result = self.parser.read([filename])
-        if filename not in result:
+        if str(filename) not in result:
             click.secho(
                 f"An error occured while loading config from {filename}",
                 fg="red",
@@ -66,7 +66,7 @@ class Config:
 
         path_file_dir = path_file.parent
         if not path_file_dir.is_dir():
-            path_file_dir.mkdir()
+            path_file_dir.mkdir(parents=True)
 
         self.parser.write(path_file.open("w"))
 
