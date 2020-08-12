@@ -1,5 +1,4 @@
 import pathlib
-import shutil
 
 import audible
 import httpx
@@ -46,7 +45,9 @@ def download_file(url):
         filename = pathlib.Path.cwd() / "audiobooks" / title
     
         with open(filename, 'wb') as f:
-            shutil.copyfileobj(r.iter_raw, f)
+            for chunk in r.iter_bytes():
+                f.write(chunk)
+        print(f"File downloaded in {r.elapsed}")
         return filename
     except KeyError:
         return "Nothing downloaded"
