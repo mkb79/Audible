@@ -174,8 +174,8 @@ def build_auth_file(
 
 class LongestSubString:
     def __init__(self, search_for, search_in, case_sensitiv=False):
-        search_for = search_for.lower() if case_sensitiv else search_for
-        search_in = search_in.lower() if case_sensitiv else search_in
+        search_for = search_for if case_sensitiv else search_for.lower()
+        search_in = search_in if case_sensitiv else search_in.lower()
 
         self._search_for = search_for
         self._search_in = search_in
