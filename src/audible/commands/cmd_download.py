@@ -40,7 +40,7 @@ def search_by_title(search_title, library, p=80):
     if len(matching_items) > 1:
         full_match = [item for item in matching_items if item["match_percentage"] == 100]
         
-        if len(full_match) > 1:
+        if len(full_match) != 1:
             head = ["percentage", "title", "asin"]
             data = []
     
