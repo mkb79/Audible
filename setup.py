@@ -31,7 +31,9 @@ libonly_flags = set(["lib-only", "libonly", "no-cli", "without-cli"])
 if libonly_flags.intersection(install_options):
     console_scripts = []
 else:
-    console_scripts = ["audible = audible.cli:main"]
+    console_scripts = [
+        "audible = audible.cli:main",
+        "audible-quickstart = audible.cli:quickstart"]
 
 
 setup(
@@ -63,7 +65,8 @@ setup(
         'Pillow',
         'pyaes',
         'rsa',
-        'tabulate'
+        'tabulate',
+        'toml'
     ],
     python_requires='>=3.6',
     keywords='Audible, API, async',

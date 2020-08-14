@@ -19,12 +19,16 @@ The whole code is written with Pythonista for iOS.
 - Python >= 3.6
 - depends on following packages:
 	- beautifulsoup4
+	- click
+	- colorama
 	- httpx
 	- pbkdf2
 	- Pillow
 	- pyaes
 	- rsa
 	- httpcore
+	- tabulate
+	- toml
 
 ## Installation
 

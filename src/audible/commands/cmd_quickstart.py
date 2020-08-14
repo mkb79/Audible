@@ -1,57 +1,57 @@
-import io
 import sys
 
 import audible
 import click
-import httpx
 from click import echo, secho, prompt
-from PIL import Image
+from tabulate import tabulate
 
-from audible.auth import LoginAuthenticator
-from . import options
-
-
-SUB_COMMAND_NAME = "quickstart"
-
-
-def prompt_captcha_callback(captcha_url: str) -> str:
-    """Helper function for handling captcha."""
-
-    echo("Captcha found")
-    if click.confirm("Open Captcha with default image viewer", default="Y"):
-        captcha = httpx.get(captcha_url).content
-        f = io.BytesIO(captcha)
-        img = Image.open(f)
-        img.show()
-    else:
-        echo("Please open the following url with a webbrowser "
-             "to get the captcha:")
-        echo(captcha_url)
-
-    guess = prompt("Answer for CAPTCHA")
-    return str(guess).strip().lower()
+from .utils import (
+    build_auth_file,
+    pass_config,
+    Config,
+    DEFAULT_AUTH_FILE_EXTENSION
+)
 
 
-def prompt_otp_callback() -> str:
-    """Helper function for handling 2-factor authentication."""
+def tabulate_summary(d: dict) -> None:
+    head = ["Option", "Value"]
+    data = [
+        ["profile_name", d["profile_name"]],
+        ["auth_file", d["auth_file"]],
+        ["country_code", d["country_code"]]
+    ]
+    if "use_existing_auth_file" not in d:
+        data.append(
+            ["auth_file_password", "***" if "auth_file_password" in d else "-"])
+        data.append(["audible_username", d["audible_username"]])
+        data.append(["audible_password", "***"])
 
-    echo("2FA is activated for this account.")
-    guess = prompt("Please enter OTP Code")
-    return str(guess).strip().lower()
+    return tabulate(data, head, tablefmt="pretty", colalign=("left", "left"))
 
 
-def ask_user(cfg_file):
-    path = cfg_file.parent
+def ask_user(config: Config):
     d = {}
-
-    welcome_message = (f"Welcome to the audible {audible.__version__} "
-                       f"quickstart utility.")
-
+    welcome_message = (
+        f"Welcome to the audible {audible.__version__} quickstart utility.")
     secho(welcome_message, bold=True)
-    secho(len(welcome_message)*"=", bold=True)
+    secho(len(welcome_message) * "=", bold=True)
 
+    intro = """Quickstart will guide you through the process of build a basic 
+config, create a first profile and assign an auth file to the profile now.
+
+The profile created by quickstart will set as primary. It will be used, if no 
+other profile is chosen.
+
+An auth file can be shared between multiple profiles. Simply enter the name of 
+an existing auth file when asked about it. Auth files have to be stored in the 
+config dir. If the auth file doesn't exists, it will be created. In this case, 
+an authentication to the audible server is necessary to register a new device.
+"""
     echo()
-    secho("Selected config dir:", bold=True)
+    secho(intro, bold=True)
+   
+    path = config.dir_path.absolute()
+    secho("Selected dir to proceed with:", bold=True)
     echo(path.absolute())
 
     echo()
@@ -59,170 +59,98 @@ def ask_user(cfg_file):
          "to accept a default value, if one is given in brackets).")
 
     echo()
-    secho("A country code can now set as default. This country code is used,"
-          "if no other is provided.", bold=True)
+    d["profile_name"] = prompt(
+        "Please enter a name for your primary profile",
+        default="audible")
 
+    available_country_codes = [
+        "us", "ca", "uk", "au", "fr", "de", "jp", "it", "in"]
     echo()
-    d["default_country_code"] = prompt(
-        "Which country country code should be set as default",
-        type=click.Choice(("us", "ca", "uk", "au", "fr", "de", "jp", "it", "in")),
-        show_choices=False
+    d["country_code"] = prompt(
+        "Enter a country code for the profile",
+        show_choices=False,
+        type=click.Choice(available_country_codes)
     )
 
     echo()
-    secho(
-        "Audible quickstart will now create a profile. This profile is "
-        "choosen as default, if no other one is selected.\n"
-        "A auth file must assigned to every profile. This file contains "
-        "credentials and other data for a specific audible user. It will be "
-        "stored in the config dir. A auth file can be shared between multiple "
-        "profiles. Simple enter the same file name for the corresponding profiles."
-        "\n\n"
-        "If the auth file doesn't exists, a new one will created. To retrieve the "
-        "necessary auth data, credentials for the audible account, which you "
-        "want to use, must be provided.\n"
-        "Audible quickstart login to the audible account and register a new "
-        "audible device. The password will not be stored.\n"
-        "To protect the auth data, the file can be encrypted optionally.\n"
-        "More accounts/profiles can be added to the conf file later.\n",
-        bold=True)
-
-    profile_name = prompt(
-        "Please enter a name for your primary profile",
-        default="audible")
-    d["profile_name"] = profile_name
-
-    echo()
-    auth_file = prompt(
+    d["auth_file"] = prompt(
         "Please enter a name for the auth file",
-        default=profile_name + f".{options.DEFAULT_AUTH_FILE_EXTENSION}")
+        default=d["profile_name"] + "." + DEFAULT_AUTH_FILE_EXTENSION)
 
-    use_existing_file = False
-    while (path / auth_file).exists():
+    while (path / d["auth_file"]).exists():
         echo()
         secho("The auth file already exists in config dir.", bold=True)
         echo()
 
-        use_existing_file = click.confirm(
+        d["use_existing_auth_file"] = click.confirm(
             "Should this file be used for the new profile",
-            default="N")
+            default=False)
 
-        if use_existing_file:
-            break
+        if d["use_existing_auth_file"]:
+            echo()
+            echo("Use existing auth file for new profile.")
+
+            return d
 
         echo()
-        auth_file = prompt(
+        d["auth_file"] = prompt(
             "Please enter a new name for the auth file (or just Enter to exit)",
             default="")
-        if not auth_file:
+        if not d["auth_file"]:
             sys.exit(1)
 
-    d["use_existing_file"] = use_existing_file
-    d["profile_auth_file"] = auth_file
+    echo()
+    encrypt_file = click.confirm(
+        "Do you want to encrypt the auth file?",
+        default=False)
 
-    if not use_existing_file:
+    if encrypt_file:
         echo()
-        encrypt_file = click.confirm(
-            "Do you want to encrypt the auth file?",
-            default="N")
-    
-        if encrypt_file:
-            echo()
-            while True:
-                file_password = prompt(
-                    "Please enter a password for the auth file",
-                    hide_input=True)
-                confirm_password = prompt(
-                    "Please retype password for the auth file to confirm",
-                    hide_input=True)
-                if file_password == confirm_password:
-                    break
-
-                secho("Passwords don't match. Please try again.")
-                echo()
-            d["profile_auth_file_password"] = file_password
-            d["profile_auth_file_encryption"] = "json"
-    
-        echo()
-        d["audible_username"] = prompt("Please enter your amazon username")
-        d["audible_password"] = prompt("Please enter your amazon password",
-                                       hide_input=True)
+        d["auth_file_password"] = prompt(
+            "Please enter a password for the auth file",
+            confirmation_prompt=True, hide_input=True)
 
     echo()
-    profile_country_code = prompt(
-        "Please enter the country code for the primary profile",
-        default="default",
-        type=click.Choice(("us", "ca", "uk", "au", "fr", "de", "jp", "it", "in", "default"))
-    )
-    if profile_country_code != "default":
-        d["profile_country_code"] = profile_country_code
-
+    d["audible_username"] = prompt("Please enter your amazon username")
+    d["audible_password"] = prompt("Please enter your amazon password",
+                                   hide_input=True, confirmation_prompt=True)
+    
     return d
 
 
-@click.command()
+@click.command("quickstart")
 @click.pass_context
-@options.config_option
-@options.pass_config
+@pass_config
 def cli(config, ctx):
     """Quicksetup audible"""
-    cfg_file = config.filename
-    cfg_path = cfg_file.parent
-    cfg_parser = config.parser
+    if config.file_exists():
+        m = (f"Config file {config.filename} already exists. Quickstart will "
+             f"not overwrite existing files.")
+ 
+        ctx.fail(m) if ctx else echo(m)
+        sys.exit()
 
-    if cfg_file.exists():
-        echo()
-        secho(f"Error: an existing {cfg_file.name} has been found in the "
-              f"config dir {cfg_path}.",
-              bold=True)
-        ctx.fail("audible quickstart will not overwrite existing config files.")
+    d = ask_user(config)
 
-    d = ask_user(cfg_file)
+    table = tabulate_summary(d)
+    echo()
+    echo(table)
+    click.confirm("Do you want to continue?", abort=True)
 
-    profile_name = d.get("profile_name")
-    profile_auth_file = d.get("profile_auth_file")
-    profile_country_code = d.get("profile_country_code", None)
+    config.add_profile(
+        name=d.get("profile_name"),
+        auth_file=d.get("auth_file"),
+        country_code=d.get("country_code"),
+        is_primary=True,
+        write_config=False)
 
-    cfg_parser.set(
-        cfg_parser.default_section,
-        "country_code",
-        d.get("default_country_code")
-    )
-
-    cfg_parser.add_section(profile_name)
-    cfg_parser.set(profile_name, "primary", None)
-    cfg_parser.set(profile_name, "auth_file", profile_auth_file)
-    if profile_country_code:
-        cfg_parser.set(profile_name, "country_code", profile_country_code)
-
-    file_options = {"filename": cfg_path / profile_auth_file}
-    if "profile_auth_file_encryption" in d:
-        file_options["password"] = d.get("profile_auth_file_password")
-        file_options["encryption"] = d.get("profile_auth_file_encryption")
-
-    if not d.get("use_existing_file"):
-        echo()
-        secho("Now login with amazon to your audible account.", bold=True)
-
-        auth = LoginAuthenticator(
+    if "use_existing_auth_file" not in d:
+        build_auth_file(
+            filename=config.dir_path / d.get("auth_file"),
             username=d.get("audible_username"),
             password=d.get("audible_password"),
-            locale=cfg_parser.get(profile_name, "country_code"),
-            captcha_callback=prompt_captcha_callback,
-            otp_callback=prompt_otp_callback)
-
-        echo()
-        secho("Login was successful. Now registering a new device.", bold=True)
-
-        auth.register_device()
-        device_name = auth.device_info["device_name"]
-        echo()
-        secho(f"Successfully registered {device_name}.", bold=True)
+            country_code=d.get("country_code"),
+            file_password=d.get("auth_file_password")
+        )
 
     config.write_config()
-    auth.to_file(**file_options)
-
-    echo()
-    secho("Finished: An initial directory structure has been created.", bold=True)
-    echo("The project dir can be found here:")
-    echo(cfg_path.absolute())
