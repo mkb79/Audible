@@ -53,7 +53,7 @@ def get_soup(resp):
 def get_inputs_from_soup(soup) -> Dict[str, str]:
     inputs = {}
     for node in soup.select("input[type=hidden]"):
-        if node["name"] and node["value"]:
+        if node.attrs.get("name") and node.attrs.get("value"):
             inputs[node["name"]] = node["value"]
     return inputs
 
