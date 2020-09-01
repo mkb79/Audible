@@ -34,18 +34,3 @@ development version::
 Alternatively, install directly from the GitHub repository::
 
     pip install git+https://github.com/mkb79/audible.git
-
-Command Line Utility
---------------------
-
-The command line utility will be installed as `audible`.
-
-To install just the library on Unix-like operating systems::
-
-    AUDIBLE_INSTALL=lib-only pip install audible
-
-On Windows::
-
-    set AUDIBLE_INSTALL=lib-only
-    pip install audible
-
