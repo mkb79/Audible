@@ -52,6 +52,7 @@ def download_file(url):
     except KeyError:
         return "Nothing downloaded"
 
+
 if __name__ == "__main__":
     password = input("Password for file: ")
 

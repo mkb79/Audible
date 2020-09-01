@@ -133,7 +133,7 @@ GET /1.0/library/collections/%s/products
    - image_sizes:
 
 GET /1.0/orders
- -—————
+---------------
 
  :params:
     - unknown
