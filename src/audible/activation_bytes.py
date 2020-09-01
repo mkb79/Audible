@@ -87,8 +87,7 @@ def fetch_activation_bytes(player_token, filename=None):
     }
 
     with httpx.Client(headers=headers) as session:
-        resp = session.get(rurl, params=dparams)
-        resp.content
+        session.get(rurl, params=dparams)
 
         resp = session.get(rurl, params=params)
         register_response_content = resp.content
@@ -98,8 +97,7 @@ def fetch_activation_bytes(player_token, filename=None):
 
         activation_bytes, _ = extract_activation_bytes(register_response_content)
 
-        resp = session.get(rurl, params=dparams)
-        resp.content
+        session.get(rurl, params=dparams)
 
         return activation_bytes
 
