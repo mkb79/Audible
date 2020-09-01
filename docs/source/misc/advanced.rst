@@ -161,7 +161,7 @@ Activation Bytes
 Since v0.4.0 this app can get activation bytes. 
 
 To retrieve activation bytes an authentication via 
-:class:`LoginAuthenticator` or :class:`FileAuthenticator`is 
+:class:`LoginAuthenticator` or :class:`FileAuthenticator` is 
 needed.
 
 With an auth instance, Activation bytes can be obtained like so::
@@ -170,4 +170,5 @@ With an auth instance, Activation bytes can be obtained like so::
 
 The activation blob can be saved to file too::
 
-activation_bytes = auth.get_activation_bytes(filename)
+   activation_bytes = auth.get_activation_bytes(filename)
+

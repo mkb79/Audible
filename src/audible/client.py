@@ -6,12 +6,12 @@ import httpx
 from httpx._models import URL
 
 from .auth import LoginAuthenticator, FileAuthenticator
-from .exceptions import (BadRequest, NotFoundError, NotResponding,
-                         NetworkError, ServerError, Unauthorized,
-                         UnexpectedError, RatelimitError)
-from .utils import test_convert
+from .exceptions import (
+    BadRequest, NotFoundError, NotResponding, NetworkError, ServerError,
+    Unauthorized, UnexpectedError, RatelimitError
+)
 from .localization import LOCALE_TEMPLATES, Locale
-
+from .utils import test_convert
 
 logger = logging.getLogger('audible.client')
 
@@ -24,13 +24,21 @@ class AudibleAPI:
 
     REQUEST_LOG = '{method} {url} has received {text}, has returned {status}'
 
-    def __init__(self, auth: Optional[Union[LoginAuthenticator, FileAuthenticator]] = None,
-                 session=None, is_async=False, **options) -> None:
+    def __init__(
+            self,
+            auth: Optional[
+                Union[LoginAuthenticator, FileAuthenticator]] = None,
+            session=None,
+            is_async=False,
+            **options
+    ) -> None:
         self.auth = auth
 
         self.is_async = is_async
-        self.session = (session or (httpx.AsyncClient() if is_async
-                        else httpx.Client()))
+        self.session = (
+            session or
+            (httpx.AsyncClient() if is_async else httpx.Client())
+        )
         headers = {
             "Accept": "application/json",
             "Content-Type": "application/json"
@@ -60,7 +68,9 @@ class AudibleAPI:
 
     def close(self):
         if self.is_async:
-            logger.warning("Please use aclose() method to close a async client.")
+            logger.warning(
+                "Please use aclose() method to close a async client."
+            )
         return self.session.close()
 
     async def aclose(self):
@@ -99,10 +109,14 @@ class AudibleAPI:
             data = text
         code = getattr(resp, 'status', None) or getattr(resp, 'status_code')
 
-        logger.debug(self.REQUEST_LOG.format(
-            method=method or resp.request_info.method, url=resp.url,
-            text=text, status=code
-        ))
+        logger.debug(
+            self.REQUEST_LOG.format(
+                method=method or resp.request_info.method,
+                url=resp.url,
+                text=text,
+                status=code
+            )
+        )
 
         if 300 > code >= 200:  # Request was successful
             if not return_raw:
@@ -132,10 +146,10 @@ class AudibleAPI:
             return self._raise_for_status(
                 resp, resp.text, method=method, return_raw=return_raw
             )
-        except (httpx.ConnectTimeout,
-                httpx.ReadTimeout,
-                httpx.WriteTimeout,
-                httpx.PoolTimeout):
+        except (
+                httpx.ConnectTimeout, httpx.ReadTimeout, httpx.WriteTimeout,
+                httpx.PoolTimeout
+        ):
             raise NotResponding
         except httpx.NetworkError:
             raise NetworkError
@@ -158,10 +172,10 @@ class AudibleAPI:
             return self._raise_for_status(
                 resp, resp.text, method=method, return_raw=return_raw
             )
-        except (httpx.ConnectTimeout,
-                httpx.ReadTimeout,
-                httpx.WriteTimeout,
-                httpx.PoolTimeout):
+        except (
+                httpx.ConnectTimeout, httpx.ReadTimeout, httpx.WriteTimeout,
+                httpx.PoolTimeout
+        ):
             raise NotResponding
         except httpx.NetworkError:
             raise NetworkError
@@ -201,13 +215,18 @@ class AudibleAPI:
 
 
 class Client:
-
     _API_URL_TEMP = "https://api.audible."
     _API_VERSION = "1.0"
     _SESSION = httpx.Client
     _REQUEST_LOG = '{method} {url} has received {text}, has returned {status}'
 
-    def __init__(self, auth, country_code=None, timeout=10):
+    def __init__(
+            self,
+            auth: Optional[
+                Union[LoginAuthenticator, FileAuthenticator]] = None,
+            country_code: Optional[str] = None,
+            timeout: int = 10
+    ):
         locale = Locale(country_code.lower()) if country_code else auth.locale
         api_url = self._API_URL_TEMP + locale.domain
         headers = {
@@ -216,10 +235,8 @@ class Client:
             "Content-Type": "application/json"
         }
         self.session = self._SESSION(
-            headers=headers,
-            timeout=timeout,
-            base_url=api_url,
-            auth=auth)
+            headers=headers, timeout=timeout, base_url=api_url, auth=auth
+        )
 
     def __enter__(self):
         return self
@@ -252,11 +269,11 @@ class Client:
         return self.session.auth
 
     def switch_user(
-        self,
-        auth: Union[LoginAuthenticator, FileAuthenticator],
-        switch_to_default_marketplace: bool = False
+            self,
+            auth: Union[LoginAuthenticator, FileAuthenticator],
+            switch_to_default_marketplace: bool = False
     ):
-        if set_default_marketplace:
+        if switch_to_default_marketplace:
             self.switch_marketplace(auth.locale.country_code)
         self.session.auth = auth
 
@@ -269,7 +286,7 @@ class Client:
         user_profile = self.get_user_profile()
         return user_profile["name"]
 
-    def _raise_for_status(self, resp, data, method):
+    def _raise_for_status(self, resp, data):
         code = resp.status_code
 
         if 300 > code >= 200:  # Request was successful
@@ -304,8 +321,10 @@ class Client:
 
             logger.debug(
                 self._REQUEST_LOG.format(
-                method=method, url=resp.url,
-                text=resp.text, status=resp.status_code
+                    method=method,
+                    url=resp.url,
+                    text=resp.text,
+                    status=resp.status_code
                 )
             )
 
@@ -314,14 +333,14 @@ class Client:
             except json.JSONDecodeError:
                 data = resp.text
 
-            self._raise_for_status(resp, data, method=method)
+            self._raise_for_status(resp, data)
 
             return data
 
-        except (httpx.ConnectTimeout,
-                httpx.ReadTimeout,
-                httpx.WriteTimeout,
-                httpx.PoolTimeout):
+        except (
+                httpx.ConnectTimeout, httpx.ReadTimeout, httpx.WriteTimeout,
+                httpx.PoolTimeout
+        ):
             raise NotResponding
         except httpx.NetworkError:
             raise NetworkError
@@ -354,7 +373,7 @@ class Client:
         return self._request("POST", path, params=params, json=body, **kwargs)
 
     def delete(self, path, **kwargs):
-        params, kwargs = self._split_kwargs(**kwargs)      
+        params, kwargs = self._split_kwargs(**kwargs)
         return self._request("DELETE", path, params=params, **kwargs)
 
 
@@ -381,8 +400,10 @@ class AsyncClient(Client):
 
             logger.debug(
                 self._REQUEST_LOG.format(
-                    method=method, url=resp.url,
-                    text=resp.text, status=resp.status_code
+                    method=method,
+                    url=resp.url,
+                    text=resp.text,
+                    status=resp.status_code
                 )
             )
 
@@ -391,20 +412,20 @@ class AsyncClient(Client):
             except json.JSONDecodeError:
                 data = resp.text
 
-            self._raise_for_status(resp, data, method=method)
+            self._raise_for_status(resp, data)
 
             return data
 
-        except (httpx.ConnectTimeout,
-                httpx.ReadTimeout,
-                httpx.WriteTimeout,
-                httpx.PoolTimeout):
+        except (
+                httpx.ConnectTimeout, httpx.ReadTimeout, httpx.WriteTimeout,
+                httpx.PoolTimeout
+        ):
             raise NotResponding
         except httpx.NetworkError:
             raise NetworkError
 
         finally:
             try:
-                resp.aclose()
+                await resp.aclose()
             except UnboundLocalError:
                 pass

@@ -26,16 +26,6 @@ def read_from_file(key):
     return re.search(f"{key} = ['\"]([^'\"]+)['\"]", about).group(1)
 
 
-install_options = os.environ.get("AUDIBLE_INSTALL", "").split(",")
-libonly_flags = set(["lib-only", "libonly", "no-cli", "without-cli"])
-if libonly_flags.intersection(install_options):
-    console_scripts = []
-else:
-    console_scripts = [
-        "audible = audible.cli:main",
-        "audible-quickstart = audible.cli:quickstart"]
-
-
 setup(
     name=read_from_file('__title__'),
     version=read_from_file('__version__'),
@@ -57,16 +47,12 @@ setup(
     ],
     install_requires=[
         'beautifulsoup4',
-        'click',
-        'colorama; platform_system=="Windows"',
         'httpcore',
         'httpx==0.13.*',
         'pbkdf2',
         'Pillow',
         'pyaes',
-        'rsa',
-        'tabulate',
-        'toml'
+        'rsa'
     ],
     python_requires='>=3.6',
     keywords='Audible, API, async',
@@ -75,6 +61,5 @@ setup(
     project_urls={
         "Documentation": "https://audible.readthedocs.io/",
         "Source": "https://github.com/mkb79/Audible",
-    },
-    entry_points={"console_scripts": console_scripts}
+    }
 )

@@ -1,16 +1,15 @@
 import base64
-from hashlib import sha256 as SHA256
-import hmac as HMAC
+import hmac
 import json
 import logging
 import os
 import pathlib
 import struct
-from typing import Dict, Tuple, Union
+from hashlib import sha256
+from typing import Dict, Tuple
 
 from pbkdf2 import PBKDF2
 from pyaes import AESModeOfOperationCBC, Encrypter, Decrypter
-
 
 logger = logging.getLogger('audible.aescipher')
 
@@ -36,15 +35,17 @@ def create_salt(salt_marker: bytes, kdf_iterations: int):
 
 
 def pack_salt(header, unpacked_salt):
-    return header+unpacked_salt
+    return header + unpacked_salt
 
 
 def unpack_salt(packed_salt, salt_marker):
     mlen = len(salt_marker)
     hlen = mlen * 2 + 2
 
-    if not (packed_salt[:mlen] == salt_marker and
-            packed_salt[mlen + 2:hlen] == salt_marker):
+    if not (
+            packed_salt[:mlen] == salt_marker and
+            packed_salt[mlen + 2:hlen] == salt_marker
+    ):
         raise ValueError("Check salt_marker.")
 
     kdf_iterations = struct.unpack('>H', packed_salt[mlen:mlen + 2])[0]
@@ -52,9 +53,15 @@ def unpack_salt(packed_salt, salt_marker):
     return salt, kdf_iterations
 
 
-def derive_from_pbkdf2(password: str, *, key_size: int, salt: bytes,
-                       kdf_iterations: int, hashmod, mac):
-
+def derive_from_pbkdf2(
+        password: str,
+        *,
+        key_size: int,
+        salt: bytes,
+        kdf_iterations: int,
+        hashmod,
+        mac
+):
     kdf = PBKDF2(password, salt, min(kdf_iterations, 65535), hashmod, mac)
     return kdf.read(key_size)
 
@@ -84,10 +91,17 @@ class AESCipher:
     All values in dict mode are written as base64 encoded string.
     """
 
-    def __init__(self, password: str, *, key_size: int = 32,
-                 salt_marker: bytes = b"$", kdf_iterations: int = 1000,
-                 hashmod=SHA256, mac=HMAC) -> None:
-        
+    def __init__(
+            self,
+            password: str,
+            *,
+            key_size: int = 32,
+            salt_marker: bytes = b"$",
+            kdf_iterations: int = 1000,
+            hashmod=sha256,
+            mac=hmac
+    ) -> None:
+
         if not 1 <= len(salt_marker) <= 6:
             raise ValueError('The salt_marker must be one to six bytes long.')
 
@@ -136,7 +150,7 @@ class AESCipher:
 
     def to_dict(self, data: str) -> Dict[str, str]:
         salt, iv, encrypted_data = self._encrypt(data)
-        
+
         return {
             "salt": base64.b64encode(salt).decode("utf-8"),
             "iv": base64.b64encode(iv).decode("utf-8"),
@@ -157,13 +171,14 @@ class AESCipher:
     def from_bytes(self, data: bytes) -> str:
         bs = BLOCK_SIZE
         salt = data[:bs]
-        iv = data[bs:2*bs]
-        encrypted_data = data[2*bs:]
+        iv = data[bs:2 * bs]
+        encrypted_data = data[2 * bs:]
         return self._decrypt(salt, iv, encrypted_data)
 
-    def to_file(self, data: str,
-                filename: Union[pathlib.Path, pathlib.WindowsPath],
-                encryption="json", indent=4):
+    def to_file(
+            self, data: str, filename: pathlib.Path, encryption="json",
+            indent=4
+    ):
         if encryption == "json":
             encrypted_dict = self.to_dict(data)
             data_json = json.dumps(encrypted_dict, indent=indent)
@@ -176,22 +191,21 @@ class AESCipher:
         else:
             raise ValueError("encryption must be \"json\" or \"bytes\"..")
 
-    def from_file(self, filename: Union[pathlib.Path, pathlib.WindowsPath],
-                  encryption="json"):
+    def from_file(self, filename: pathlib.Path, encryption="json"):
         if encryption == "json":
             encrypted_json = filename.read_text()
             encrypted_dict = json.loads(encrypted_json)
             return self.from_dict(encrypted_dict)
 
         elif encryption == "bytes":
-            encrypted_data = filename.read_bytes()    
+            encrypted_data = filename.read_bytes()
             return self.from_bytes(encrypted_data)
 
         else:
             raise ValueError("encryption must be \"json\" or \"bytes\".")
 
 
-def detect_file_encryption(filename: Union[pathlib.Path, pathlib.WindowsPath]):
+def detect_file_encryption(filename: pathlib.Path):
     file = filename.read_bytes()
     encryption = None
 
@@ -217,4 +231,3 @@ def remove_file_encryption(source, target, password, **kwargs):
     crypter = AESCipher(password, **kwargs)
     decrypted = crypter.from_file(source_file, encryption=encryption)
     pathlib.Path(target).write_text(decrypted)
-

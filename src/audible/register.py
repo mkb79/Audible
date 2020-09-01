@@ -1,6 +1,6 @@
+import uuid
 from datetime import datetime, timedelta
 from typing import Any, Dict
-import uuid
 
 import httpx
 
@@ -21,34 +21,36 @@ def register(access_token: str, domain: str) -> Dict[str, Any]:
     Returns important credentials needed for access audible api.
     """
     body = {
-        "requested_token_type": [
-            "bearer", "mac_dms", "website_cookies",
-            "store_authentication_cookie"
-        ],
+        "requested_token_type":
+            ["bearer", "mac_dms", "website_cookies",
+             "store_authentication_cookie"],
         "cookies": {
             "website_cookies": [],
-            "domain": f".amazon.{domain}"
-        },
+            "domain": f".amazon.{domain}"},
         "registration_data": {
-            "domain": "Device",
-            "app_version": "3.26.1",
-            "device_serial": get_random_device_serial(),
-            "device_type": "A2CZJZGLK2JJVM",
-            "device_name": ("%FIRST_NAME%%FIRST_NAME_POSSESSIVE_STRING%%DUPE_"
-                            "STRATEGY_1ST%Audible for iPhone"),
-            "os_version": "13.5.1",
-            "device_model": "iPhone",
-            "app_name": "Audible"
-        },
+            "domain":
+                "Device",
+            "app_version":
+                "3.26.1",
+            "device_serial":
+                get_random_device_serial(),
+            "device_type":
+                "A2CZJZGLK2JJVM",
+            "device_name": (
+                "%FIRST_NAME%%FIRST_NAME_POSSESSIVE_STRING%%DUPE_"
+                "STRATEGY_1ST%Audible for iPhone"),
+            "os_version":
+                "13.5.1",
+            "device_model":
+                "iPhone",
+            "app_name":
+                "Audible"},
         "auth_data": {
-            "access_token": access_token
-        },
+            "access_token": access_token},
         "requested_extensions": ["device_info", "customer_info"]
     }
 
-    resp = httpx.post(
-        f"https://api.amazon.{domain}/auth/register", json=body
-    )
+    resp = httpx.post(f"https://api.amazon.{domain}/auth/register", json=body)
 
     resp_json = resp.json()
     if resp.status_code != 200:
@@ -101,7 +103,8 @@ def deregister(access_token: str, domain: str,
 
     resp = httpx.post(
         f"https://api.amazon.{domain}/auth/deregister",
-        json=body, headers=headers
+        json=body,
+        headers=headers
     )
 
     resp_json = resp.json()
