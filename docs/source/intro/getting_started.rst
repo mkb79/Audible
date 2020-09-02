@@ -9,6 +9,11 @@ If you are new to audible, this is the place to begin. The goal of this
 tutorial is to get you set-up and rolling with audible. I won't go into 
 too much detail here, just some important basics.
 
+.. note::
+
+   For a command line interface take a look on my 
+   `audible-cli <https://github.com/mkb79/audible-cli>`_ package.
+
 Hello Library
 =============
 
