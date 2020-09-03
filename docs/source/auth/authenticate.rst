@@ -25,8 +25,7 @@ To authenticate with amazon you can do::
    auth = audible.LoginAuthenticator(
        username,
        password,
-       locale=country_code,
-       register=False)
+       locale=country_code)
 
 .. note::
 

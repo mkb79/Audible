@@ -1,20 +1,20 @@
 import base64
-from collections.abc import MutableMapping
-from datetime import datetime, timedelta
 import json
 import logging
+from collections.abc import MutableMapping
+from datetime import datetime, timedelta
 from typing import Any, Dict
 
 import httpx
 import rsa
 
+from .activation_bytes import get_activation_bytes as get_ab
 from .aescipher import AESCipher, detect_file_encryption
+from .exceptions import FileEncryptionError, NoAuthFlow, NoRefreshToken
 from .login import login
-from .exceptions import NoAuthFlow, NoRefreshToken
 from .register import deregister as deregister_
 from .register import register as register_
 from .utils import test_convert
-
 
 logger = logging.getLogger('audible.auth')
 
@@ -25,36 +25,34 @@ def refresh_access_token(refresh_token: str, domain: str) -> Dict[str, Any]:
     Access tokens are valid for 60 mins.
     
     """
-    
+
     body = {
         "app_name": "Audible",
-        "app_version": "3.7",
+        "app_version": "3.26.1",
         "source_token": refresh_token,
         "requested_token_type": "access_token",
         "source_token_type": "refresh_token"
     }
 
-    resp = httpx.post(
-        f"https://api.amazon.{domain}/auth/token", data=body
-    )
+    resp = httpx.post(f"https://api.amazon.{domain}/auth/token", data=body)
     resp.raise_for_status()
-    resp_json = resp.json()
+    resp_dict = resp.json()
 
-    expires_in_sec = int(resp_json["expires_in"])
-    expires = (datetime.utcnow() + timedelta(seconds=expires_in_sec)).timestamp()
+    expires_in_sec = int(resp_dict["expires_in"])
+    expires = (datetime.utcnow() + timedelta(seconds=expires_in_sec
+                                             )).timestamp()
 
-    return {
-        "access_token": resp_json["access_token"],
-        "expires": expires
-    }
+    return {"access_token": resp_dict["access_token"], "expires": expires}
 
 
-def refresh_website_cookies(refresh_token: str, domain: str, cookies_domain: str):
+def refresh_website_cookies(
+        refresh_token: str, domain: str, cookies_domain: str
+) -> Dict[str, str]:
     url = f"https://www.amazon.{domain}/ap/exchangetoken"
 
     body = {
         "app_name": "Audible",
-        "app_version": "3.7",
+        "app_version": "3.26.1",
         "source_token": refresh_token,
         "requested_token_type": "auth_cookies",
         "source_token_type": "refresh_token",
@@ -63,19 +61,22 @@ def refresh_website_cookies(refresh_token: str, domain: str, cookies_domain: str
 
     resp = httpx.post(url, data=body)
     resp.raise_for_status()
-    resp_json = resp.json()
+    resp_dict = resp.json()
 
-    website_cookies = resp_json["response"]["tokens"]["cookies"]
+    raw_cookies = resp_dict["response"]["tokens"]["cookies"]
+    website_cookies = dict()
+    for domain in raw_cookies:
+        for cookie in raw_cookies[domain]:
+            website_cookies[cookie["Name"]] = cookie["Value"].replace(r'"',
+                                                                      r'')
 
     return website_cookies
 
 
 def user_profile(access_token: str, domain: str) -> Dict[str, Any]:
-    """Returns user profile."""
+    """Returns user profile from amazon."""
 
-    headers = {
-        "Authorization": f"Bearer {access_token}"
-    }
+    headers = {"Authorization": f"Bearer {access_token}"}
 
     resp = httpx.get(
         f"https://api.amazon.{domain}/user/profile", headers=headers
@@ -85,8 +86,22 @@ def user_profile(access_token: str, domain: str) -> Dict[str, Any]:
     return resp.json()
 
 
-def sign_request(path: str, method: str, body: str, adp_token: str,
-                 private_key: str) -> Dict[str, str]:
+def user_profile_audible(access_token: str, domain: str) -> Dict[str, Any]:
+    """Returns user profile from audible."""
+
+    headers = {"Authorization": f"Bearer {access_token}"}
+
+    resp = httpx.get(
+        f"https://api.audible.{domain}/user/profile", headers=headers
+    )
+    resp.raise_for_status()
+
+    return resp.json()
+
+
+def sign_request(
+        method: str, path: str, body: bytes, adp_token: str, private_key: str
+) -> Dict[str, str]:
     """
     Helper function who creates a signed header for requests.
 
@@ -97,14 +112,9 @@ def sign_request(path: str, method: str, body: str, adp_token: str,
     :param private_key: the rsa key obtained after register as device
     """
     date = datetime.utcnow().isoformat("T") + "Z"
+    body = body.decode("utf-8")
 
-    data = f"{method}\n{path}\n{date}\n"
-    if body:
-        if isinstance(body, bytes):
-            body = body.decode('utf-8')
-        data += body
-    data += "\n"
-    data += adp_token
+    data = f"{method}\n{path}\n{date}\n{body}\n{adp_token}"
 
     key = rsa.PrivateKey.load_pkcs1(private_key)
     cipher = rsa.pkcs1.sign(data.encode(), key, "SHA-256")
@@ -123,9 +133,6 @@ class BaseAuthenticator(MutableMapping, httpx.Auth):
     """Base Class for retrieve and handle credentials."""
 
     requires_request_body = True
-
-    def __init__(self):
-        raise NotImplementedError()
 
     def __getitem__(self, key):
         return self.__dict__[key]
@@ -154,8 +161,8 @@ class BaseAuthenticator(MutableMapping, httpx.Auth):
     def __repr__(self):
         return f"{type(self).__name__}({self.__dict__})"
 
-    def auth_flow(self, request):
-        if self.adp_token and self.device_private_key: 
+    def auth_flow(self, request: httpx.Request):
+        if self.adp_token and self.device_private_key:
             logger.info("Use sign request auth flow.")
             self.sign_request(request)
 
@@ -176,36 +183,44 @@ class BaseAuthenticator(MutableMapping, httpx.Auth):
 
         yield request
 
-    def sign_request(self, request):
+    def sign_request(self, request: httpx.Request):
         method = request.method
         path = request.url.path
         query = request.url.query
-        body = request.content if request.content else None
-    
+        body = request.content
+
         if query:
             path += f"?{query}"
 
-        headers = sign_request(path, method, body, self.adp_token,
-                               self.device_private_key)
+        headers = sign_request(
+            method, path, body, self.adp_token, self.device_private_key
+        )
 
         request.headers.update(headers)
 
-    def to_file(self, filename=None, password=None, encryption="default",
-                indent=4, set_default=True, **kwargs):
+    def to_file(
+            self,
+            filename=None,
+            password=None,
+            encryption="default",
+            indent=4,
+            set_default=True,
+            **kwargs
+    ):
 
-        if not any([filename, self.filename]):
+        if not (filename or self.filename):
             raise ValueError("No filename provided")
 
         if filename:
             filename = test_convert("filename", filename)
 
-        target_file = filename or self.filename            
+        target_file = filename or self.filename
 
         if encryption != "default":
             encryption = test_convert("encryption", encryption)
         else:
             encryption = self.encryption or False
-        
+
         body = {
             "website_cookies": self.website_cookies,
             "adp_token": self.adp_token,
@@ -225,14 +240,19 @@ class BaseAuthenticator(MutableMapping, httpx.Auth):
             crypter = None
         else:
             if password:
-                crypter = test_convert("crypter", AESCipher(password, **kwargs))
+                crypter = test_convert("crypter",
+                                       AESCipher(password, **kwargs))
             elif self.crypter:
                 crypter = self.crypter
             else:
                 raise ValueError("No password provided")
 
-            crypter.to_file(json_body, filename=target_file,
-                            encryption=encryption, indent=indent)
+            crypter.to_file(
+                json_body,
+                filename=target_file,
+                encryption=encryption,
+                indent=indent
+            )
 
         logger.info(f"saved data to file {filename}")
 
@@ -243,8 +263,14 @@ class BaseAuthenticator(MutableMapping, httpx.Auth):
 
         logger.info(f"set filename {target_file} as default")
 
-    def re_login(self, username, password, captcha_callback=None,
-                 otp_callback=None, cvf_callback=None):
+    def re_login(
+            self,
+            username,
+            password,
+            captcha_callback=None,
+            otp_callback=None,
+            cvf_callback=None
+    ):
 
         login_device = login(
             username=username,
@@ -260,15 +286,18 @@ class BaseAuthenticator(MutableMapping, httpx.Auth):
         self.update(**login_device)
 
     def register_device(self):
-        register_device = register_(access_token=self.access_token,
-                                    domain=self.locale.domain)
+        register_device = register_(
+            access_token=self.access_token, domain=self.locale.domain
+        )
 
         self.update(**register_device)
 
     def deregister_device(self, deregister_all: bool = False):
-        return deregister_(access_token=self.access_token,
-                           deregister_all=deregister_all,
-                           domain=self.locale.domain)
+        return deregister_(
+            access_token=self.access_token,
+            deregister_all=deregister_all,
+            domain=self.locale.domain
+        )
 
     def refresh_access_token(self, force=False):
         if force or self.access_token_expired:
@@ -277,18 +306,23 @@ class BaseAuthenticator(MutableMapping, httpx.Auth):
                 logger.critical(message)
                 raise NoRefreshToken(message)
             refresh_data = refresh_access_token(
-                refresh_token=self.refresh_token,
-                domain=self.locale.domain
+                refresh_token=self.refresh_token, domain=self.locale.domain
             )
-    
+
             self.update(**refresh_data)
         else:
-            logger.info("Access Token not expired. No refresh nessessary. "
-                        "To force refresh please use force=True")
+            logger.info(
+                "Access Token not expired. No refresh nessessary. "
+                "To force refresh please use force=True"
+            )
+
+    def get_activation_bytes(self, filename=None):
+        return get_ab(self, filename)
 
     def user_profile(self):
-        return user_profile(access_token=self.access_token,
-                            domain=self.locale.domain)
+        return user_profile(
+            access_token=self.access_token, domain=self.locale.domain
+        )
 
     @property
     def access_token_expires(self):
@@ -296,18 +330,22 @@ class BaseAuthenticator(MutableMapping, httpx.Auth):
 
     @property
     def access_token_expired(self):
-        if datetime.fromtimestamp(self.expires) <= datetime.utcnow():
-            return True
-        else:
-            return False
+        return datetime.fromtimestamp(self.expires) <= datetime.utcnow()
 
 
 class LoginAuthenticator(BaseAuthenticator):
     """Authenticator class to retrieve credentials from login."""
-    def __init__(self, username: str, password: str, locale, register=False,
-                 captcha_callback=None, otp_callback=None,
-                 cvf_callback=None):
 
+    def __init__(
+            self,
+            username: str,
+            password: str,
+            locale,
+            register=False,
+            captcha_callback=None,
+            otp_callback=None,
+            cvf_callback=None
+    ):
         self.locale = locale
 
         resp = login(
@@ -320,7 +358,7 @@ class LoginAuthenticator(BaseAuthenticator):
             otp_callback=otp_callback,
             cvf_callback=cvf_callback
         )
- 
+
         logger.info(f"logged in to audible as {username}")
 
         if register:
@@ -332,14 +370,20 @@ class LoginAuthenticator(BaseAuthenticator):
 
 class FileAuthenticator(BaseAuthenticator):
     """Authenticator class to retrieve credentials from stored file."""
-    def __init__(self, filename, password=None, locale=None,
-                 encryption=None, **kwargs) -> None:
+
+    def __init__(
+            self, filename, password=None, locale=None, encryption=None,
+            **kwargs
+    ) -> None:
 
         self.filename = filename
-
         self.encryption = encryption or detect_file_encryption(self.filename)
 
         if self.encryption:
+            if password is None:
+                message = "File is encrypted but no password provided."
+                logger.critical(message)
+                raise FileEncryptionError(message)
             self.crypter = AESCipher(password, **kwargs)
             file_data = self.crypter.from_file(self.filename, self.encryption)
         else:
@@ -359,5 +403,9 @@ class FileAuthenticator(BaseAuthenticator):
 
         self.update(**json_data)
 
-        logger.info((f"load data from file {self.filename} for "
-                     f"locale {self.locale.country_code}"))
+        logger.info(
+            (
+                f"load data from file {self.filename} for "
+                f"locale {self.locale.country_code}"
+            )
+        )

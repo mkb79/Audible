@@ -6,9 +6,7 @@ import httpx
 from bs4 import BeautifulSoup
 from httpcore import ConnectError
 
-
 logger = logging.getLogger("audible.localization")
-
 
 LOCALE_TEMPLATES = {
     "germany": {
@@ -80,10 +78,7 @@ def autodetect_locale(domain: str) -> Dict[str, str]:
     """
     domain = domain.lstrip(".")
     site = f"https://www.audible.{domain}"
-    params = {
-        "ipRedirectOverride": True,
-        "overrideBaseCountry": True
-    }
+    params = {"ipRedirectOverride": True, "overrideBaseCountry": True}
 
     try:
         resp = httpx.get(site, params=params)
@@ -114,9 +109,13 @@ class Locale:
     ``autodetect_locale`` if your marketplace is not in `locales.json`.
     
     """
-    def __init__(self, country_code: Optional[str] = None,
-                 domain: Optional[str] = None,
-                 market_place_id: Optional[str] = None) -> None:
+
+    def __init__(
+            self,
+            country_code: Optional[str] = None,
+            domain: Optional[str] = None,
+            market_place_id: Optional[str] = None
+    ) -> None:
 
         if not all([country_code, domain, market_place_id]):
             locale = None
@@ -133,8 +132,10 @@ class Locale:
         self._market_place_id = market_place_id or locale["market_place_id"]
 
     def __repr__(self):
-        return (f"Locale class for domain: {self.domain}, "
-                f"marketplace: {self.market_place_id}")
+        return (
+            f"Locale class for domain: {self.domain}, "
+            f"marketplace: {self.market_place_id}"
+        )
 
     def to_dict(self) -> Dict[str, str]:
         return {

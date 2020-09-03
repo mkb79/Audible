@@ -6,7 +6,7 @@ import audible
 # ASYNC FUNCTIONALITY
 async def get_book_infos(client, asin):
     try:
-        book, _ = await client.get(
+        book = await client.get(
             path=f"library/{asin}",
             params={
                 "response_groups": (
@@ -25,10 +25,10 @@ async def get_book_infos(client, asin):
 
 
 async def main(auth):
-    async with audible.AudibleAPI(auth, is_async=True) as client:
+    async with audible.AsyncClient(auth) as client:
         print(repr(client))
 
-        library, _ = await client.get(
+        library = await client.get(
             path="library",
             params={
                 "num_results": 999
@@ -54,8 +54,7 @@ if __name__ == "__main__":
     auth = audible.LoginAuthenticator(
         "USERNAME",
         "PASSWORD",
-        locale="us",
-        register=False
+        locale="us"
     )
     loop = asyncio.get_event_loop()
     loop.run_until_complete(main(auth))

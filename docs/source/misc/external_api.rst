@@ -133,12 +133,12 @@ GET /1.0/library/collections/%s/products
    - image_sizes:
 
 GET /1.0/orders
-----------------
+---------------
 
-:params:
-   - unknown
+ :params:
+    - unknown
 
-Returns order history from at least the past 6 months. Supports pagination.
+ Returns order history from at least the past 6 months. Supports pagination.
 
 POST /1.0/orders
 ----------------
@@ -217,6 +217,13 @@ GET /1.0/catalog/categories
 ---------------------------
 
 :params:
+   - response_groups: [category_metadata, products]
+   - products_plan = [Enterprise, RodizioFreeBasic, AyceRomance, AllYouCanEat, US Minerva, Universal, AmazonEnglish, ComplimentaryOriginalMemberBenefit, Radio, SpecialBenefit, Rodizio]
+   - products_in_plan_timestamp:
+   - products_num_results:
+   - runtime_length_min:
+   - content_level:
+   - content_type:
    - categories_num_levels: \\d+ (greater than or equal to 1)
    - ids: \\d+(,\\d+)\*
    - root: [InstitutionsHpMarketing, ChannelsConfigurator, AEReadster, ShortsPrime, ExploreBy, RodizioBuckets, EditorsPicks, ClientContent, RodizioGenres, AmazonEnglishProducts, ShortsSandbox, Genres, Curated, ShortsIntroOutroRemoval, Shorts, RodizioEpisodesAndSeries, ShortsCurated]

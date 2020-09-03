@@ -3,7 +3,7 @@ import audible
 
 # get library
 def get_library():
-    books, _ = client.get(
+    books = client.get(
         path="library",
         params={
             "response_groups": (
@@ -18,7 +18,7 @@ def get_library():
 
 
 def _get_book_infos(asin):
-    book, _ = client.get(
+    book = client.get(
         path=f"library/{asin}",
         params={
             "response_groups": "relationships, product_desc, product_attrs, media"
@@ -47,7 +47,7 @@ def _get_book_infos(asin):
 
 
 def _get_download_link(asin, quality):
-    data, _ = client.post(
+    data = client.post(
         path=f"content/{asin}/licenserequest",
         body={
             "drm_type": "Adrm",

@@ -14,6 +14,8 @@
 Code and README are forked from omarroth‘s fantastic [audible.cr](https://github.com/omarroth/audible.cr) API written in crystal.
 The whole code is written with Pythonista for iOS.
 
+For a command line interface take a look on my [audible-cli](https://github.com/mkb79/audible-cli) package.
+
 ## Requirements
 
 - Python >= 3.6
@@ -32,4 +34,4 @@ The whole code is written with Pythonista for iOS.
 
 ## Read the Doc
 
-The doc can be found at [Read the Docs](https://audible.readthedocs.io/en/latest)
+The documentation can be found at [Read the Docs](https://audible.readthedocs.io/en/latest)

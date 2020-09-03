@@ -7,6 +7,7 @@ class StatusError(RequestError):
     Base class for all errors except NotResponding and
     RatelimitDetectedError
     """
+
     def __init__(self, resp, data):
         self.response = resp
         self.code = getattr(resp, 'status_code')
@@ -24,6 +25,7 @@ class StatusError(RequestError):
 
 class NotResponding(RequestError):
     """Raised if the API request timed out"""
+
     def __init__(self):
         self.code = 504
         self.error = 'API request timed out, please be patient.'
@@ -34,6 +36,7 @@ class NetworkError(RequestError):
     """Raised if there is an issue with the network
     (i.e. requests.ConnectionError)
     """
+
     def __init__(self):
         self.code = 503
         self.error = 'Network down.'
@@ -73,3 +76,7 @@ class NoAuthFlow(Exception):
 
 class NoRefreshToken(Exception):
     """Raised if refresh token is needed but not provided"""
+
+
+class FileEncryptionError(Exception):
+    """Raised if something is wrong with file encryption"""

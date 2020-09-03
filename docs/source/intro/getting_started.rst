@@ -9,6 +9,11 @@ If you are new to audible, this is the place to begin. The goal of this
 tutorial is to get you set-up and rolling with audible. I won't go into 
 too much detail here, just some important basics.
 
+.. note::
+
+   For a command line interface take a look on my 
+   `audible-cli <https://github.com/mkb79/audible-cli>`_ package.
+
 Hello Library
 =============
 
@@ -19,16 +24,15 @@ First step is to authenticate the user::
    auth = audible.LoginAuthenticator(
        username,
        password,
-       locale=country_code,
-       register=False)
+       locale=country_code)
 
 After authenticating, the client can be instantiated::
 
-   client = audible.AudibleAPI(auth)
+   client = audible.Client(auth)
 
 Now make our first API call::
    
-   library, _ = client.get("library")
+   library = client.get("1.0/library")
    
    for book in library["items"]:
        print(book)

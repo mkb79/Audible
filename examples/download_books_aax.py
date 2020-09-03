@@ -6,7 +6,7 @@ import httpx
 
 # get download link(s) for book
 def _get_download_link(auth, asin, codec="LC_128_44100_stereo"):
-    # need at least v0.3.1
+    # need at least v0.4.0dev
     if auth.adp_token is None:
         raise Exception("No adp token present. Can't get download link.")
 
@@ -61,9 +61,9 @@ if __name__ == "__main__":
         encryption="json",
         password=password
     )
-    client = audible.AudibleAPI(auth)
+    client = audible.Client(auth)
 
-    books, _ = client.get(
+    books = client.get(
         path="library",
         params={
             "response_groups": "product_attrs",
@@ -71,8 +71,9 @@ if __name__ == "__main__":
             }
     )
 
-    for book in books["items"]:
-        asin = book["asin"]
+    asins = [book["asin"] for book in books["items"]]
+
+    for asin in asins:
         dl_link = _get_download_link(auth, asin)
 
         if dl_link:

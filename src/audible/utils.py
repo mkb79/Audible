@@ -76,11 +76,10 @@ def _check_expires(value) -> Optional[float]:
 
 
 def _check_locales(value) -> Optional[Locale]:
-    if isinstance(value, Locale):
-        pass
-    elif isinstance(value, str):
+    if isinstance(value, str):
         return Locale(value.lower())
-    else:
+
+    if not isinstance(value, Locale):
         raise TypeError("Locale error")
 
 

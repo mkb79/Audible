@@ -11,9 +11,8 @@ from bs4 import BeautifulSoup
 from PIL import Image
 import httpx
 
-
-USER_AGENT = ("Mozilla/5.0 (iPhone; CPU iPhone OS 12_3_1 like Mac OS X) "
-              "AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148")
+USER_AGENT = "Mozilla/5.0 (iPhone; CPU iPhone OS 12_3_1 like Mac OS X) " \
+             "AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148"
 
 
 def default_captcha_callback(captcha_url: str) -> str:
@@ -58,23 +57,25 @@ def get_inputs_from_soup(soup) -> Dict[str, str]:
     return inputs
 
 
-def build_oauth_url(country_code: str, domain: str, market_place_id: str) -> str:
+def build_oauth_url(
+    country_code: str, domain: str, market_place_id: str
+) -> str:
     oauth_params = {
         "openid.oa2.response_type": "token",
         "openid.return_to": f"https://www.amazon.{domain}/ap/maplanding",
         "openid.assoc_handle": f"amzn_audible_ios_{country_code}",
-        "openid.identity": ("http://specs.openid.net/auth/2.0/"
-                            "identifier_select"),
+        "openid.identity": "http://specs.openid.net/auth/2.0/"
+                           "identifier_select",
         "pageId": "amzn_audible_ios",
         "accountStatusPolicy": "P1",
-        "openid.claimed_id": ("http://specs.openid.net/auth/2.0/"
-                              "identifier_select"),
+        "openid.claimed_id": "http://specs.openid.net/auth/2.0/"
+                             "identifier_select",
         "openid.mode": "checkid_setup",
         "openid.ns.oa2": "http://www.amazon.com/ap/ext/oauth/2",
-        "openid.oa2.client_id": ("device:6a52316c62706d53427a57355"
-                                 "05a76477a45375959566674327959465"
-                                 "a6374424a53497069546d45234132435"
-                                 "a4a5a474c4b324a4a564d"),
+        "openid.oa2.client_id": "device:6a52316c62706d53427a57355"
+                                "05a76477a45375959566674327959465"
+                                "a6374424a53497069546d45234132435"
+                                "a4a5a474c4b324a4a564d",
         "openid.ns.pape": "http://specs.openid.net/extensions/pape/1.0",
         "marketPlaceId": market_place_id,
         "openid.oa2.scope": "device_auth_access",
@@ -82,7 +83,7 @@ def build_oauth_url(country_code: str, domain: str, market_place_id: str) -> str
         "openid.ns": "http://specs.openid.net/auth/2.0",
         "openid.pape.max_auth_age": "0"
     }
-    
+
     return f"https://www.amazon.{domain}/ap/signin?{urlencode(oauth_params)}"
 
 
@@ -123,10 +124,16 @@ def extract_token_from_url(url):
     return parsed_url["openid.oa2.access_token"][0]
 
 
-def login(username: str, password: str, country_code: str,
-          domain: str, market_place_id: str, captcha_callback=None,
-          otp_callback=None,
-          cvf_callback=None) -> Dict[str, Any]:
+def login(
+    username: str,
+    password: str,
+    country_code: str,
+    domain: str,
+    market_place_id: str,
+    captcha_callback=None,
+    otp_callback=None,
+    cvf_callback=None
+) -> Dict[str, Any]:
 
     amazon_url = f"https://www.amazon.{domain}"
     sign_in_url = amazon_url + "/ap/signin"
@@ -174,7 +181,9 @@ def login(username: str, password: str, country_code: str,
     # https://www.amazon.de/ap/mfa/new-otp
     while check_for_choice_mfa(login_soup):
         inputs = get_inputs_from_soup(login_soup)
-        for node in login_soup.select("div[data-a-input-name=otpDeviceContext]"):
+        for node in login_soup.select(
+            "div[data-a-input-name=otpDeviceContext]"
+        ):
             # auth-TOTP, auth-SMS, auth-VOICE
             if "auth-TOTP" in node["class"]:
                 inp_node = node.find("input")
@@ -242,7 +251,7 @@ def _data_to_int_list(data: Union[str, bytes]) -> List[int]:
     data_bytes = data.encode() if isinstance(data, str) else data
     data_list_int = []
     for i in range(0, len(data_bytes), 4):
-        data_list_int.append(int.from_bytes(data_bytes[i:i+4], "little"))
+        data_list_int.append(int.from_bytes(data_bytes[i:i + 4], "little"))
 
     return data_list_int
 
@@ -269,9 +278,11 @@ def _encrypt_data(data: List[int]) -> List[int]:
 
         for i in range(rounds):
             first = temp2[(i + 1) % rounds]
-            temp2[i] += ((last >> 5 ^ first << 2)
-                         + (first >> 3 ^ last << 4) ^ (inner_roll ^ first)
-                         + (CONSTANTS[i & 3 ^ inner_variable] ^ last))
+            temp2[i] += (
+                (last >> 5 ^ first << 2) + (first >> 3 ^ last << 4) ^
+                (inner_roll ^ first) +
+                (CONSTANTS[i & 3 ^ inner_variable] ^ last)
+            )
             last = temp2[i] = temp2[i] & 0xffffffff
 
     return temp2
@@ -296,9 +307,11 @@ def _decrypt_data(data: List[int]) -> List[int]:
             first = temp2[(i + 1) % rounds]
             last = temp2[(i - 1) % rounds]
 
-            temp2[i] -= ((last >> 5 ^ first << 2)
-                         + (first >> 3 ^ last << 4) ^ (inner_roll ^ first)
-                         + (CONSTANTS[i & 3 ^ inner_variable] ^ last))
+            temp2[i] -= (
+                (last >> 5 ^ first << 2) + (first >> 3 ^ last << 4) ^
+                (inner_roll ^ first) +
+                (CONSTANTS[i & 3 ^ inner_variable] ^ last)
+            )
             temp2[i] &= 0xffffffff
 
     return temp2
@@ -315,15 +328,10 @@ def encrypt_metadata(metadata: str) -> str:
 
     """
     checksum = _generate_hex_checksum(metadata)
-
     object_str = f"{checksum}#{metadata}"
-
     object_list_int = _data_to_int_list(object_str)
-
     object_list_int_enc = _encrypt_data(object_list_int)
-
     object_bytes = _list_int_to_bytes(object_list_int_enc)
-
     object_base64 = base64.b64encode(object_bytes)
 
     return f"ECdITeCs:{object_base64.decode()}"
@@ -332,17 +340,11 @@ def encrypt_metadata(metadata: str) -> str:
 def decrypt_metadata(metadata: str) -> str:
     """Decrypt metadata. For testing purposes only."""
     object_base64 = metadata.lstrip("ECdITeCs:")
-
     object_bytes = base64.b64decode(object_base64)
-
     object_list_int = _data_to_int_list(object_bytes)
-
     object_list_int_dec = _decrypt_data(object_list_int)
-
     object_bytes = _list_int_to_bytes(object_list_int_dec).rstrip(b"\0")
-
     object_str = object_bytes.decode()
-
     checksum, metadata = object_str.split("#", 1)
 
     assert _generate_hex_checksum(metadata) == checksum
@@ -351,7 +353,7 @@ def decrypt_metadata(metadata: str) -> str:
 
 
 def now_to_unix_ms() -> int:
-    return math.floor(datetime.now().timestamp()*1000)
+    return math.floor(datetime.now().timestamp() * 1000)
 
 
 def meta_audible_app(user_agent: str, oauth_url: str) -> str:
@@ -394,19 +396,9 @@ def meta_audible_app(user_agent: str, oauth_url: str) -> str:
                  "01/x-locale/common/login/fwcim._CB454428048_.js")
             ],
             "inlineHashes": [
-                -1746719145,
-                1334687281,
-                -314038750,
-                1184642547,
-                -137736901,
-                318224283,
-                585973559,
-                1103694443,
-                11288800,
-                -1611905557,
-                1800521327,
-                -1171760960,
-                -898892073
+                -1746719145, 1334687281, -314038750, 1184642547, -137736901,
+                318224283, 585973559, 1103694443, 11288800, -1611905557,
+                1800521327, -1171760960, -898892073
             ],
             "elapsed": 52,
             "dynamicUrlCount": 5,
@@ -527,102 +519,30 @@ def meta_audible_app(user_agent: str, oauth_url: str) -> str:
         "token": None,
         "errors": [],
         "metrics": [
-            {
-                "n": "fwcim-mercury-collector",
-                "t": 0
-            },
-            {
-                "n": "fwcim-instant-collector",
-                "t": 0
-            },
-            {
-                "n": "fwcim-element-telemetry-collector",
-                "t": 2
-            },
-            {
-                "n": "fwcim-script-version-collector",
-                "t": 0
-            },
-            {
-                "n": "fwcim-local-storage-identifier-collector",
-                "t": 0
-            },
-            {
-                "n": "fwcim-timezone-collector",
-                "t": 0
-            },
-            {
-                "n": "fwcim-script-collector",
-                "t": 1
-            },
-            {
-                "n": "fwcim-plugin-collector",
-                "t": 0
-            },
-            {
-                "n": "fwcim-capability-collector",
-                "t": 1
-            },
-            {
-                "n": "fwcim-browser-collector",
-                "t": 0
-            },
-            {
-                "n": "fwcim-history-collector",
-                "t": 0
-            },
-            {
-                "n": "fwcim-gpu-collector",
-                "t": 1
-            },
-            {
-                "n": "fwcim-battery-collector",
-                "t": 0
-            },
-            {
-                "n": "fwcim-dnt-collector",
-                "t": 0
-            },
-            {
-                "n": "fwcim-math-fingerprint-collector",
-                "t": 0
-            },
-            {
-                "n": "fwcim-performance-collector",
-                "t": 0
-            },
-            {
-                "n": "fwcim-timer-collector",
-                "t": 0
-            },
-            {
-                "n": "fwcim-time-to-submit-collector",
-                "t": 0
-            },
-            {
-                "n": "fwcim-form-input-telemetry-collector",
-                "t": 4
-            },
-            {
-                "n": "fwcim-canvas-collector",
-                "t": 2
-            },
-            {
-                "n": "fwcim-captcha-telemetry-collector",
-                "t": 0
-            },
-            {
-                "n": "fwcim-proof-of-work-collector",
-                "t": 1
-            },
-            {
-                "n": "fwcim-ubf-collector",
-                "t": 0
-            },
-            {
-                "n": "fwcim-timer-collector",
-                "t": 0
-            }
+            {"n": "fwcim-mercury-collector", "t": 0},
+            {"n": "fwcim-instant-collector", "t": 0},
+            {"n": "fwcim-element-telemetry-collector", "t": 2},
+            {"n": "fwcim-script-version-collector", "t": 0},
+            {"n": "fwcim-local-storage-identifier-collector", "t": 0},
+            {"n": "fwcim-timezone-collector", "t": 0},
+            {"n": "fwcim-script-collector", "t": 1},
+            {"n": "fwcim-plugin-collector", "t": 0},
+            {"n": "fwcim-capability-collector", "t": 1},
+            {"n": "fwcim-browser-collector", "t": 0},
+            {"n": "fwcim-history-collector", "t": 0},
+            {"n": "fwcim-gpu-collector", "t": 1},
+            {"n": "fwcim-battery-collector", "t": 0},
+            {"n": "fwcim-dnt-collector", "t": 0},
+            {"n": "fwcim-math-fingerprint-collector", "t": 0},
+            {"n": "fwcim-performance-collector", "t": 0},
+            {"n": "fwcim-timer-collector", "t": 0},
+            {"n": "fwcim-time-to-submit-collector", "t": 0},
+            {"n": "fwcim-form-input-telemetry-collector", "t": 4},
+            {"n": "fwcim-canvas-collector", "t": 2},
+            {"n": "fwcim-captcha-telemetry-collector", "t": 0},
+            {"n": "fwcim-proof-of-work-collector", "t": 1},
+            {"n": "fwcim-ubf-collector", "t": 0},
+            {"n": "fwcim-timer-collector", "t": 0}
         ]
     }
     return json.dumps(meta_dict, separators=(',', ':'))
