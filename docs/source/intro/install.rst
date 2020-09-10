@@ -15,7 +15,6 @@ It depends on the following packages:
 * Pillow
 * pyaes
 * rsa
-* httpcore
 
 Installation
 ============

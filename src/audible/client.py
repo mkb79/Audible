@@ -8,7 +8,7 @@ from httpx._models import URL
 from .auth import LoginAuthenticator, FileAuthenticator
 from .exceptions import (
     BadRequest, NotFoundError, NotResponding, NetworkError, ServerError,
-    Unauthorized, UnexpectedError, RatelimitError
+    Unauthorized, UnexpectedError, RatelimitError, RequestError
 )
 from .localization import LOCALE_TEMPLATES, Locale
 from .utils import test_convert
@@ -214,6 +214,12 @@ class AudibleAPI:
         return self._request("DELETE", url, params=params, **kwargs)
 
 
+def convert_response_content(resp):
+    try:
+        return resp.json()
+    except json.JSONDecodeError:
+        return resp.text
+
 class Client:
     _API_URL_TEMP = "https://api.audible."
     _API_VERSION = "1.0"
@@ -286,8 +292,10 @@ class Client:
         user_profile = self.get_user_profile()
         return user_profile["name"]
 
-    def _raise_for_status(self, resp, data):
+    def _raise_for_status_error(self, resp):
         code = resp.status_code
+
+        data = convert_response_content(resp)
 
         if 300 > code >= 200:  # Request was successful
             return
@@ -328,14 +336,9 @@ class Client:
                 )
             )
 
-            try:
-                data = resp.json()
-            except json.JSONDecodeError:
-                data = resp.text
+            resp.raise_for_status()
 
-            self._raise_for_status(resp, data)
-
-            return data
+            return convert_response_content(resp)
 
         except (
                 httpx.ConnectTimeout, httpx.ReadTimeout, httpx.WriteTimeout,
@@ -344,6 +347,10 @@ class Client:
             raise NotResponding
         except httpx.NetworkError:
             raise NetworkError
+        except httpx.RequestError as exc:
+            raise RequestError(exc)
+        except httpx.HTTPStatusError as exc:
+            self._raise_for_status_error(exc.response)
 
         finally:
             try:
@@ -407,14 +414,9 @@ class AsyncClient(Client):
                 )
             )
 
-            try:
-                data = resp.json()
-            except json.JSONDecodeError:
-                data = resp.text
+            resp.raise_for_status()
 
-            self._raise_for_status(resp, data)
-
-            return data
+            return convert_response_content(resp)
 
         except (
                 httpx.ConnectTimeout, httpx.ReadTimeout, httpx.WriteTimeout,
@@ -423,6 +425,10 @@ class AsyncClient(Client):
             raise NotResponding
         except httpx.NetworkError:
             raise NetworkError
+        except httpx.RequestError as exc:
+            raise RequestError(exc)
+        except httpx.HTTPStatusError as exc:
+            self._raise_for_status_error(exc.response)
 
         finally:
             try:
