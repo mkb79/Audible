@@ -26,7 +26,6 @@ For a command line interface take a look on my [audible-cli](https://github.com/
 	- Pillow
 	- pyaes
 	- rsa
-	- httpcore
 
 ## Installation
 
