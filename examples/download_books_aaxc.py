@@ -81,7 +81,7 @@ if __name__ == "__main__":
             }
     )
 
-    for book in books:
+    for book in books["items"]:
         asin = book["asin"]
         title = book["title"] + f"( {asin}).aaxc"
         lr = get_license_response(client, asin, quality="Extreme")
