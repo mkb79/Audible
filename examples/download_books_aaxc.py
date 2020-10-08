@@ -1,7 +1,6 @@
 import base64
 import json
 import pathlib
-import shutil
 
 import audible
 import httpx
@@ -57,10 +56,10 @@ def get_download_link(license_response):
 
 
 def download_file(url, filename):
-    # example download function
-    r = httpx.get(url)
-    with open(filename, 'wb') as f:
-        shutil.copyfileobj(r.iter_raw, f)
+    with httpx.stream("GET", url) as r:
+        with open(filename, 'wb') as f:
+            for chunck in r.iter_bytes():
+                f.write(chunck)
     return filename
 
 
