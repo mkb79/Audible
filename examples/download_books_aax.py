@@ -58,7 +58,6 @@ if __name__ == "__main__":
 
     auth = audible.FileAuthenticator(
         filename="FILENAME",
-        encryption="json",
         password=password
     )
     client = audible.Client(auth)

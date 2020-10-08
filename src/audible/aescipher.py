@@ -231,3 +231,15 @@ def remove_file_encryption(source, target, password, **kwargs):
     crypter = AESCipher(password, **kwargs)
     decrypted = crypter.from_file(source_file, encryption=encryption)
     pathlib.Path(target).write_text(decrypted)
+
+
+def decrypt_voucher(device_serial_number, customer_id, device_type, asin, voucher):
+    # https://github.com/mkb79/Audible/issues/3#issuecomment-705262614
+    buf = (device_type + device_serial_number + customer_id + asin).encode("ascii")
+    digest = sha256(buf).digest()
+    key = digest[0:16]
+    iv = digest[16:]
+
+    # decrypt "voucher" using AES in CBC mode with no padding
+    plaintext = aes_cbc_decrypt(key, iv, voucher).rstrip("\x00")
+    return json.loads(plaintext)
