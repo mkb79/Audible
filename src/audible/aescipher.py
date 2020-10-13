@@ -233,7 +233,7 @@ def remove_file_encryption(source, target, password, **kwargs):
     pathlib.Path(target).write_text(decrypted)
 
 
-def decrypt_voucher(device_serial_number, customer_id, device_type, asin, voucher):
+def _decrypt_voucher(device_serial_number, customer_id, device_type, asin, voucher):
     # https://github.com/mkb79/Audible/issues/3#issuecomment-705262614
     buf = (device_type + device_serial_number + customer_id + asin).encode("ascii")
     digest = sha256(buf).digest()
@@ -243,3 +243,40 @@ def decrypt_voucher(device_serial_number, customer_id, device_type, asin, vouche
     # decrypt "voucher" using AES in CBC mode with no padding
     plaintext = aes_cbc_decrypt(key, iv, voucher).rstrip("\x00")
     return json.loads(plaintext)
+
+
+def decrypt_voucher_from_licenserequest(auth, license_response):
+    """Decrypt the voucher from licenserequest response
+
+    :param auth: An instance of an `Authenticator` clsss
+    :type auth: audible.FileAuthenticator, audible.LoginAuthenticator
+    :param license_response: The response content from a successful http 
+        `POST` request to api endpoint /1.0/content/{asin}/licenserequest
+    :type license_response: dict
+    :returns: The decryptes license voucher with needed key and iv
+    :rtype: dict
+
+    .. note::
+        A device registration is needed to use the auth instance for a 
+        license request and to obtain the needed device data
+    
+    """
+    # device data
+    device_info = auth.device_info
+    device_serial_number = device_info["device_serial_number"]
+    device_type = device_info["device_type"]
+
+    # user data
+    customer_id = auth.customer_info["user_id"]
+
+    # book specific data
+    asin = license_response["content_license"]["asin"]
+    encrypted_voucher = base64.b64decode(license_response["content_license"]["license_response"])
+
+    return _decrypt_voucher(
+        device_serial_number=device_serial_number,
+        customer_id=customer_id,
+        device_type=device_type,
+        asin=asin,
+        voucher=encrypted_voucher
+    )

@@ -1,10 +1,9 @@
-import base64
 import json
 import pathlib
 
 import audible
 import httpx
-from audible.aescipher import decrypt_voucher as dv
+from audible.aescipher import decrypt_voucher_from_licenserequest
 
 
 # files downloaded via this script can be converted
@@ -29,26 +28,6 @@ def get_license_response(client, asin, quality):
     except Exception as e:
         print(f"Error: {e}")
         return
-
-
-def decrypt_voucher(auth, license_response):
-    # device data
-    device_info = auth.device_info
-    device_serial_number = device_info["device_serial_number"]
-    device_type = device_info["device_type"]
-
-    # user data
-    customer_id = auth.customer_info["user_id"]
-
-    # book specific data
-    asin = license_response["content_license"]["asin"]
-    encrypted_voucher = base64.b64decode(license_response["content_license"]["license_response"])
-
-    return dv(device_serial_number=device_serial_number,
-              customer_id=customer_id,
-              device_type=device_type,
-              asin=asin,
-              voucher=encrypted_voucher)
 
 
 def get_download_link(license_response):
@@ -95,6 +74,6 @@ if __name__ == "__main__":
 
             # save voucher
             voucher_file = filename.with_suffix(".json")
-            decrypted_voucher = decrypt_voucher(auth, lr)
-            voucher_file.write_text(json.dumps(decrypt_voucher, indent=4))
+            decrypted_voucher = decrypt_voucher_from_licenserequest(auth, lr)
+            voucher_file.write_text(json.dumps(decrypted_voucher, indent=4))
             print(f"saved voucher to: {voucher_file}")
