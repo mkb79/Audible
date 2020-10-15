@@ -65,8 +65,8 @@ def refresh_website_cookies(
 
     raw_cookies = resp_dict["response"]["tokens"]["cookies"]
     website_cookies = dict()
-    for domain in raw_cookies:
-        for cookie in raw_cookies[domain]:
+    for cookies_domain in raw_cookies:
+        for cookie in raw_cookies[cookies_domain]:
             website_cookies[cookie["Name"]] = cookie["Value"].replace(r'"',
                                                                       r'')
 
