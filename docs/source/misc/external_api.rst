@@ -65,9 +65,11 @@ GET /1.0/library
    - purchased_after: [RFC3339](https://tools.ietf.org/html/rfc3339) (e.g. `2000-01-01T00:00:00Z`)
    - title
    - author
-   - response_groups: [contributors, media, price, product_attrs, product_desc, product_extended_attrs, product_plan_details, product_plans, rating, sample, sku, series, reviews, ws4v, origin, relationships, review_attrs, categories, badge_types, category_ladders, claim_code_url, is_downloaded, is_finished, is_returnable, origin_asin, pdf_url, percent_complete, provided_review]
+   - response_groups: [contributors, customer_rights, media, price, product_attrs, product_desc, product_extended_attrs, product_plan_details, product_plans, rating, sample, sku, series, reviews, ws4v, origin, relationships, review_attrs, categories, badge_types, category_ladders, claim_code_url, is_downloaded, is_finished, is_playable, is_removable, is_returnable, is_visible, order_details, origin_asin, pdf_url, percent_complete, provided_review]
+   - image_sizes: [1215,408,360,882,315,570,252,558,900,500]
    - sort_by: [-Author, -Length, -Narrator, -PurchaseDate, -Title, Author, Length, Narrator, PurchaseDate, Title]
    - status: [Active, Revoked] ('Active' is the default, 'Revoked' returns audiobooks the user has returned for a refund.)
+   - parent_asin: asin
 
 GET /1.0/library/%{asin}
 ------------------------
@@ -167,7 +169,7 @@ GET /1.0/wishlist
 :params:
    - num_results: \\d+ (max: 50)
    - page: \\d+
-   - response_groups: [contributors, media, price, product_attrs, product_desc, product_extended_attrs, product_plan_details, product_plans, rating, sample, sku]
+   - response_groups: [contributors, media, price, product_attrs, product_desc, product_extended_attrs, product_plan_details, product_plans, rating, sample, sku, customer_rights, relationships]
    - sort_by: [-Author, -DateAdded, -Price, -Rating, -Title, Author, DateAdded, Price, Rating, Title]
 
 POST /1.0/wishlist
@@ -252,6 +254,7 @@ GET /1.0/catalog/products/%{asin}
    - response_groups: [contributors, media, product_attrs, product_desc, product_extended_attrs, product_plan_details, product_plans, rating, review_attrs, reviews, sample, sku]
    - reviews_num_results: \\d+ (max: 10)
    - reviews_sort_by: [MostHelpful, MostRecent]
+   - asins
 
 GET /1.0/catalog/products/%{asin}/reviews
 -----------------------------------------
@@ -307,20 +310,26 @@ POST /1.0/content/%{asin}/licenserequest
 ----------------------------------------
 
 :body:
+   - supported_drm_types: [Mpeg, Adrm]
    - consumption_type: [Streaming, Offline, Download]
    - drm_type: [Hls, PlayReady, Hds, Adrm]
    - quality: [High, Normal, Extreme, Low]
    - num_active_offline_licenses: \\d+ (max: 10)
+   - response_groups: [last_position_heard,pdf_url,content_reference,chapter_info]
 
 Example request body:
 
 .. code-block:: json
 
-   {
-     "drm_type": "Adrm",
-     "consumption_type": "Download",
-     "quality": "Extreme"
-   }
+    {
+        "supported_drm_types" : [
+            "Mpeg",
+            "Adrm"
+        ],
+        "quality" : "High",
+        "consumption_type" : "Download",
+        "response_groups" : "last_position_heard,pdf_url,content_reference,chapter_info"
+    }
 
 For a succesful request, returns JSON body with `content_url`.
 
@@ -375,6 +384,7 @@ GET /1.0/stats/status/finished
 
 :params:
    - asin: asin
+   - start_date: [RFC3339](https://tools.ietf.org/html/rfc3339) (e.g. `2000-01-01T00:00:00Z`)
 
 POST(?) /1.0/stats/status/finished
 ----------------------------------
@@ -383,6 +393,42 @@ POST(?) /1.0/stats/status/finished
    - start_date:
    - status:
    - continuation_token:
+
+PUT /1.0/stats/events
+---------------------
+
+:body:
+   - stats
+
+Example request body:
+
+.. code-block:: json
+
+    {
+        "stats" : [
+            {
+                "download_start" : {
+                    "country_code" : "de",
+                    "download_host" : "xxxxx.cloudfront.net",
+                    "user_agent" : "Audible, iPhone, 3.35.1 (644), iPhone XS (iPhone11,2), 238 GB, iOS, 14.1, Wifi",
+                    "request_id" : "xxxxxxxxxxxx",
+                    "codec" : "AAX_44_128",
+                    "source" : "audible_iPhone"
+                },
+                "social_network_site" : "Unknown",
+                "event_type" : "DownloadStart",
+                "listening_mode" : "Offline",
+                "local_timezone" : "Europe\/Berlin",
+                "asin_owned" : false,
+                "playing_immersion_reading" : false,
+                "audio_type" : "FullTitle",
+                "event_timestamp" : "2020-10-23T21:29:06.985Z",
+                "asin" : "xxxxxxx",
+                "store" : "Audible",
+                "delivery_type" : "Download"
+            }
+        ]
+    }
 
 GET /1.0/pages/%s
 -----------------
@@ -410,3 +456,9 @@ GET /1.0/recommendations
    - response_groups: [contributors, media, price, product_attrs, product_desc, product_extended_attrs, product_plan_details, product_plans, rating, sample, sku]
    - reviews_num_results: \\d+ (max: 10)
    - reviews_sort_by: [MostHelpful, MostRecent]
+
+GET /1.0/user/settings
+----------------------
+
+:params:
+   - setting_name: [captionsEnabled]
