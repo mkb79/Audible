@@ -197,7 +197,7 @@ GET /1.0/badges/progress
 :params:
    - locale: en_US
    - response_groups: brag_message
-   - store: Audible
+   - store: [AudibleForInstitutions, Audible, AmazonEnglish, Rodizio]
 
 GET /1.0/badges/metadata
 ------------------------
