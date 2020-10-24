@@ -134,6 +134,70 @@ GET /1.0/library/collections/%s/products
    - continuation_token:
    - image_sizes:
 
+GET /1.0/collections
+--------------------
+
+:params:
+
+POST /1.0/collections
+---------------------
+
+Create a new collection
+
+:body:
+   - name: 
+   - asins: []
+   - description
+
+:returns:
+   - collection_id
+   - creation_date
+   - customer_id
+   - marketplace
+
+GET /1.0/collections/%{collection_id}
+-------------------------------------
+
+:params:
+
+PUT /1.0/collections/%{collection_id}
+-------------------------------------
+
+Modify a collection
+
+:body:
+   - state_token
+   - collection_id: %{collection_id}
+   - name
+   - description
+
+:returns:
+   - state_token
+   - collection_id: %{collection_id}
+   - name
+   - description
+
+GET /1.0/collections/%{collection_id}/items
+-------------------------------------------
+
+:params:
+   - response_groups: [always-returned]
+
+POST /1.0/collections/%{collection_id}/items
+--------------------------------------------
+
+Add item(s) to a collection
+
+:body:
+   - collection_id: %{collection_id}
+   - asins: []
+
+:returns:
+   - description
+   - name
+   - num_items_added: int
+   - state_token
+
 GET /1.0/orders
 ---------------
 
