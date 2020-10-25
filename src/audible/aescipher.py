@@ -4,6 +4,7 @@ import json
 import logging
 import os
 import pathlib
+import re
 import struct
 from hashlib import sha256
 from typing import Dict, Tuple
@@ -241,8 +242,15 @@ def _decrypt_voucher(device_serial_number, customer_id, device_type, asin, vouch
     iv = digest[16:]
 
     # decrypt "voucher" using AES in CBC mode with no padding
-    plaintext = aes_cbc_decrypt(key, iv, voucher).rstrip("\x00")
-    return json.loads(plaintext)
+    b64d_voucher = base64.b64decode(voucher)
+    plaintext = aes_cbc_decrypt(key, iv, b64d_voucher).rstrip("\x00")
+
+    try:
+        return json.loads(plaintext)
+    except json.JSONDecodeError:
+        fmt = r"^{\"key\":\"(?P<key>.*?)\",\"iv\":\"(?P<iv>.*?)\","
+        match = re.match(fmt, plaintext)
+        return match.groupdict()
 
 
 def decrypt_voucher_from_licenserequest(auth, license_response):
@@ -271,7 +279,7 @@ def decrypt_voucher_from_licenserequest(auth, license_response):
 
     # book specific data
     asin = license_response["content_license"]["asin"]
-    encrypted_voucher = base64.b64decode(license_response["content_license"]["license_response"])
+    encrypted_voucher = license_response["content_license"]["license_response"]
 
     return _decrypt_voucher(
         device_serial_number=device_serial_number,
