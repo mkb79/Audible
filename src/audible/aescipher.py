@@ -17,14 +17,18 @@ logger = logging.getLogger('audible.aescipher')
 BLOCK_SIZE = 16
 
 
-def aes_cbc_encrypt(key: bytes, iv: bytes, data: str) -> bytes:
-    encrypter = Encrypter(AESModeOfOperationCBC(key, iv))
+def aes_cbc_encrypt(
+    key: bytes, iv: bytes, data: str, padding="default"
+) -> bytes:
+    encrypter = Encrypter(AESModeOfOperationCBC(key, iv), padding=padding)
     encrypted = encrypter.feed(data) + encrypter.feed()
     return encrypted
 
 
-def aes_cbc_decrypt(key: bytes, iv: bytes, encrypted_data: bytes) -> str:
-    decrypter = Decrypter(AESModeOfOperationCBC(key, iv))
+def aes_cbc_decrypt(
+    key: bytes, iv: bytes, encrypted_data: bytes, padding="default"
+) -> str:
+    decrypter = Decrypter(AESModeOfOperationCBC(key, iv), padding=padding)
     decrypted = decrypter.feed(encrypted_data) + decrypter.feed()
     return decrypted.decode("utf-8")
 
@@ -243,7 +247,7 @@ def _decrypt_voucher(device_serial_number, customer_id, device_type, asin, vouch
 
     # decrypt "voucher" using AES in CBC mode with no padding
     b64d_voucher = base64.b64decode(voucher)
-    plaintext = aes_cbc_decrypt(key, iv, b64d_voucher).rstrip("\x00")
+    plaintext = aes_cbc_decrypt(key, iv, b64d_voucher, padding="none").rstrip("\x00")
 
     try:
         return json.loads(plaintext)
