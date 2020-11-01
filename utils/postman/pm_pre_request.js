@@ -1,5 +1,4 @@
 eval( pm.globals.get('pmlib_code') );
-var CryptoJS = require("crypto-js");
 var moment = require("moment");
 
 const adpToken = pm.environment.get("adp-token")
@@ -16,7 +15,7 @@ function signRequest(request, adpToken, privateKey) {
     var sig = new pmlib.rs.KJUR.crypto.Signature({"alg": "SHA256withRSA"});
     sig.init(privateKey);
     var hash = sig.signString(data);
-    const signedEncoded = CryptoJS.enc.Base64.stringify(CryptoJS.enc.Hex.parse(hash));
+    var signedEncoded = pmlib.rs.hex2b64(hash);
 
     pm.request.headers.add({
         key: 'x-adp-token',
