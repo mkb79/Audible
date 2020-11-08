@@ -185,6 +185,10 @@ class Client:
         params, kwargs = self._split_kwargs(**kwargs)
         return self._request("DELETE", path, params=params, **kwargs)
 
+    def put(self, path, body, **kwargs):
+        params, kwargs = self._split_kwargs(**kwargs)
+        return self._request("PUT", path, params=params, json=body, **kwargs)
+
 
 class AsyncClient(Client):
     _SESSION = httpx.AsyncClient
