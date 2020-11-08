@@ -7,10 +7,11 @@ from typing import Any, Dict
 
 import httpx
 import rsa
+from httpx import Cookies
 
 from .activation_bytes import get_activation_bytes as get_ab
 from .aescipher import AESCipher, detect_file_encryption
-from .exceptions import FileEncryptionError, NoAuthFlow, NoRefreshToken
+from .exceptions import FileEncryptionError, AuthFlowError, NoRefreshToken
 from .login import login
 from .register import deregister as deregister_
 from .register import register as register_
@@ -162,28 +163,42 @@ class BaseAuthenticator(MutableMapping, httpx.Auth):
         return f"{type(self).__name__}({self.__dict__})"
 
     def auth_flow(self, request: httpx.Request):
-        if self.adp_token and self.device_private_key:
-            logger.info("Use sign request auth flow.")
-            self.sign_request(request)
+        requested_modes = request.headers.pop("auth_mode", "default")
+        available_modes = self.available_auth_modes
 
-        elif self.access_token:
-            if self.access_token_expired:
-                self.refresh_access_token()
-            logger.info("Use access token auth flow.")
-            headers = {
-                "Authorization": "Bearer " + self.access_token,
-                "client-id": "0"
-            }
-            request.headers.update(headers)
+        if requested_modes == "default":
+            if "signing" in available_modes:
+                self._apply_signing_auth_flow(request)
+            elif "bearer" in available_modes:
+                self._apply_bearer_auth_flow(request)
+            else:
+                message = "Auth flow mode is set to default but signing " \
+                          "or bearer auth flow are not available."
+                logger.critical(message)
+                raise AuthFlowError(message)
+
+        elif requested_modes == "none":
+            pass       
 
         else:
-            message = "No auth flow method available."
-            logger.critical(message)
-            raise NoAuthFlow(message)
+            requested_modes = [
+                mode.strip() for mode in requested_modes.split(",")
+            ]
+            not_available = list(set(requested_modes) - set(available_modes))
+            if not_available:
+                raise AuthFlowError(f"Following Auth flow(s) are not allowed/"
+                                    f"available: {', '.join(not_available)}")
+
+            if "signing" in requested_modes:
+                self._apply_signing_auth_flow(request)
+            if "bearer" in requested_modes:
+                self._apply_bearer_auth_flow(request)
+            if "cookies" in requested_modes:
+                self._apply_cookies_auth_flow(request)
 
         yield request
 
-    def sign_request(self, request: httpx.Request):
+    def _apply_signing_auth_flow(self, request: httpx.Request) -> None:
         method = request.method
         path = request.url.path
         query = request.url.query
@@ -197,6 +212,50 @@ class BaseAuthenticator(MutableMapping, httpx.Auth):
         )
 
         request.headers.update(headers)
+        logger.info("signing auth flow applied to request")
+
+    def _apply_bearer_auth_flow(self, request: httpx.Request) -> None:
+        if self.access_token_expired:
+            self.refresh_access_token()
+
+        headers = {
+            "Authorization": "Bearer " + self.access_token,
+            "client-id": "0"
+        }
+
+        request.headers.update(headers)
+        logger.info("bearer auth flow applied to request")
+
+    def _apply_cookies_auth_flow(self, request: httpx.Request) -> None:
+        cookies = {name: value for (name, value) in self.website_cookies.items()}
+
+        Cookies(cookies).set_cookie_header(request)
+        logger.info("cookies auth flow applied to request")
+
+    def sign_request(self, request: httpx.Request) -> None:
+        """
+        .. deprecated:: 0.5.0
+           Use :met:`self._apply_signing_auth_flow` instead.
+        """
+        self._apply_signing_auth_flow(request)
+
+    @property
+    def available_auth_modes(self):
+        available_modes = []
+
+        if self.adp_token and self.device_private_key:
+            available_modes.append("signing")
+
+        if self.access_token:
+            if self.access_token_expired and not self.refresh_token:
+                pass
+            else:
+                available_modes.append("bearer")
+
+        if self.website_cookies:
+            available_modes.append("cookies")
+
+        return available_modes
 
     def to_file(
             self,
@@ -315,6 +374,13 @@ class BaseAuthenticator(MutableMapping, httpx.Auth):
                 "Access Token not expired. No refresh nessessary. "
                 "To force refresh please use force=True"
             )
+
+    def set_website_cookies_for_country(self, country_code):
+        cookies_domain = test_convert("locale", country_code).domain
+
+        self.website_cookies = refresh_website_cookies(
+            self.refresh_token, self.locale.domain, cookies_domain
+        )
 
     def get_activation_bytes(self, filename=None):
         return get_ab(self, filename)

@@ -155,6 +155,51 @@ Or to check the time left before token expires::
 
    auth.access_token_expires
 
+Auth methods and auth flow
+--------------------------
+
+The Authenticator classes supports multiple methods of authentication to the API and/or 
+the audible/amazon web page. These are:
+
+- sign request method (needs a device registration)
+- bearer token method
+- website cookies method
+
+By default, the sign request method is choosen. If this method is not available (missing 
+adp token and device key from registrstion process), bearer token method is choosen. If 
+no access token is present or the access token is expired and no refresh token is found, 
+a Exception will be raise.
+
+.. versionadded:: v0.5.0
+   The `auth_mode` header to control the auth flow
+
+To control the auth flow, the `auth_mode` header can be used. The `auth_mode` header 
+can have the following values (they have be comma separated with or without a whitespace):
+
+- `default`, must be standalone when provided, instead of providing the `default` 
+  auth_mode you can left the header
+- `none`, must be standalone when provided, deactivates all auth methods
+- `signing`, applies the sign request method to the request
+- `bearer`, applies the bearer token method to the request
+- `cookies`, applies the website cookies method to the request, cookies are limited 
+  to one specific tld range (e.g. com, de, ...). These range are set during login or
+  device registration (country_code). To get new website cookies for a specific tld 
+  range you can call the method `set_website_cookies_for_country(country_code)` from 
+  `auth` instance. Warning: present website cookies for another country code will be 
+  overriden. If you want to keep the new cookies, please make sure to save to file.
+
+Usually the `auth_method` header will be used to make authenticate requests to the 
+audible or amazon web page with cookies. You can do this with this example code::
+
+   import audible
+
+   auth = audible.FileAuthenticator(FILENAME)
+   headers = {"auth_mode": "cookies"}
+
+   with httpx.Client(auth=auth, headers=headers) as client:
+       r = client.get("https://www.amazon.com/cpe/yourpayments/wallet?ref_=ya_d_c_pmt_mpo")
+       print(r.text)
+
 Activation Bytes
 ================
 
