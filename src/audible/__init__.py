@@ -7,7 +7,7 @@ from audible._version import __version__
 
 
 __all__ = [
-    "__version__", "AudibleAPI", "LoginAuthenticator", "FileAuthenticator",
+    "__version__", "LoginAuthenticator", "FileAuthenticator",
     "log_helper", "Client", "AsyncClient"
 ]
 
