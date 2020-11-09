@@ -74,3 +74,6 @@ class AudibleLogHelper:
         self._logger.info(
             f"Capture warnings {'activated' if status else 'deactivated'}"
         )
+
+
+log_helper = AudibleLogHelper()
