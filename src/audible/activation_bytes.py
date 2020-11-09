@@ -19,7 +19,7 @@ def extract_token_from_url(url):
 
 
 def get_player_token(auth) -> str:
-    with httpx.Client(cookies=auth.website_cookies) as session:
+    with httpx.Client(auth=auth) as session:
         audible_base_url = f"https://www.audible.{auth.locale.domain}"
         params = {
             "ipRedirectOverride": True,
@@ -30,8 +30,9 @@ def get_player_token(auth) -> str:
             "playerManufacturer": "Audible",
             "serial": ""
         }
+        headers = {"auth_mode": "cookies"}
         resp = session.get(f"{audible_base_url}/player-auth-token",
-                           params=params)
+                           params=params, headers=headers)
     
         player_token = extract_token_from_url(resp.url)[0]
     
