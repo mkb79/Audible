@@ -45,6 +45,11 @@ def default_cvf_callback() -> str:
     return str(guess).strip().lower()
 
 
+def default_approval_alert_callback() -> None:
+    print("Approval alert detected! Amazon sends you a mail.")
+    guess = input("Please press enter when you approve the notification.")
+
+
 def get_soup(resp):
     return BeautifulSoup(resp.text, "html.parser")
 
@@ -110,6 +115,11 @@ def check_for_choice_mfa(soup):
 def check_for_cvf(soup):
     cvf = soup.find("div", id="cvf-page-content")
     return True if cvf else False
+
+
+def check_for_approval_alert(soup):
+    approval_alert = soup.find("div", id="resend-approval-alert")
+    return True if approval_alert else False
 
 
 def extract_cookies_from_session(session):
@@ -224,6 +234,14 @@ def login(
         inputs["code"] = cvf_code
 
         login_resp = session.post(cvf_url, data=inputs)
+        login_soup = get_soup(login_resp)
+
+    # check for approval alert
+    while check_for_approval_alert(login_soup):
+        default_approval_alert_callback()
+        url = soup.find_all("a", class_="a-link-normal")[1]["href"]
+
+        login_resp = session.get(url)
         login_soup = get_soup(login_resp)
 
     if login_resp.status_code != 404:
