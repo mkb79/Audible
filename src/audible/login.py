@@ -239,7 +239,7 @@ def login(
     # check for approval alert
     while check_for_approval_alert(login_soup):
         default_approval_alert_callback()
-        url = soup.find_all("a", class_="a-link-normal")[1]["href"]
+        url = login_soup.find_all("a", class_="a-link-normal")[1]["href"]
 
         login_resp = session.get(url)
         login_soup = get_soup(login_resp)
