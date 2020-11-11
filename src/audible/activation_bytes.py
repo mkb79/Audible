@@ -19,24 +19,25 @@ def extract_token_from_url(url):
 
 
 def get_player_token(auth) -> str:
-    with httpx.Client(auth=auth) as session:
-        audible_base_url = f"https://www.audible.{auth.locale.domain}"
-        params = {
-            "ipRedirectOverride": True,
-            "playerType": "software",
-            "bp_ua": "y",
-            "playerModel": "Desktop",
-            "playerId": get_player_id(),
-            "playerManufacturer": "Audible",
-            "serial": ""
-        }
-        headers = {"auth_mode": "cookies"}
-        resp = session.get(f"{audible_base_url}/player-auth-token",
-                           params=params, headers=headers)
-    
-        player_token = extract_token_from_url(resp.url)[0]
-    
-        return player_token
+    audible_base_url = f"https://www.audible.{auth.locale.domain}"
+    audible_token_url = audible_base_url + "/player-auth-token"
+
+    params = {
+        "ipRedirectOverride": True,
+        "playerType": "software",
+        "bp_ua": "y",
+        "playerModel": "Desktop",
+        "playerId": get_player_id(),
+        "playerManufacturer": "Audible",
+        "serial": ""
+    }
+    headers = {"auth_mode": "cookies"}
+
+    with httpx.Client(auth=auth, headers=headers) as session:
+        resp = session.get(audible_token_url, params=params)
+
+    player_token = extract_token_from_url(resp.url)[0]
+    return player_token
 
 
 def extract_activation_bytes(data):
@@ -70,41 +71,32 @@ def extract_activation_bytes(data):
 
 
 def fetch_activation_bytes(player_token, filename=None):
+    register_url = "https://www.audible.com/license/licenseForCustomerToken"
 
-    base_url_license = "https://www.audible.com"
-    rurl = base_url_license + "/license/licenseForCustomerToken"
     # register params
-    params = {
-        "customer_token": player_token
-    }
+    register_params = {"customer_token": player_token}
+
     # deregister params
-    dparams = {
+    deregister_params = {
         "customer_token": player_token,
         "action": "de-register"
     }
 
-    headers = {
-        "User-Agent": "Audible Download Manager"
-    }
-
+    headers = {"User-Agent": "Audible Download Manager"}
     with httpx.Client(headers=headers) as session:
-        session.get(rurl, params=dparams)
+        session.get(register_url, params=deregister_params)
 
-        resp = session.get(rurl, params=params)
-        register_response_content = resp.content
-
+        resp = session.get(register_url, params=register_params)
         if filename:
-            pathlib.Path(filename).write_bytes(register_response_content)
+            pathlib.Path(filename).write_bytes(resp.content)
+        activation_bytes, _ = extract_activation_bytes(resp.content)
 
-        activation_bytes, _ = extract_activation_bytes(register_response_content)
-
-        session.get(rurl, params=dparams)
+        session.get(register_url, params=deregister_params)
 
         return activation_bytes
 
 
 def get_activation_bytes(auth, filename=None):
-
     player_token = get_player_token(auth)
     activation_bytes = fetch_activation_bytes(player_token, filename)
 

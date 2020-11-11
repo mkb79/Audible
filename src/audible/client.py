@@ -3,7 +3,7 @@ import logging
 from typing import Union, Optional
 
 import httpx
-from httpx._models import URL
+from httpx import URL
 
 from .auth import LoginAuthenticator, FileAuthenticator
 from .exceptions import (
@@ -11,7 +11,6 @@ from .exceptions import (
     Unauthorized, UnexpectedError, RatelimitError, RequestError
 )
 from .localization import LOCALE_TEMPLATES, Locale
-from .utils import test_convert
 
 logger = logging.getLogger('audible.client')
 
@@ -21,6 +20,7 @@ def convert_response_content(resp):
         return resp.json()
     except json.JSONDecodeError:
         return resp.text
+
 
 class Client:
     _API_URL_TEMP = "https://api.audible."
