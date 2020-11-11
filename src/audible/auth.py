@@ -3,7 +3,7 @@ import json
 import logging
 from collections.abc import MutableMapping
 from datetime import datetime, timedelta
-from typing import Any, Dict
+from typing import Any, Dict, List, Union
 
 import httpx
 import rsa
@@ -163,38 +163,16 @@ class BaseAuthenticator(MutableMapping, httpx.Auth):
         return f"{type(self).__name__}({self.__dict__})"
 
     def auth_flow(self, request: httpx.Request):
-        requested_modes = request.headers.pop("auth_mode", "default")
         available_modes = self.available_auth_modes
 
-        if requested_modes == "default":
-            if "signing" in available_modes:
-                self._apply_signing_auth_flow(request)
-            elif "bearer" in available_modes:
-                self._apply_bearer_auth_flow(request)
-            else:
-                message = "Auth flow mode is set to default but signing " \
-                          "or bearer auth flow are not available."
-                logger.critical(message)
-                raise AuthFlowError(message)
-
-        elif requested_modes == "none":
-            pass       
-
+        if "signing" in available_modes:
+            self._apply_signing_auth_flow(request)
+        elif "bearer" in available_modes:
+            self._apply_bearer_auth_flow(request)
         else:
-            requested_modes = [
-                mode.strip() for mode in requested_modes.split(",")
-            ]
-            not_available = list(set(requested_modes) - set(available_modes))
-            if not_available:
-                raise AuthFlowError(f"Following Auth flow(s) are not allowed/"
-                                    f"available: {', '.join(not_available)}")
-
-            if "signing" in requested_modes:
-                self._apply_signing_auth_flow(request)
-            if "bearer" in requested_modes:
-                self._apply_bearer_auth_flow(request)
-            if "cookies" in requested_modes:
-                self._apply_cookies_auth_flow(request)
+            message = "signing or bearer auth flow are not available."
+            logger.critical(message)
+            raise AuthFlowError(message)
 
         yield request
 
@@ -429,7 +407,7 @@ class LoginAuthenticator(BaseAuthenticator):
 
         if register:
             resp = register_(resp["access_token"], self.locale.domain)
-        logger.info("registered audible device")
+            logger.info("registered audible device")
 
         self.update(**resp)
 

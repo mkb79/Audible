@@ -32,7 +32,7 @@ def get_player_token(auth) -> str:
         "serial": ""
     }
 
-    with httpx.Client(auth=auth, cookies=auth.website_cookies) as session:
+    with httpx.Client(cookies=auth.website_cookies) as session:
         resp = session.get(audible_token_url, params=params)
 
     player_token = extract_token_from_url(resp.url)[0]

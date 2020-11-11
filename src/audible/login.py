@@ -47,7 +47,7 @@ def default_cvf_callback() -> str:
 
 def default_approval_alert_callback() -> None:
     print("Approval alert detected! Amazon sends you a mail.")
-    guess = input("Please press enter when you approve the notification.")
+    input("Please press enter when you approve the notification.")
 
 
 def get_soup(resp):
