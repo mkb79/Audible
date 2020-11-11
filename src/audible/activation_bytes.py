@@ -31,9 +31,8 @@ def get_player_token(auth) -> str:
         "playerManufacturer": "Audible",
         "serial": ""
     }
-    headers = {"auth_mode": "cookies"}
 
-    with httpx.Client(auth=auth, headers=headers) as session:
+    with httpx.Client(auth=auth, cookies=auth.website_cookies) as session:
         resp = session.get(audible_token_url, params=params)
 
     player_token = extract_token_from_url(resp.url)[0]
