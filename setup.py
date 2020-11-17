@@ -52,6 +52,13 @@ setup(
         'pyaes',
         'rsa'
     ],
+    extras_require={
+        'docs': [
+            'sphinx',
+            'sphinx_rtd_theme',
+            'sphinxcontrib-httpdomain'
+        ]
+    },
     python_requires='>=3.6',
     keywords='Audible, API, async',
     long_description=long_description,
