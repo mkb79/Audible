@@ -33,3 +33,4 @@ development version::
 Alternatively, install directly from the GitHub repository::
 
     pip install git+https://github.com/mkb79/audible.git
+

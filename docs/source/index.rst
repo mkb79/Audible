@@ -28,21 +28,27 @@ Audible |version| documentation!
 
 -------------------
 
-**Audible** is a Python module to communicate with the non-publicly audible API. 
-It's written with Pythonista for iOS. All communication with the API can be 
-done in sync or async mode. The code are ported from omarroth‘s 
-`audible.cr <https://github.com/omarroth/audible.cr>`_ crystal app.
+**Audible** is a Python low-level interface to communicate with the non-publicly 
+`Audible <https://en.m.wikipedia.org/wiki/Audible_(service)>`_ API.
+It enables Python developers to create there own Audible services. Asynchronous 
+communication with the Audible API is supported.
+
+.. note::
+
+   For a very basic command line interface take a look at my
+   `audible-cli <https://github.com/mkb79/audible-cli>`_ package.
 
 |
 
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 1
    :caption: Table of Contents
 
    intro/install
    intro/getting_started
    marketplaces/marketplaces
-   auth/authenticate
+   auth/authorization
+   auth/authentication
    auth/register
    misc/load_save
    misc/async
@@ -50,12 +56,6 @@ done in sync or async mode. The code are ported from omarroth‘s
    misc/logging
    misc/external_api
    misc/examples
-
-.. toctree::
-   :caption: Readme <= v0.3.0
-   :hidden:
-
-   misc/README_OLD
 
 
 Indices and tables

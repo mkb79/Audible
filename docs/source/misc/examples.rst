@@ -19,3 +19,4 @@ Print number of books for every marketplace::
        asins = [book["asin"] for book in library["items"]]
        print(f"Country: {client.marketplace.upper()} | Number of books: {len(asins)}")
        print(34* "-")
+

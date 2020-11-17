@@ -2,29 +2,32 @@
 Marketplaces
 ============
 
-General Informations
-====================
+General Information
+===================
 
-Audible offers his service on 9 different marketplaces. You can read 
-more about marketplaces `here <https://audible.custhelp.com/app/answers/detail/a_id/7267/~/what-is-an-audible-marketplace-and-which-is-best-for-me%3F>`_.
+Audible offers his service on 9 different marketplaces. You can read more about
+marketplaces
+`here <https://audible.custhelp.com/app/answers/detail/a_id/7267/~/what-is-an-audible-marketplace-and-which-is-best-for-me%3F>`_.
 
 .. note::
 
-   Credentials from authentication or device registration are valid 
-   for all marketplaces, no matter which country code are used.
+   Except website cookies, authentication data from authorization or device
+   registration are valid for all marketplaces, no matter which marketplace are
+   used.
 
 .. _country_codes:
 
 Country Codes
 =============
 
-This app supports all marketplaces provided by Audible. For every 
-marketplace a country code is specified.
+This app supports all marketplaces provided by Audible. For every marketplace a
+country code is associated.
 
 .. note::
 
-   When saving credentials the country code will be stored in file. After 
-   loading credentials from file this country code will be used by default.
+   The country code of the selected marketplace is stored to file, when you
+   save your authentication data. So, after loading this data from file, the
+   stored country code is used by default.
 
 .. list-table:: Marketplaces with country codes
    :widths: 20 50 15
@@ -64,10 +67,6 @@ marketplace a country code is specified.
 The locale argument
 ===================
 
-You have to provide the country code via the ``locale`` argument.
-
-.. note::
-
-   The locale argument means the same as country code. Because of 
-   backward compatibility I don't renamed the locale argument yet. 
-   In the future there will be some adjustments. 
+The locale argument have the same meaning as the country code argument. Because
+of backward compatibility I didn't renamed the locale argument yet. So if you
+are asked for a `locale` than provide a country code from above.
