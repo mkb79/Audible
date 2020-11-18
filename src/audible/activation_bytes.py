@@ -75,7 +75,7 @@ def fetch_activation(player_token):
             session.get(url, params=dparams)
 
 
-def get_activation_bytes(auth: , filename=None, extract=True):
+def get_activation_bytes(auth, filename=None, extract=True):
     """Get Activation bytes from Audible
     
     :param auth: the Authenticator
@@ -93,4 +93,4 @@ def get_activation_bytes(auth: , filename=None, extract=True):
     if extract:
         activation = extract_activation_bytes(activation)
 
-    return activation_bytes
+    return activation
