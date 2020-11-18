@@ -442,8 +442,18 @@ class Authenticator(MutableMapping, httpx.Auth):
             self.refresh_token, self.locale.domain, cookies_domain
         )
 
-    def get_activation_bytes(self, filename=None):
-        return get_ab(self, filename)
+    def get_activation_bytes(self, filename=None, extract=True):
+        """Get Activation bytes from Audible
+        
+        :param auth: the Authenticator
+        :type auth: audible.Authenticator
+        :param filename: [Optional] filename to save the activation blob
+        :type filename: string, pathlib.Path
+        :param extract: [Optional] if True, returns the extracted activation
+                        bytes otherwise the whole activation blob
+        :type extract: bool
+        """
+        return get_ab(self, filename, extract)
 
     def user_profile(self):
         return user_profile(

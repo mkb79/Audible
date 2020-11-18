@@ -154,11 +154,18 @@ Activation Bytes
 
    Get activation bytes
 
+.. versionadded:: v0.5.0
+
+   the ``extract`` param
+
 To retrieve activation bytes an authentication :class:`Authenticator` is needed.
 
 The Activation bytes can be obtained like so::
 
    activation_bytes = auth.get_activation_bytes()
+
+   # the whole activation blob can fetched with
+   auth.get_activation_bytes(extract=False)
 
 The activation blob can be saved to file too::
 
