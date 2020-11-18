@@ -22,7 +22,7 @@ all known Audible marketplaces and associated country codes you can find at
 
    import audible
    
-   auth = audible.LoginAuthenticator(
+   auth = audible.Authenticator.from_login(
        USERNAME,
        PASSWORD,
        locale=COUNTRY_CODE
@@ -88,5 +88,5 @@ registration with::
 
 And load the data from file to reuse it later with::
 
-   auth = audible.FileAuthenticator(FILENAME)
+   auth = audible.Authenticator.from_file(FILENAME)
 

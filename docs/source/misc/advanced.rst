@@ -85,10 +85,10 @@ Switch User
 If you work with multiple users you can do this::
 
    # instantiate 1st user
-   auth = audible.FileAuthenticator(FILENAME)
+   auth = audible.Authenticator.from_file(FILENAME)
 
    # instantiate 2nd user
-   auth2 = audible.FileAuthenticator(FILENAME2)
+   auth2 = audible.Authenticator.from_file(FILENAME2)
 
    # instantiate client with 1st user
    client = audible.AudibleAPI(auth)
@@ -104,19 +104,31 @@ If you work with multiple users you can do this::
 Misc
 ----
 
-The underlying Authenticator class can be accessed via the `auth` attribute.
+The underlying Authenticator can be accessed via the `auth` attribute.
 
 Authenticator classes
 =====================
 
-There are two Authenticator classes. The ``LoginAuthenticator`` 
-and the ``FileAuthenticator``. Both derive from ``BaseAuthenticator``. 
+.. deprecated:: v0.5.0
 
-The ``LoginAuthenticator`` is used to authorize an user and then authenticate
-requests with the received data. The ``FileAuthenticator`` is used to load
+   The ``LoginAuthenticator`` and the ``FileAuthenticator``
+
+.. versionchanged:: v0.5.0
+
+   The ``LoginAuthenticator`` and the ``FileAuthenticator`` now instantiate the
+   the new :class:`Authenticator` instead a class of its own. 
+
+.. versionadded:: v0.5.0
+
+   The :class:`Authenticator` with the  classmethods ``from_file`` and 
+   ``from_login``
+
+The :meth:`Authenticator.from_login` classmethod is used to authorize 
+an user and then authenticate requests with the received data. The 
+:meth:`Authenticator.from_file` classmethod is used to load
 previous saved authentication data.
 
-With an Authenticator class you can:
+With an Authenticator you can:
 
 - Save credentials to file with ``auth.to_file()``
 - Register a device with ``auth.register_device()`` after a fresh authorization.
@@ -138,10 +150,11 @@ Or to check the time left before token expires::
 Activation Bytes
 ================
 
-Since v0.4.0 this app can get activation bytes. 
+.. versionadded:: v0.4.0
 
-To retrieve activation bytes an authentication via :class:`LoginAuthenticator`
-or :class:`FileAuthenticator` is needed.
+   Get activation bytes
+
+To retrieve activation bytes an authentication :class:`Authenticator` is needed.
 
 The Activation bytes can be obtained like so::
 
@@ -170,7 +183,7 @@ are missing in the provided link. As a workaround you can do::
    import httpx
    
    asin = ASIN_FROM_BOOK
-   auth = audible.FileAuthenticator(...)  # or LoginAuthenticator
+   auth = audible.Authenticator.from_file(...)  # or Authenticator.from_login
    tld = auth.locale.domain
 
    with httpx.Client(auth=auth) as client:

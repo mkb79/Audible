@@ -8,11 +8,11 @@ API Authentication
 Audible uses the `sign request` or the `bearer` method to authenticate the
 requests to the Audible API.
 
-The authentication is done automatically when using the :class:`audible.LoginAuthenticator`
-or :class:`audible.FileAuthenticator`. Simply use an ``Authenticator`` with
+The authentication is done automatically when using the 
+:class:`audible.Authenticator`. Simply use the ``Authenticator`` with
 the :class:`audible.Client` or :class:`audible.AsyncClient` like so::
 
-   auth = audible.FileAuthenticator(...)
+   auth = audible.Authenticator.from_file(...)
    client = audible.Client(auth=auth)
 
 The Authenticator will try to use the sign request method if available.
@@ -57,7 +57,7 @@ authorization or device registration.
 You can use the website cookies from an ``Authenticator`` with a
 :class:`httpx.Client` or :class:`httpx.AsyncClient` like so::
 
-   auth = audible.FileAuthenticator(...)
+   auth = audible.Authenticator.from_file(...)
    with httpx.Client(cookies=auth.website_cookies) as client:
        resp = client.get("https://www.amazon.com/cpe/yourpayments/wallet?ref_=ya_d_c_pmt_mpo")
        resp = client.get("https://www.audible.com")

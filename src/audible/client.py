@@ -1,11 +1,11 @@
 import json
 import logging
-from typing import Union, Optional
+from typing import Optional
 
 import httpx
 from httpx import URL
 
-from .auth import LoginAuthenticator, FileAuthenticator
+from .auth import Authenticator
 from .exceptions import (
     BadRequest, NotFoundError, NotResponding, NetworkError, ServerError,
     Unauthorized, UnexpectedError, RatelimitError, RequestError
@@ -30,8 +30,7 @@ class Client:
 
     def __init__(
             self,
-            auth: Optional[
-                Union[LoginAuthenticator, FileAuthenticator]] = None,
+            auth: Authenticator = None,
             country_code: Optional[str] = None,
             timeout: int = 10
     ):
@@ -78,7 +77,7 @@ class Client:
 
     def switch_user(
             self,
-            auth: Union[LoginAuthenticator, FileAuthenticator],
+            auth: Authenticator,
             switch_to_default_marketplace: bool = False
     ):
         if switch_to_default_marketplace:

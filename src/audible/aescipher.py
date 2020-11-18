@@ -260,8 +260,8 @@ def _decrypt_voucher(device_serial_number, customer_id, device_type, asin, vouch
 def decrypt_voucher_from_licenserequest(auth, license_response):
     """Decrypt the voucher from licenserequest response
 
-    :param auth: An instance of an `Authenticator` clsss
-    :type auth: audible.FileAuthenticator, audible.LoginAuthenticator
+    :param auth: An instance of an `Authenticator`
+    :type auth: audible.Authenticator
     :param license_response: The response content from a successful http 
         `POST` request to api endpoint /1.0/content/{asin}/licenserequest
     :type license_response: dict

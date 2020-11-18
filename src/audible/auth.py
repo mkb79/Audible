@@ -130,7 +130,7 @@ def sign_request(
     }
 
 
-class BaseAuthenticator(MutableMapping, httpx.Auth):
+class Authenticator(MutableMapping, httpx.Auth):
     """Base Class for retrieve and handle credentials."""
 
     requires_request_body = True
@@ -161,6 +161,88 @@ class BaseAuthenticator(MutableMapping, httpx.Auth):
 
     def __repr__(self):
         return f"{type(self).__name__}({self.__dict__})"
+
+    @classmethod
+    def from_file(
+        cls, filename, password=None, locale=None, encryption=None, **kwargs
+    ) -> "Authenticator":
+        """Instantiate a new Authenticator with authentication data from file
+
+        .. versionadded:: v0.5.0
+        """
+        cls = cls()
+        cls.filename = filename
+        cls.encryption = encryption or detect_file_encryption(cls.filename)
+
+        if cls.encryption:
+            if password is None:
+                message = "File is encrypted but no password provided."
+                logger.critical(message)
+                raise FileEncryptionError(message)
+            cls.crypter = AESCipher(password, **kwargs)
+            file_data = cls.crypter.from_file(cls.filename, cls.encryption)
+        else:
+            file_data = cls.filename.read_text()
+
+        json_data = json.loads(file_data)
+
+        locale_code = json_data.pop("locale_code", None)
+        locale = locale or locale_code
+        cls.locale = locale
+
+        # login cookies where renamed to website cookies
+        # old names must be adjusted
+        login_cookies = json_data.pop("login_cookies", None)
+        if login_cookies:
+            json_data["website_cookies"] = login_cookies
+
+        cls.update(**json_data)
+
+        logger.info(
+            (
+                f"load data from file {cls.filename} for "
+                f"locale {cls.locale.country_code}"
+            )
+        )
+        return cls
+
+    @classmethod
+    def from_login(
+        cls,
+        username: str,
+        password: str,
+        locale,
+        register=False,
+        captcha_callback=None,
+        otp_callback=None,
+        cvf_callback=None
+    ) -> "Authenticator":
+        """Instantiate a new Authenticator with authentication data from login
+
+        .. versionadded:: v0.5.0
+        """
+        cls = cls()
+        cls.locale = locale
+
+        resp = login(
+            username=username,
+            password=password,
+            country_code=cls.locale.country_code,
+            domain=cls.locale.domain,
+            market_place_id=cls.locale.market_place_id,
+            captcha_callback=captcha_callback,
+            otp_callback=otp_callback,
+            cvf_callback=cvf_callback
+        )
+
+        logger.info(f"logged in to audible as {username}")
+
+        if register:
+            resp = register_(resp["access_token"], cls.locale.domain)
+            logger.info("registered audible device")
+
+        cls.update(**resp)
+        return cls
 
     def auth_flow(self, request: httpx.Request):
         available_modes = self.available_auth_modes
@@ -377,11 +459,17 @@ class BaseAuthenticator(MutableMapping, httpx.Auth):
         return datetime.fromtimestamp(self.expires) <= datetime.utcnow()
 
 
-class LoginAuthenticator(BaseAuthenticator):
-    """Authenticator class to retrieve credentials from login."""
+class LoginAuthenticator:
+    """Authenticator class to retrieve credentials from login.
+    
+    .. deprecated:: v0.5.0
+    
+       Use :classmethod:`audible.auth.Authenticator.from_login` instead.
 
-    def __init__(
-            self,
+    """
+
+    def __new__(
+            cls,
             username: str,
             password: str,
             locale,
@@ -389,67 +477,30 @@ class LoginAuthenticator(BaseAuthenticator):
             captcha_callback=None,
             otp_callback=None,
             cvf_callback=None
-    ):
-        self.locale = locale
-
-        resp = login(
-            username=username,
-            password=password,
-            country_code=self.locale.country_code,
-            domain=self.locale.domain,
-            market_place_id=self.locale.market_place_id,
-            captcha_callback=captcha_callback,
-            otp_callback=otp_callback,
-            cvf_callback=cvf_callback
-        )
-
-        logger.info(f"logged in to audible as {username}")
-
-        if register:
-            resp = register_(resp["access_token"], self.locale.domain)
-            logger.info("registered audible device")
-
-        self.update(**resp)
+    ) -> Authenticator:
+        return Authenticator.from_login(
+            username,
+            password,
+            locale,
+            register,
+            captcha_callback,
+            otp_callback,
+            cvf_callback)
 
 
-class FileAuthenticator(BaseAuthenticator):
-    """Authenticator class to retrieve credentials from stored file."""
+class FileAuthenticator:
+    """Authenticator class to retrieve credentials from stored file.
+    
+    .. deprecated:: v0.5.0
+    
+       Use :classmethod:`audible.auth.Authenticator.from_file` instead.
 
-    def __init__(
-            self, filename, password=None, locale=None, encryption=None,
+    """
+
+    def __new__(
+            cls, filename, password=None, locale=None, encryption=None,
             **kwargs
-    ) -> None:
+    ) -> Authenticator:
 
-        self.filename = filename
-        self.encryption = encryption or detect_file_encryption(self.filename)
-
-        if self.encryption:
-            if password is None:
-                message = "File is encrypted but no password provided."
-                logger.critical(message)
-                raise FileEncryptionError(message)
-            self.crypter = AESCipher(password, **kwargs)
-            file_data = self.crypter.from_file(self.filename, self.encryption)
-        else:
-            file_data = self.filename.read_text()
-
-        json_data = json.loads(file_data)
-
-        locale_code = json_data.pop("locale_code", None)
-        locale = locale or locale_code
-        self.locale = locale
-
-        # login cookies where renamed to website cookies
-        # old names must be adjusted
-        login_cookies = json_data.pop("login_cookies", None)
-        if login_cookies:
-            json_data["website_cookies"] = login_cookies
-
-        self.update(**json_data)
-
-        logger.info(
-            (
-                f"load data from file {self.filename} for "
-                f"locale {self.locale.country_code}"
-            )
-        )
+        return Authenticator.from_file(
+            filename, password, locale, encryption, **kwargs)

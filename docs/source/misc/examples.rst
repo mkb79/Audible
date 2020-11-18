@@ -9,7 +9,7 @@ Print number of books for every marketplace::
 
    import audible
    
-   auth = audible.FileAuthenticator(filename)
+   auth = audible.Authenticator.from_file(filename)
    client = audible.Client(auth)
    country_codes = ["de", "us", "ca", "uk", "au", "fr", "jp", "it", "in"]
 

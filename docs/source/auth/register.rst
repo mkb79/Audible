@@ -15,7 +15,7 @@ successfully authorization.
 
 To authorize and register a new device in one step you can do::
 
-   auth = audible.LoginAuthenticator(
+   auth = audible.Authenticator.from_login(
        username,
        password,
        locale=country_code,
@@ -36,7 +36,8 @@ Deregister
 ==========
 
 Authentication data obtained by a device registration are valid until
-deregister. Call ``auth.deregister_device()`` the current used device.
+deregister. Call ``auth.deregister_device()`` to deregister the current used 
+device.
 
 Call ``auth.deregister_device(deregister_all=True)`` to deregister **ALL**
 Audible devices. This function is helpful to remove hanging slots. This can

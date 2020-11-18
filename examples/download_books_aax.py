@@ -56,7 +56,7 @@ def download_file(url):
 if __name__ == "__main__":
     password = input("Password for file: ")
 
-    auth = audible.FileAuthenticator(
+    auth = audible.Authenticator.from_file(
         filename="FILENAME",
         password=password
     )

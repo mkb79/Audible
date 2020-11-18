@@ -11,7 +11,7 @@ Authentication data can be saved any time to file like so::
 
 And can then be reused later like so::
 
-   auth = audible.FileAuthenticator(FILENAME)
+   auth = audible.Authenticator.from_file(FILENAME)
 
 .. note::
 
@@ -44,7 +44,7 @@ Or in bytes style like so::
 When loading data from file, encryption style is auto detected. These files can
 be loaded like so::
 
-   auth = audible.FileAuthenticator(
+   auth = audible.Authenticator.from_file(
        FILENAME,
        PASSWORD
    )
@@ -80,7 +80,7 @@ Advanced use of encryption/decryption
 
 When saving authentication data, additional options can be provided with
 ``auth.to_file(..., **kwargs)``. This data can be loaded with
-``auth = audible.FileAuthenticator(..., **kwargs)``.
+``auth = audible.Authenticator.from_file(..., **kwargs)``.
 
 Following options are supported:
 
@@ -115,8 +115,8 @@ Remove encryption
 =================
 
 To remove encryption from file (or save as new file) simply load the encrypted
-file with the :class:`~audible.FileAuthenticator` and save the data
-unencrypted. If the `FileAuthenticator` can't load your data, you can try::
+file with :meth:`audible.Authenticator.from_file` and save the data
+unencrypted. If the `Authenticator` can't load your data, you can try::
 
    from audible.aescipher import remove_file_encryption
 

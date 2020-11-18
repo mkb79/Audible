@@ -18,7 +18,7 @@ minutes. After expiration you have to authorize again to obtain a new one.
 Authorization
 =============
 
-For an example how to authorization please take a look at :ref:`hello_library`.
+For an example how to authorize please take a look at :ref:`hello_library`.
 
 CAPTCHA
 -------
@@ -40,7 +40,7 @@ external service), like so::
 
        return "My answer for CAPTCHA"
 
-   auth = audible.LoginAuthenticator(
+   auth = audible.Authenticator.from_login(
        ...
        captcha_callback=custom_captcha_callback
    )
@@ -61,7 +61,7 @@ A custom callback can be provided, like so::
 
        return "My answer for otp code"
 
-   auth = audible.LoginAuthenticator(
+   auth = audible.Authenticator.from_login(
        ...
        otp_callback=custom_otp_callback
    )
@@ -83,7 +83,7 @@ A custom callback can be provided, like so::
 
        return "My answer for cvf code"
 
-   auth = audible.LoginAuthenticator(
+   auth = audible.Authenticator.from_login(
        ...
        cvf_callback=custom_cvf_callback
    )
