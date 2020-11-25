@@ -1,9 +1,9 @@
+
 import base64
 import json
 import logging
-from collections.abc import MutableMapping
 from datetime import datetime, timedelta
-from typing import Any, Dict, List, Union
+from typing import Any, Dict
 
 import httpx
 import rsa
@@ -130,28 +130,35 @@ def sign_request(
     }
 
 
-class Authenticator(MutableMapping, httpx.Auth):
-    """Base Class for retrieve and handle credentials."""
+class Authenticator(httpx.Auth):
+    """Class for retrieve credentials and handle authentication."""
 
     requires_request_body = True
+    allowed_attrs = [
+        "access_token",
+        "adp_token",
+        "crypter",
+        "customer_info",
+        "device_info",
+        "device_private_key",
+        "encryption",
+        "expires",
+        "filename",
+        "locale",
+        "refresh_token",
+        "store_authentication_cookie",
+        "website_cookies",
+    ]
 
-    def __getitem__(self, key):
-        return self.__dict__[key]
-
-    def __getattr__(self, attr):
-        try:
-            return self.__getitem__(attr)
-        except KeyError:
-            return None
-
-    def __delitem__(self, key):
-        del self.__dict__[key]
-
-    def __setitem__(self, key, value):
-        self.__dict__[key] = test_convert(key, value)
+    def __init__(self):
+        for attr in Authenticator.allowed_attrs:
+            setattr(self, attr, None)
 
     def __setattr__(self, attr, value):
-        self.__setitem__(attr, value)
+        if attr not in Authenticator.allowed_attrs:
+            raise KeyError(f"Attribute are not allowed: {attr}")
+        converted_value = test_convert(attr, value)
+        object.__setattr__(self, attr, converted_value)
 
     def __iter__(self):
         return iter(self.__dict__)
@@ -161,6 +168,10 @@ class Authenticator(MutableMapping, httpx.Auth):
 
     def __repr__(self):
         return f"{type(self).__name__}({self.__dict__})"
+
+    def update_attrs(self, **kwargs):
+        for attr, value in kwargs.items():
+            setattr(self, attr, value)
 
     @classmethod
     def from_file(
@@ -196,27 +207,21 @@ class Authenticator(MutableMapping, httpx.Auth):
         if login_cookies:
             json_data["website_cookies"] = login_cookies
 
-        cls.update(**json_data)
+        cls.update_attrs(**json_data)
 
-        logger.info(
-            (
-                f"load data from file {cls.filename} for "
-                f"locale {cls.locale.country_code}"
-            )
-        )
+        logger.info((f"load data from file {cls.filename} for "
+                     f"locale {cls.locale.country_code}"))
         return cls
 
     @classmethod
-    def from_login(
-        cls,
-        username: str,
-        password: str,
-        locale,
-        register=False,
-        captcha_callback=None,
-        otp_callback=None,
-        cvf_callback=None
-    ) -> "Authenticator":
+    def from_login(cls,
+                   username: str,
+                   password: str,
+                   locale,
+                   register=False,
+                   captcha_callback=None,
+                   otp_callback=None,
+                   cvf_callback=None) -> "Authenticator":
         """Instantiate a new Authenticator with authentication data from login
 
         .. versionadded:: v0.5.0
@@ -224,24 +229,19 @@ class Authenticator(MutableMapping, httpx.Auth):
         cls = cls()
         cls.locale = locale
 
-        resp = login(
+        cls.re_login(
             username=username,
             password=password,
-            country_code=cls.locale.country_code,
-            domain=cls.locale.domain,
-            market_place_id=cls.locale.market_place_id,
             captcha_callback=captcha_callback,
             otp_callback=otp_callback,
-            cvf_callback=cvf_callback
-        )
+            cvf_callback=cvf_callback)
 
-        logger.info(f"logged in to audible as {username}")
+        logger.info(f"logged in to Audible as {username}")
 
         if register:
-            resp = register_(resp["access_token"], cls.locale.domain)
-            logger.info("registered audible device")
+            cls.register_device()
+            logger.info("registered Audible device")
 
-        cls.update(**resp)
         return cls
 
     def auth_flow(self, request: httpx.Request):
@@ -267,9 +267,8 @@ class Authenticator(MutableMapping, httpx.Auth):
         if query:
             path += f"?{query}"
 
-        headers = sign_request(
-            method, path, body, self.adp_token, self.device_private_key
-        )
+        headers = sign_request(method, path, body, self.adp_token,
+                               self.device_private_key)
 
         request.headers.update(headers)
         logger.info("signing auth flow applied to request")
@@ -287,7 +286,10 @@ class Authenticator(MutableMapping, httpx.Auth):
         logger.info("bearer auth flow applied to request")
 
     def _apply_cookies_auth_flow(self, request: httpx.Request) -> None:
-        cookies = {name: value for (name, value) in self.website_cookies.items()}
+        cookies = {
+            name: value
+            for (name, value) in self.website_cookies.items()
+        }
 
         Cookies(cookies).set_cookie_header(request)
         logger.info("cookies auth flow applied to request")
@@ -295,7 +297,7 @@ class Authenticator(MutableMapping, httpx.Auth):
     def sign_request(self, request: httpx.Request) -> None:
         """
         .. deprecated:: 0.5.0
-           Use :met:`self._apply_signing_auth_flow` instead.
+           Use :meth:`self._apply_signing_auth_flow` instead.
         """
         self._apply_signing_auth_flow(request)
 
@@ -317,15 +319,13 @@ class Authenticator(MutableMapping, httpx.Auth):
 
         return available_modes
 
-    def to_file(
-            self,
-            filename=None,
-            password=None,
-            encryption="default",
-            indent=4,
-            set_default=True,
-            **kwargs
-    ):
+    def to_file(self,
+                filename=None,
+                password=None,
+                encryption="default",
+                indent=4,
+                set_default=True,
+                **kwargs):
 
         if not (filename or self.filename):
             raise ValueError("No filename provided")
@@ -359,8 +359,8 @@ class Authenticator(MutableMapping, httpx.Auth):
             crypter = None
         else:
             if password:
-                crypter = test_convert("crypter",
-                                       AESCipher(password, **kwargs))
+                crypter = test_convert("crypter", AESCipher(
+                    password, **kwargs))
             elif self.crypter:
                 crypter = self.crypter
             else:
@@ -370,8 +370,7 @@ class Authenticator(MutableMapping, httpx.Auth):
                 json_body,
                 filename=target_file,
                 encryption=encryption,
-                indent=indent
-            )
+                indent=indent)
 
         logger.info(f"saved data to file {filename}")
 
@@ -382,14 +381,12 @@ class Authenticator(MutableMapping, httpx.Auth):
 
         logger.info(f"set filename {target_file} as default")
 
-    def re_login(
-            self,
-            username,
-            password,
-            captcha_callback=None,
-            otp_callback=None,
-            cvf_callback=None
-    ):
+    def re_login(self,
+                 username,
+                 password,
+                 captcha_callback=None,
+                 otp_callback=None,
+                 cvf_callback=None):
 
         login_device = login(
             username=username,
@@ -399,24 +396,21 @@ class Authenticator(MutableMapping, httpx.Auth):
             market_place_id=self.locale.market_place_id,
             captcha_callback=captcha_callback,
             otp_callback=otp_callback,
-            cvf_callback=cvf_callback
-        )
+            cvf_callback=cvf_callback)
 
-        self.update(**login_device)
+        self.update_attrs(**login_device)
 
     def register_device(self):
         register_device = register_(
-            access_token=self.access_token, domain=self.locale.domain
-        )
+            access_token=self.access_token, domain=self.locale.domain)
 
-        self.update(**register_device)
+        self.update_attrs(**register_device)
 
-    def deregister_device(self, deregister_all: bool = False):
+    def deregister_device(self, deregister_all: bool=False):
         return deregister_(
             access_token=self.access_token,
             deregister_all=deregister_all,
-            domain=self.locale.domain
-        )
+            domain=self.locale.domain)
 
     def refresh_access_token(self, force=False):
         if force or self.access_token_expired:
@@ -425,28 +419,22 @@ class Authenticator(MutableMapping, httpx.Auth):
                 logger.critical(message)
                 raise NoRefreshToken(message)
             refresh_data = refresh_access_token(
-                refresh_token=self.refresh_token, domain=self.locale.domain
-            )
+                refresh_token=self.refresh_token, domain=self.locale.domain)
 
-            self.update(**refresh_data)
+            self.update_attrs(**refresh_data)
         else:
-            logger.info(
-                "Access Token not expired. No refresh nessessary. "
-                "To force refresh please use force=True"
-            )
+            logger.info("Access Token not expired. No refresh necessary. "
+                        "To force refresh please use force=True")
 
     def set_website_cookies_for_country(self, country_code):
         cookies_domain = test_convert("locale", country_code).domain
 
         self.website_cookies = refresh_website_cookies(
-            self.refresh_token, self.locale.domain, cookies_domain
-        )
+            self.refresh_token, self.locale.domain, cookies_domain)
 
     def get_activation_bytes(self, filename=None, extract=True):
         """Get Activation bytes from Audible
-        
-        :param auth: the Authenticator
-        :type auth: audible.Authenticator
+
         :param filename: [Optional] filename to save the activation blob
         :type filename: string, pathlib.Path
         :param extract: [Optional] if True, returns the extracted activation
@@ -457,8 +445,7 @@ class Authenticator(MutableMapping, httpx.Auth):
 
     def user_profile(self):
         return user_profile(
-            access_token=self.access_token, domain=self.locale.domain
-        )
+            access_token=self.access_token, domain=self.locale.domain)
 
     @property
     def access_token_expires(self):
