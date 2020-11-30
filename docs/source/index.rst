@@ -56,6 +56,7 @@ communication with the Audible API is supported.
    misc/logging
    misc/external_api
    misc/examples
+   modules/mods
 
 
 Indices and tables
