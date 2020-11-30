@@ -1,6 +1,6 @@
 from datetime import datetime, timedelta
 import io
-from typing import Any, Dict
+from typing import Any, Callable, Dict, Optional
 from urllib.parse import urlencode, parse_qs
 
 from bs4 import BeautifulSoup
@@ -35,8 +35,8 @@ def default_otp_callback() -> str:
 
 
 def default_cvf_callback() -> str:
-    """
-    Helper function for handling cvf verifys.
+    """Helper function for handling cvf verifys.
+    
     Amazon sends a verify code via Mail or SMS.
     """
     guess = input("CVF Code: ")
@@ -44,6 +44,7 @@ def default_cvf_callback() -> str:
 
 
 def default_approval_alert_callback() -> None:
+    """Helper function for handling approval alerts."""
     print("Approval alert detected! Amazon sends you a mail.")
     input("Please press enter when you approve the notification.")
 
@@ -52,7 +53,8 @@ def get_soup(resp):
     return BeautifulSoup(resp.text, "html.parser")
 
 
-def get_inputs_from_soup(soup) -> Dict[str, str]:
+def get_inputs_from_soup(soup: BeautifulSoup) -> Dict[str, str]:
+    """Extracts hidden form input fields from a Amazon login page."""
     inputs = {}
     for node in soup.select("input[type=hidden]"):
         if node.attrs.get("name") and node.attrs.get("value"):
@@ -63,6 +65,7 @@ def get_inputs_from_soup(soup) -> Dict[str, str]:
 def build_oauth_url(
     country_code: str, domain: str, market_place_id: str
 ) -> str:
+    """Builds the url to login to Amazon as an Audible device"""
     oauth_params = {
         "openid.oa2.response_type": "token",
         "openid.return_to": f"https://www.amazon.{domain}/ap/maplanding",
@@ -90,44 +93,51 @@ def build_oauth_url(
     return f"https://www.amazon.{domain}/ap/signin?{urlencode(oauth_params)}"
 
 
-def check_for_captcha(soup):
+def check_for_captcha(soup: BeautifulSoup) -> bool:
+    """Checks a Amazon login page for a captcha form."""
     captcha = soup.find("img", alt=lambda x: x and "CAPTCHA" in x)
     return True if captcha else False
 
 
-def extract_captcha_url(soup):
+def extract_captcha_url(soup: BeautifulSoup) -> Optional[str]:
+    """Returns the captcha url from a Amazon login page."""
     captcha = soup.find("img", alt=lambda x: x and "CAPTCHA" in x)
     return captcha["src"] if captcha else None
 
 
-def check_for_mfa(soup):
+def check_for_mfa(soup: BeautifulSoup) -> bool:
+    """Checks a Amazon login page for a multi-factor authentication form."""
     mfa = soup.find("form", id=lambda x: x and "auth-mfa-form" in x)
     return True if mfa else False
 
 
-def check_for_choice_mfa(soup):
+def check_for_choice_mfa(soup: BeautifulSoup) -> bool:
+    """Checks a Amazon login page for a MFA selection form."""
     mfa_choice = soup.find("form", id="auth-select-device-form")
     return True if mfa_choice else False
 
 
-def check_for_cvf(soup):
+def check_for_cvf(soup: BeautifulSoup) -> bool:
     cvf = soup.find("div", id="cvf-page-content")
     return True if cvf else False
 
 
-def check_for_approval_alert(soup):
+def check_for_approval_alert(soup: BeautifulSoup) -> bool:
+    """Checks a Amazon login page for an approval alert."""
     approval_alert = soup.find("div", id="resend-approval-alert")
     return True if approval_alert else False
 
 
-def extract_cookies_from_session(session):
+def extract_cookies_from_session(session: httpx.Client) -> Dict[str, str]:
+    """Extracts cookies from a httpx Client."""
     cookies = dict()
     for cookie in session.cookies.jar:
         cookies[cookie.name] = cookie.value.replace(r'"', r'')
     return cookies
 
 
-def extract_token_from_url(url):
+def extract_token_from_url(url: httpx.URL) -> str:
+    """Extracts the access token from url query after login."""
     parsed_url = parse_qs(url.query)
     return parsed_url["openid.oa2.access_token"][0]
 
@@ -138,10 +148,29 @@ def login(
     country_code: str,
     domain: str,
     market_place_id: str,
-    captcha_callback=None,
-    otp_callback=None,
-    cvf_callback=None
+    captcha_callback: Optional[Callable[[str], str]] = None,
+    otp_callback: Optional[Callable[[], str]] = None,
+    cvf_callback: Optional[Callable[[], str]] = None
 ) -> Dict[str, Any]:
+    """Login to Audible by simulating an Audible App for iOS.
+    
+    Args:
+        username: The Amazon email address.
+        password: The Amazon password.
+        country_code: The country code for the Audible marketplace to login.
+        domain: domain: The top level domain for the Audible marketplace to login.
+        market_place_id: The id for the Audible marketplace to login.
+        captcha_callback: A custom Callable for handling captcha requests. 
+            If ``None`` :func:`default_captcha_callback` is used.
+        otp_callback: A custom Callable for providing one-time passwords.
+            If ``None`` :func:`default_otp_callback` is used.
+        cvf_callback: A custom Callback for providing the answer for a CVF code.
+            If ``None`` :func:`default_cvf_callback` is used.
+    
+    Returns:
+        An ``access_token`` with ``expires`` timestamp and the 
+        ``website_cookies`` from the authorized Client.
+    """
 
     amazon_url = f"https://www.amazon.{domain}"
     sign_in_url = amazon_url + "/ap/signin"
@@ -160,6 +189,7 @@ def login(
     login_inputs = get_inputs_from_soup(oauth_soup)
     login_inputs["email"] = username
     login_inputs["password"] = password
+    
     metadata = meta_audible_app(USER_AGENT, amazon_url)
     login_inputs["metadata1"] = encrypt_metadata(metadata)
 

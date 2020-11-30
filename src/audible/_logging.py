@@ -3,7 +3,6 @@ import pathlib
 from typing import Optional, Union
 from warnings import warn
 
-
 logger = logging.getLogger("audible")
 logger.addHandler(logging.NullHandler())
 
@@ -14,10 +13,11 @@ log_formatter = logging.Formatter(
 
 class AudibleLogHelper:
     def set_level(self, level: Union[str, int]) -> None:
-        """Set logging level for the main logger."""
+        """Set logging level for the audible package."""
         self._set_level(logger, level)
 
-    def _set_level(self, obj, level: Optional[Union[str, int]]) -> None:
+    @staticmethod
+    def _set_level(obj, level: Optional[Union[str, int]]) -> None:
         if level:
             level = level.upper() if isinstance(level, str) else level
             obj.setLevel(level)
@@ -25,7 +25,7 @@ class AudibleLogHelper:
         level_name = logging.getLevelName(obj.level)
         logger.info(f"set log level for {obj.name} to: {level_name}")
 
-        if obj.level > 0 and obj.level < logger.level:
+        if 0 < obj.level < logger.level:
             warn(f"{obj.name} level is lower than {logger.name} logger level")
 
     def _set_handler(self, handler, name, level):
@@ -36,19 +36,23 @@ class AudibleLogHelper:
 
     def set_console_logger(self,
                            level: Optional[Union[str, int]] = None) -> None:
-        """Set logging level for the stream handler."""
+        """Set up a console logger to the audible package."""
         handler = logging.StreamHandler()
+        # noinspection PyTypeChecker
         self._set_handler(handler, "ConsoleLogger", level)
 
     def set_file_logger(
             self, filename: str, level: Optional[Union[str, int]] = None
     ) -> None:
-        """Set logging level and filename for the file handler."""
+        """Set up a file logger to the audible package."""
         filename = pathlib.Path(filename)
         handler = logging.FileHandler(filename)
+        # noinspection PyTypeChecker
         self._set_handler(handler, "FileLogger", level)
 
-    def capture_warnings(self, status: bool = True) -> None:
+    @staticmethod
+    def capture_warnings(status: bool = True) -> None:
+        """Lets the logger capture warnings."""
         logging.captureWarnings(status)
         logger.info(
             f"Capture warnings {'activated' if status else 'deactivated'}"

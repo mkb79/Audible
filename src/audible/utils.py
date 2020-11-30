@@ -2,7 +2,7 @@ import logging
 import pathlib
 import re
 import time
-from typing import Any, Optional, Union
+from typing import Any, Dict, Optional, Union
 
 from .localization import Locale
 
@@ -10,14 +10,14 @@ from .localization import Locale
 logger = logging.getLogger('audible.utils')
 
 
-def _check_website_cookies(value) -> None:
+def _check_website_cookies(value: Dict[str, str]) -> None:
     if not isinstance(value, dict):
         raise TypeError("type of login_cookies is not dict")
     if not set(map(type, value.values())) == {str}:
         raise TypeError("login_cookies have wrong format")
 
 
-def _check_adp_token(value) -> None:
+def _check_adp_token(value: str) -> None:
     if not isinstance(value, str):
         raise TypeError("type of adp_token is not str")
 
@@ -37,7 +37,7 @@ def _check_adp_token(value) -> None:
         raise ValueError("adp_token have wrong format")
 
 
-def _check_access_token(value) -> None:
+def _check_access_token(value: str) -> None:
     if not isinstance(value, str):
         raise TypeError("type of access_token is not str")
 
@@ -45,14 +45,14 @@ def _check_access_token(value) -> None:
         raise ValueError('access_token have wrong format')
 
 
-def _check_refresh_token(value) -> None:
+def _check_refresh_token(value: str) -> None:
     if not isinstance(value, str):
         raise TypeError("type of refresh_token is not str")
     if not value.startswith("Atnr|"):
         raise ValueError('refresh_token have wrong format')
 
 
-def _check_device_private_key(value) -> None:
+def _check_device_private_key(value: str) -> None:
     if not isinstance(value, str):
         raise TypeError("type of device_private_key is not str")
 
@@ -63,7 +63,7 @@ def _check_device_private_key(value) -> None:
         raise ValueError('device_private_key have wrong format')
 
 
-def _check_expires(value) -> Optional[float]:
+def _check_expires(value: Union[int, float, str]) -> Optional[float]:
     if not isinstance(value, (int, float, str)):
         raise ValueError("type of device_private_key is not int or float")
 
@@ -75,7 +75,7 @@ def _check_expires(value) -> Optional[float]:
                              "and can't be converted to float")
 
 
-def _check_locales(value) -> Optional[Locale]:
+def _check_locales(value: Union[str, Locale]) -> Optional[Locale]:
     if isinstance(value, str):
         return Locale(value.lower())
 
@@ -98,7 +98,7 @@ def _check_crypter(value) -> Any:
     return value
 
 
-def _check_encryption(value) -> None:
+def _check_encryption(value: Union[bool, str]) -> None:
     allowed_values = [False, "json", "bytes"]
 
     if not isinstance(value, (bool, str)):
@@ -122,6 +122,7 @@ string_function_map = {
 
 
 def test_convert(key: str, value: Any) -> Any:
+    """Helper function to check and convert values for specific keys."""
     if key in string_function_map and value is not None:
         return string_function_map[key](value) or value
 

@@ -1,6 +1,6 @@
 import json
 import logging
-from typing import Optional
+from typing import Dict, Optional, Tuple, Union
 
 import httpx
 from httpx import URL
@@ -12,10 +12,10 @@ from .exceptions import (
 )
 from .localization import LOCALE_TEMPLATES, Locale
 
-logger = logging.getLogger('audible.client')
+logger = logging.getLogger("audible.client")
 
 
-def convert_response_content(resp):
+def convert_response_content(resp: httpx.Response) -> Union[Dict, str]:
     try:
         return resp.json()
     except json.JSONDecodeError:
@@ -26,11 +26,11 @@ class Client:
     _API_URL_TEMP = "https://api.audible."
     _API_VERSION = "1.0"
     _SESSION = httpx.Client
-    _REQUEST_LOG = '{method} {url} has received {text}, has returned {status}'
+    _REQUEST_LOG = "{method} {url} has received {text}, has returned {status}"
 
     def __init__(
             self,
-            auth: Authenticator = None,
+            auth: Authenticator,
             country_code: Optional[str] = None,
             timeout: int = 10
     ):
@@ -54,15 +54,15 @@ class Client:
     def __repr__(self):
         return f"<Sync Client for *{self.marketplace}* marketplace>"
 
-    def close(self):
+    def close(self) -> None:
         self.session.close()
 
-    def switch_marketplace(self, country_code):
+    def switch_marketplace(self, country_code: str) -> None:
         locale = Locale(country_code.lower())
         self.session.base_url = URL(self._API_URL_TEMP + locale.domain)
 
     @property
-    def marketplace(self):
+    def marketplace(self) -> str:
         base_url = str(self.session.base_url)
         slice_len = len(self._API_URL_TEMP)
         domain = base_url[slice_len:]
@@ -72,28 +72,28 @@ class Client:
                 return country["country_code"]
 
     @property
-    def auth(self):
+    def auth(self) -> Authenticator:
         return self.session.auth
 
     def switch_user(
             self,
             auth: Authenticator,
             switch_to_default_marketplace: bool = False
-    ):
+    ) -> None:
         if switch_to_default_marketplace:
             self.switch_marketplace(auth.locale.country_code)
         self.session.auth = auth
 
-    def get_user_profile(self):
+    def get_user_profile(self) -> Dict:
         self.auth.refresh_access_token()
         return self.auth.user_profile()
 
     @property
-    def user_name(self):
+    def user_name(self) -> str:
         user_profile = self.get_user_profile()
         return user_profile["name"]
 
-    def _raise_for_status_error(self, resp):
+    def _raise_for_status_error(self, resp: httpx.Response):
         code = resp.status_code
 
         data = convert_response_content(resp)
@@ -113,7 +113,7 @@ class Client:
         else:
             raise UnexpectedError(resp, data)
 
-    def _prepare_path(self, path):
+    def _prepare_path(self, path: str) -> str:
         if path.startswith("/"):
             path = path[1:]
 
@@ -122,7 +122,7 @@ class Client:
 
         return "/".join((self._API_VERSION, path))
 
-    def _request(self, method: str, path: str, **kwargs):
+    def _request(self, method: str, path: str, **kwargs) -> Union[Dict, str]:
         url = self._prepare_path(path)
 
         try:
@@ -159,7 +159,7 @@ class Client:
             except UnboundLocalError:
                 pass
 
-    def _split_kwargs(self, **kwargs):
+    def _split_kwargs(self, **kwargs) -> Tuple:
         protected_kwargs = [
             "method", "url", "params", "data", "json", "headers", "cookies",
             "files", "auth", "timeout", "allow_redirects", "proxies", "verify",
@@ -172,19 +172,19 @@ class Client:
 
         return params, kwargs
 
-    def get(self, path, **kwargs):
+    def get(self, path: str, **kwargs) -> Union[Dict, str]:
         params, kwargs = self._split_kwargs(**kwargs)
         return self._request("GET", path, params=params, **kwargs)
 
-    def post(self, path, body, **kwargs):
+    def post(self, path: str, body: Dict, **kwargs) -> Union[Dict, str]:
         params, kwargs = self._split_kwargs(**kwargs)
         return self._request("POST", path, params=params, json=body, **kwargs)
 
-    def delete(self, path, **kwargs):
+    def delete(self, path: str, **kwargs) -> Union[Dict, str]:
         params, kwargs = self._split_kwargs(**kwargs)
         return self._request("DELETE", path, params=params, **kwargs)
 
-    def put(self, path, body, **kwargs):
+    def put(self, path: str, body: Dict, **kwargs) -> Union[Dict, str]:
         params, kwargs = self._split_kwargs(**kwargs)
         return self._request("PUT", path, params=params, json=body, **kwargs)
 
@@ -201,10 +201,10 @@ class AsyncClient(Client):
     def __repr__(self):
         return f"<AyncClient for *{self.marketplace}* marketplace>"
 
-    async def close(self):
+    async def close(self) -> None:
         await self.session.aclose()
 
-    async def _request(self, method: str, path: str, **kwargs):
+    async def _request(self, method: str, path: str, **kwargs) -> Union[Dict, str]:
         url = self._prepare_path(path)
 
         try:
