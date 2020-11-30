@@ -11,9 +11,17 @@
 # documentation root, use os.path.abspath to make it absolute, like shown here.
 #
 import os
+import pathlib
+import re
 import sys
+
+# Import httpx now to prevent an error when importing with sphinx-autodoc-typehints 
+# and ``set_type_checking_flag = True`` later. ``autodoc_mock_imports = ['httpx']``
+# prevents import error but don't document ``Authenticator``, class correctly. 
+import httpx
+
 sys.path.insert(0, os.path.abspath('../../src'))
-import audible
+
 
 
 # -- Project information -----------------------------------------------------
@@ -23,7 +31,8 @@ copyright = '2020, mkb79'
 author = 'mkb79'
 
 # The full version, including alpha/beta/rc tags
-version = audible.__version__
+info = pathlib.Path('../../src/audible/_version.py').read_text('utf-8')
+version = re.search(f"{'__version__'} = ['\"]([^'\"]+)['\"]", info).group(1)
 
 
 # -- General configuration ---------------------------------------------------
@@ -31,6 +40,7 @@ version = audible.__version__
 # Add any Sphinx extension module names here, as strings. They can be
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
+
 extensions = [
     'sphinx.ext.autodoc',
     'sphinx.ext.coverage',
@@ -38,8 +48,17 @@ extensions = [
     'sphinx_rtd_theme',
     'sphinx.ext.autosummary',
     'sphinx.ext.viewcode',
-    'sphinxcontrib.httpdomain'
+    'sphinxcontrib.httpdomain',
+    'sphinx_autodoc_typehints'
 ]
+
+# Napoleon
+napoleon_numpy_docstring = False
+
+# Autodoc Typehints
+set_type_checking_flag = True
+typehints_fully_qualified = False
+always_document_param_types = True
 
 master_doc = 'index'
 
