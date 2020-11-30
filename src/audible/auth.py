@@ -201,36 +201,38 @@ class Authenticator(httpx.Auth):
         website_cookies (:obj:`dict`, :obj:`None`):
     """
 
+    access_token: Optional[str] = None
+    adp_token: Optional[str] = None
+    crypter: Optional[AESCipher] = None
+    customer_info: Optional[Dict] = None
+    device_info: Optional[Dict] = None
+    device_private_key: Optional[str] = None
+    encryption: Optional[Union[str, bool]] = None
+    expires: Optional[float] = None
+    filename: Optional["pathlib.Path"] = None
+    locale: Optional["Locale"] = None
+    refresh_token: Optional[str] = None
+    store_authentication_cookie: Optional[Dict] = None
+    website_cookies: Optional[Dict] = None
     requires_request_body: bool = True
-
-    def __init__(self) -> None:
-        self.access_token: Optional[str] = None
-        self.adp_token: Optional[str] = None
-        self.crypter: Optional[AESCipher] = None
-        self.customer_info: Optional[Dict] = None
-        self.device_info: Optional[Dict] = None
-        self.device_private_key: Optional[str] = None
-        self.encryption: Optional[Union[str, bool]] = None
-        self.expires: Optional[float] = None
-        self.filename: Optional["pathlib.Path"] = None
-        self.locale: Optional["Locale"] = None
-        self.refresh_token: Optional[str] = None
-        self.store_authentication_cookie: Optional[Dict] = None
-        self.website_cookies: Optional[Dict] = None
-        self._frozen_attrs = True
+    _forbid_new_attrs: bool = True
+    _apply_test_convert: bool = True
 
     def __setattr__(self, attr, value):
-        if getattr(self, "_frozen_attrs", False) and not hasattr(self, attr):
-            raise AttributeError(f"{self.__class__.__name__} is frozen, can't "
-                                 f"add attribute: {attr}.")
-        converted_value = test_convert(attr, value)
-        object.__setattr__(self, attr, converted_value)
+        if self._forbid_new_attrs and not hasattr(self, attr):
+            msg = (f"{self.__class__.__name__} is frozen, can't "
+                   f"add attribute: {attr}.")
+            logger.error(msg)
+            raise AttributeError(msg)
+                                 
+        if self._apply_test_convert:
+            value = test_convert(attr, value)
+        object.__setattr__(self, attr, value)
 
     def __iter__(self):
         for i in self.__dict__:
-            if self.__dict__[i] is not None and i != "_frozen_attrs":
+            if self.__dict__[i] is not None and not i.startswith("_"):
                 yield i
-        # return iter(self.__dict__)
 
     def __len__(self):
         return len([i for i in self])
