@@ -56,7 +56,8 @@ setup(
         'docs': [
             'sphinx',
             'sphinx_rtd_theme',
-            'sphinxcontrib-httpdomain'
+            'sphinxcontrib-httpdomain',
+            'sphinx-autodoc-typehints'
         ]
     },
     python_requires='>=3.6',
