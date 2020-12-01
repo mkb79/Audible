@@ -4,107 +4,108 @@ import re
 import time
 from typing import Any, Dict, Optional, Union
 
+from .aescipher import AESCipher
 from .localization import Locale
 
 
-logger = logging.getLogger('audible.utils')
+logger = logging.getLogger("audible.utils")
 
 
 def _check_website_cookies(value: Dict[str, str]) -> None:
     if not isinstance(value, dict):
-        raise TypeError("type of login_cookies is not dict")
+        raise TypeError(f"website_cookies: Expected dict, "
+                        f"got {type(value).__name__}.")
     if not set(map(type, value.values())) == {str}:
-        raise TypeError("login_cookies have wrong format")
+        raise TypeError("website_cookies: Value(s) of website_cookies have "
+                        "wrong type.")
 
 
 def _check_adp_token(value: str) -> None:
     if not isinstance(value, str):
-        raise TypeError("type of adp_token is not str")
+        raise TypeError(f"adp_token: Expected str, "
+                        f"got {type(value).__name__}.")
 
-    parts = re.findall(r"{.*?}", value)
-    if len(parts) != 5:
-        raise ValueError("adp_token have wrong format")
-
-    adp_token_as_dict = dict()
-    for part in parts:
-        search_pieces = re.search('{(.*?):(.*?)}', part)
-        key = search_pieces.group(1)
-        value = search_pieces.group(2)
-        adp_token_as_dict[key] = value
-
-    allowed_keys = {"enc", "key", "iv", "name", "serial"}
-    if not adp_token_as_dict.keys() == allowed_keys:
-        raise ValueError("adp_token have wrong format")
+    fmt = (r"^{enc:(?P<enc>.*?)}{key:(?P<key>.*?)}{iv:(?P<iv>.*?)}"
+           r"{name:(?P<name>.*?)}{serial:(?P<serial>Mg==)}$")
+    if not re.match(fmt, value):
+        raise ValueError("adp_token: Invalid token.")
 
 
 def _check_access_token(value: str) -> None:
     if not isinstance(value, str):
-        raise TypeError("type of access_token is not str")
+        raise TypeError(f"access_token: Expected str, "
+                        f"got {type(value).__name__}.")
 
-    if not value.startswith("Atna|"):
-        raise ValueError('access_token have wrong format')
+    fmt = r"^(?P<access_token>Atna\|.*)$"
+    if not re.match(fmt, value):
+        raise ValueError("access_token: Invalid token.")
 
 
 def _check_refresh_token(value: str) -> None:
     if not isinstance(value, str):
-        raise TypeError("type of refresh_token is not str")
-    if not value.startswith("Atnr|"):
-        raise ValueError('refresh_token have wrong format')
+        raise TypeError(f"refresh_token: Expected str, "
+                        f"got {type(value).__name__}.")
+
+    fmt = r"^(?P<refresh_token>Atnr\|.*)$"
+    if not re.match(fmt, value):
+        raise ValueError("refresh_token: Invalid token.")
 
 
 def _check_device_private_key(value: str) -> None:
     if not isinstance(value, str):
-        raise TypeError("type of device_private_key is not str")
+        raise TypeError(f"device_private_key: Expected str, "
+                        f"got {type(value).__name__}.")
 
-    if not value.startswith("-----BEGIN RSA PRIVATE KEY-----"):
-        raise ValueError('device_private_key have wrong format')
-
-    if not value.endswith("-----END RSA PRIVATE KEY-----\n"):
-        raise ValueError('device_private_key have wrong format')
+    fmt = (r"^(?P<device_private_key>-----BEGIN RSA PRIVATE KEY-----.*"
+           r"-----END RSA PRIVATE KEY-----\n)$")
+    if not re.match(fmt, value, re.S):
+        raise ValueError("device_private_key: Invalid token.")
 
 
 def _check_expires(value: Union[int, float, str]) -> Optional[float]:
     if not isinstance(value, (int, float, str)):
-        raise ValueError("type of device_private_key is not int or float")
+        raise TypeError(f"expires: Expected int/float/str, "
+                        f"got {type(value).__name__}.")
 
     if isinstance(value, str):
         try:
             return float(value)
-        except ValueError:
-            raise ValueError("type of device_private_key is str "
-                             "and can't be converted to float")
+        except ValueError as exc:
+            raise ValueError("expires: Got str. Converting to float "
+                             "raises an error.") from exc
 
 
-def _check_locales(value: Union[str, Locale]) -> Optional[Locale]:
+def _check_locale(value: Union[str, Locale]) -> Optional[Locale]:
+    if not isinstance(value, (Locale, str)):
+        raise TypeError(f"locales: Expected Locale/str, "
+                        f"got {type(value).__name__}.")
+
     if isinstance(value, str):
         return Locale(value.lower())
 
-    if not isinstance(value, Locale):
-        raise TypeError("Locale error")
 
-
-def _check_filename(value) -> Union[pathlib.Path, pathlib.WindowsPath]:
-    if not isinstance(value, (pathlib.Path, pathlib.WindowsPath)):
+def _check_filename(value) -> pathlib.Path:
+    if not isinstance(value, pathlib.Path):
         try:
             return pathlib.Path(value)
-        except NotImplementedError:
-            return pathlib.WindowsPath(value)
-        except:
-            raise Exception("File error")
+        except Exception as exc:
+            raise Exception(f"filename: Got {type(value).__name__}. Converting "
+                            f"to Path raises an error.") from exc
 
 
-def _check_crypter(value) -> Any:
-    # TODO: write checks
-    return value
+def _check_crypter(value: AESCipher) -> None:
+    if not isinstance(value, AESCipher):
+        raise TypeError(f"crypter: Expected AESCipher, "
+                        f"got {type(value).__name__}.")
 
 
 def _check_encryption(value: Union[bool, str]) -> None:
-    allowed_values = [False, "json", "bytes"]
-
     if not isinstance(value, (bool, str)):
-        raise TypeError("encryption has wrong type")
-    if value not in allowed_values:
-        raise ValueError("encryption has wrong value")
+        raise TypeError(f"encryption: Expected bool/str, "
+                        f"got {type(value).__name__}.")
+
+    if value not in [False, "json", "bytes"]:
+        raise ValueError("encryption: Value are not allowed.")
 
 
 string_function_map = {
@@ -114,7 +115,7 @@ string_function_map = {
     "refresh_token": _check_refresh_token,
     "device_private_key": _check_device_private_key,
     "expires": _check_expires,
-    "locale": _check_locales,
+    "locale": _check_locale,
     "filename": _check_filename,
     "crypter": _check_crypter,
     "encryption": _check_encryption
