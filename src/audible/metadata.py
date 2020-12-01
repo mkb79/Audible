@@ -40,7 +40,8 @@ def raw_xxtea(v: List, n: int, k: Union[List, Tuple]) -> int:
             y = v[0]
             z = v[n - 1] = u32(v[n - 1] + mx())
         return 0
-    elif n < -1:  # Decoding
+
+    if n < -1:  # Decoding
         n = -n
         q = int(6 + (52 / n // 1))
         sum_ = u32(q * delta)
