@@ -381,16 +381,11 @@ class Authenticator(httpx.Auth):
         yield request
 
     def _apply_signing_auth_flow(self, request: httpx.Request) -> None:
-        method = request.method
-        path = request.url.path
-        query = request.url.query
-        body = request.content
-
-        if query:
-            path += f"?{query}"
-
-        headers = sign_request(method, path, body, self.adp_token,
-                               self.device_private_key)
+        headers = sign_request(method=request.method,
+                               path=request.url.full_path,
+                               body=request.content,
+                               adp_token=self.adp_token,
+                               private_key=self.device_private_key)
 
         request.headers.update(headers)
         logger.info("signing auth flow applied to request")
@@ -403,7 +398,6 @@ class Authenticator(httpx.Auth):
             "Authorization": "Bearer " + self.access_token,
             "client-id": "0"
         }
-
         request.headers.update(headers)
         logger.info("bearer auth flow applied to request")
 
