@@ -337,7 +337,7 @@ def detect_file_encryption(filename: pathlib.Path) -> Optional[str]:
         filename: The name for the authentication file.
 
     Returns:
-        ``None`` if file is not encrypted otherwise the encryption format.
+        ``False`` if file is not encrypted otherwise the encryption format.
     """
     file = filename.read_bytes()
     encryption = None
