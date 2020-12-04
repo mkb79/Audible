@@ -382,7 +382,7 @@ class Authenticator(httpx.Auth):
 
     def _apply_signing_auth_flow(self, request: httpx.Request) -> None:
         headers = sign_request(method=request.method,
-                               path=request.url.full_path,
+                               path=request.url.raw_path.decode(),
                                body=request.content,
                                adp_token=self.adp_token,
                                private_key=self.device_private_key)
