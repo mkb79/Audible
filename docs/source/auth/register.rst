@@ -1,51 +1,53 @@
-=================
-Register a Device
-=================
+=========================
+Register a Audible device
+=========================
 
 Register
 ========
 
-Clients with an `master` access token can register a new audible device. 
-Clients are given an refresh token, RSA private key, adp_token and more 
-useful credentials and informations after registration.
+To deal with the limitations if working with *authorized only* clients
+(expiration and restricted API calls) you can register a audible device.
+Clients are obtaining additional authentication data and information after
+registration.
 
-To register a new device after a successfully authentication you can 
-call ``auth.register_device()``.
+To register a new device you can call ``auth.register_device()`` after a
+successfully authorization.
 
-To authenticate and register a new device in one step you can do::
+To authorize and register a new device in one step you can do::
 
-   auth = audible.LoginAuthenticator(
+   auth = audible.Authenticator.from_login(
        username,
        password,
        locale=country_code,
        register=True)
 
-Now requests to the audible API can be signed (authorized) using the 
-provided RSA private key and adp_token. Request signing is fairly 
-straight-forward and uses a signed SHA256 digest. Headers look like::
+.. note::
 
-   x-adp-alg: SHA256withRSA:1.0
-   x-adp-signature: AAAAAAAA...:2019-02-16T00:00:01.000000000Z,
-   x-adp-token: {enc:...}
+   Only an `master` access token from a fresh authorization can register a new
+   device. An access token from a previous registered device will not work.
 
-.. attention::
+.. important::
 
-   Every registered device will add an entry to amazon device list. 
-   Please register a new device only if neccessary. Best option is to 
-   register device only once and then reuse (save/load) credentials.
+   Every device registration will be shown on the amazon devices list. So only
+   register once and save your credentials or deregister the device before you
+   close your session.
 
 Deregister
 ==========
 
-Refresh token, RSA private key and adp_token are valid until deregister.
+Authentication data obtained by a device registration are valid until
+deregister. Call ``auth.deregister_device()`` to deregister the current used 
+device.
 
-To deregister a device with client call ``auth.deregister_device()`` from
-a previous registered `auth` instance. To deregister, a valid access token 
-is needed. If access token is expired, it have to renew with ``auth.refresh_access_token()`` 
-before deregister. 
+Call ``auth.deregister_device(deregister_all=True)`` to deregister **ALL**
+Audible devices. This function is helpful to remove hanging slots. This can
+happens if you registered a device and forgot to store the given authentication
+data or to deregister. This also deregister all other devices such as an
+Audible app on mobile devices. If you only want to remove one registration you
+can also open the amazon devices list on the the amazon website.
 
-To deregister all devices call ``auth.deregister_device(deregister_all=True)``.
-This function is necessary to prevent hanging slots if you registered 
-a device earlier but don‘t store the given credentials.
-This also deregister all other devices such as a audible app on mobile 
-devices.
+.. important::
+
+   Deregister needs an valid access token. The authentication data from a
+   device registration contains a refresh token. With these token, an access
+   token can be renewed with ``auth.refresh_access_token()``.

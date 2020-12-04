@@ -5,8 +5,8 @@ External Audible API
 Documentation
 =============
 
-There is currently no publicly available documentation about 
-the Audible API.
+There is currently no publicly available documentation about the 
+Audible API.
 
 There is a node client `audible-api <https://github.com/willthefirst/audible/tree/master/node_modules/audible-api>`_ 
 that has some endpoints documented, but does not provide information 
@@ -44,38 +44,62 @@ response but will not provide information on available response groups.
 API Endpoints
 =============
 
-GET /0.0/library/books
-----------------------
+.. http:get:: /0.0/library/books
+   :deprecated:
 
-.. note::
+   This API endpoint is deprecated. Please use :http:get:`/1.0/library` instead.
 
-   This API endpoint is deprecated. Please use `GET /1.0/library` instead.
+   :query string purchaseAfterDate: mm/dd/yyyy
+   :query string sortByColumn: [SHORT_TITLE, strTitle, DOWNLOAD_STATUS,
+                                RUNNING_TIME, sortPublishDate, SHORT_AUTHOR,
+                                sortPurchDate, DATE_AVAILABLE]
+   :query bool sortInAscendingOrder: [true, false]
 
-:params:
-   - purchaseAfterDate: mm/dd/yyyy
-   - sortByColumn: [SHORT_TITLE, strTitle, DOWNLOAD_STATUS, RUNNING_TIME, sortPublishDate, SHORT_AUTHOR, sortPurchDate, DATE_AVAILABLE]
-   - sortInAscendingOrder: [true, false]
+.. http:get:: /1.0/library
 
-GET /1.0/library
-----------------
+   The audible library of current user
 
-:params:
-   - num_results: \\d+ (max: 1000)
-   - page: \\d+
-   - purchased_after: [RFC3339](https://tools.ietf.org/html/rfc3339) (e.g. `2000-01-01T00:00:00Z`)
-   - title
-   - author
-   - response_groups: [contributors, customer_rights, media, price, product_attrs, product_desc, product_extended_attrs, product_plan_details, product_plans, rating, sample, sku, series, reviews, ws4v, origin, relationships, review_attrs, categories, badge_types, category_ladders, claim_code_url, is_downloaded, is_finished, is_playable, is_removable, is_returnable, is_visible, order_details, origin_asin, pdf_url, percent_complete, provided_review]
-   - image_sizes: [1215,408,360,882,315,570,252,558,900,500]
-   - sort_by: [-Author, -Length, -Narrator, -PurchaseDate, -Title, Author, Length, Narrator, PurchaseDate, Title]
-   - status: [Active, Revoked] ('Active' is the default, 'Revoked' returns audiobooks the user has returned for a refund.)
-   - parent_asin: asin
+   :query integer num_results: (max: 1000)
+   :query integer page: page
+   :query string purchased_after: [RFC3339](https://tools.ietf.org/html/rfc3339)
+                                  (e.g. `2000-01-01T00:00:00Z`)
+   :query string title: a title
+   :query string author: a author
+   :query string response_groups: [contributors, customer_rights, media, price,
+                                   product_attrs, product_desc,
+                                   product_extended_attrs, product_plan_details,
+                                   product_plans, rating, sample, sku, series,
+                                   reviews, ws4v, origin, relationships,
+                                   review_attrs, categories, badge_types,
+                                   category_ladders, claim_code_url, is_downloaded,
+                                   is_finished, is_playable, is_removable,
+                                   is_returnable, is_visible, order_details,
+                                   origin_asin, pdf_url, percent_complete,
+                                   provided_review]
+   :query string image_sizes: [1215,408,360,882,315,570,252,558,900,500]
+   :query string sort_by: [-Author, -Length, -Narrator, -PurchaseDate, -Title,
+                           Author, Length, Narrator, PurchaseDate, Title]
+   :query string status: [Active, Revoked] ('Active' is the default, 'Revoked'
+                         returns audiobooks the user has returned for a refund.)
+   :query string parent_asin: asin
 
-GET /1.0/library/%{asin}
-------------------------
+.. http:get:: /1.0/library/(string:asin)
 
-:params:
-   - response_groups: [contributors, media, price, product_attrs, product_desc, product_extended_attrs, product_plan_details, product_plans, rating, sample, sku, series, reviews, ws4v, origin, relationships, review_attrs, categories, badge_types, category_ladders, claim_code_url, is_downloaded, is_finished, is_returnable, origin_asin, pdf_url, percent_complete, provided_review]
+   :param asin: The asin of the book
+   :type asin: string
+   :query string response_groups: [contributors, media, price, product_attrs,
+                                   product_desc, product_extended_attrs,
+                                   product_plan_details, product_plans, rating,
+                                   sample, sku, series, reviews, ws4v, origin,
+                                   relationships, review_attrs, categories,
+                                   badge_types, category_ladders, claim_code_url,
+                                   is_downloaded, is_finished, is_returnable,
+                                   origin_asin, pdf_url, percent_complete,
+                                   provided_review]
+
+.. http:post:: /1.0/library/item
+
+   :<json string asin: The asin of the book
 
 POST(?) /1.0/library/item
 -------------------------
@@ -369,6 +393,18 @@ GET /1.0/catalog/products/%{asin}/sims
    - reviews_num_results: \\d+ (max: 10)
    - reviews_sort_by: [MostHelpful, MostRecent]
    - similarity_type: [InTheSameSeries, ByTheSameNarrator, RawSimilarities, ByTheSameAuthor, NextInSameSeries]
+
+.. http:post:: /1.0/content/(string:asin)/licenserequest
+
+   :param asin: The asin of the book
+   :type asin: string
+   :<json string supported_drm_types: [Mpeg, Adrm]
+   :<json string consumption_type: [Streaming, Offline, Download]
+   :<json string drm_type: [Hls, PlayReady, Hds, Adrm]
+   :<json string quality: [High, Normal, Extreme, Low]
+   :<json integer num_active_offline_licenses: (max: 10)
+   :<json string response_groups: [last_position_heard, pdf_url,
+                                   content_reference, chapter_info]
 
 POST /1.0/content/%{asin}/licenserequest
 ----------------------------------------

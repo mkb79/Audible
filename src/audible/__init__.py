@@ -1,15 +1,11 @@
 # -*- coding: utf-8 -*-
 
-from .client import AudibleAPI, Client, AsyncClient
-from .auth import LoginAuthenticator, FileAuthenticator
-from ._logging import AudibleLogHelper
-from audible._version import __version__
-
+from ._logging import log_helper
+from ._version import __version__
+from .auth import Authenticator, LoginAuthenticator, FileAuthenticator
+from .client import Client, AsyncClient
 
 __all__ = [
-    "__version__", "AudibleAPI", "LoginAuthenticator", "FileAuthenticator",
+    "__version__", "LoginAuthenticator", "FileAuthenticator", "Authenticator",
     "log_helper", "Client", "AsyncClient"
 ]
-
-
-log_helper = AudibleLogHelper()

@@ -6,19 +6,23 @@ import httpx
 
 
 def get_random_device_serial() -> str:
-    """
-    Generates and prepares a random uuid version 4.
+    """Generates and prepares a random uuid version 4.
     
-    Use of random serial prevents unregister device by other users
+    Using a random serial prevents from unregister devices by other users
     with same `device_serial`.
     """
     return str(uuid.uuid4()).replace("-", "")
 
 
 def register(access_token: str, domain: str) -> Dict[str, Any]:
-    """
-    Register a dummy audible device with access token  from ``auth.login``.
-    Returns important credentials needed for access audible api.
+    """Registers a dummy Audible device. 
+
+    Args:
+        access_token: An access token fetches from :func:`audible.auth.login`.
+        domain: The top level domain of the requested Amazon server (e.g. com).
+    
+    Returns:
+        Additional authentication data needed for access Audible API.
     """
     body = {
         "requested_token_type":
@@ -90,13 +94,20 @@ def register(access_token: str, domain: str) -> Dict[str, Any]:
 
 def deregister(access_token: str, domain: str,
                deregister_all: bool = False) -> Dict[str, Any]:
-    """
-    Deregister device which was previously registered with `access_token`.
-
-    `access_token` is valid until expiration. All other credentials will
-    be invalid immediately.
+    """Deregisters a dummy Audible device.
     
-    If `deregister_all=True` all registered devices will be deregistered.
+    Note:
+        Except of the ``access_token``, all authentication data will loose 
+        validation immediately.
+
+    Args:
+        access_token: The access token from the previous registered device 
+            which you want to deregister.
+        domain: The top level domain of the requested Amazon server (e.g. com).
+        deregister_all: If ``True``, deregister all Audible devices on Amazon.
+
+    Returns:
+        The response for the deregister request. Contains errors, if some occurs.
     """
     body = {"deregister_all_existing_accounts": deregister_all}
     headers = {"Authorization": f"Bearer {access_token}"}

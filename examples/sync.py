@@ -77,11 +77,11 @@ def get_download_link(asin, quality="Extreme"):
 
 if __name__ == "__main__":
     password = input("Password for file: ")
-
-    auth = audible.FileAuthenticator(
+    auth = audible.Authenticator.from_file(
         filename="FILENAME",
         password=password
     )
-    client = audible.AudibleAPI(auth)
+    client = audible.Client(auth)
+
     link = get_download_link("BOOK_ASIN")
     print(link)

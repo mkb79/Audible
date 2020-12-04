@@ -1,15 +1,13 @@
-import base64
-import binascii
 from datetime import datetime, timedelta
 import io
-import json
-import math
-from typing import Any, Dict, List, Union
+from typing import Any, Callable, Dict, Optional
 from urllib.parse import urlencode, parse_qs
 
 from bs4 import BeautifulSoup
 from PIL import Image
 import httpx
+
+from .metadata import encrypt_metadata, meta_audible_app
 
 USER_AGENT = "Mozilla/5.0 (iPhone; CPU iPhone OS 12_3_1 like Mac OS X) " \
              "AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148"
@@ -37,19 +35,26 @@ def default_otp_callback() -> str:
 
 
 def default_cvf_callback() -> str:
-    """
-    Helper function for handling cvf verifys.
+    """Helper function for handling cvf verifys.
+    
     Amazon sends a verify code via Mail or SMS.
     """
     guess = input("CVF Code: ")
     return str(guess).strip().lower()
 
 
+def default_approval_alert_callback() -> None:
+    """Helper function for handling approval alerts."""
+    print("Approval alert detected! Amazon sends you a mail.")
+    input("Please press enter when you approve the notification.")
+
+
 def get_soup(resp):
     return BeautifulSoup(resp.text, "html.parser")
 
 
-def get_inputs_from_soup(soup) -> Dict[str, str]:
+def get_inputs_from_soup(soup: BeautifulSoup) -> Dict[str, str]:
+    """Extracts hidden form input fields from a Amazon login page."""
     inputs = {}
     for node in soup.select("input[type=hidden]"):
         if node.attrs.get("name") and node.attrs.get("value"):
@@ -60,6 +65,7 @@ def get_inputs_from_soup(soup) -> Dict[str, str]:
 def build_oauth_url(
     country_code: str, domain: str, market_place_id: str
 ) -> str:
+    """Builds the url to login to Amazon as an Audible device"""
     oauth_params = {
         "openid.oa2.response_type": "token",
         "openid.return_to": f"https://www.amazon.{domain}/ap/maplanding",
@@ -87,39 +93,51 @@ def build_oauth_url(
     return f"https://www.amazon.{domain}/ap/signin?{urlencode(oauth_params)}"
 
 
-def check_for_captcha(soup):
+def check_for_captcha(soup: BeautifulSoup) -> bool:
+    """Checks a Amazon login page for a captcha form."""
     captcha = soup.find("img", alt=lambda x: x and "CAPTCHA" in x)
     return True if captcha else False
 
 
-def extract_captcha_url(soup):
+def extract_captcha_url(soup: BeautifulSoup) -> Optional[str]:
+    """Returns the captcha url from a Amazon login page."""
     captcha = soup.find("img", alt=lambda x: x and "CAPTCHA" in x)
     return captcha["src"] if captcha else None
 
 
-def check_for_mfa(soup):
+def check_for_mfa(soup: BeautifulSoup) -> bool:
+    """Checks a Amazon login page for a multi-factor authentication form."""
     mfa = soup.find("form", id=lambda x: x and "auth-mfa-form" in x)
     return True if mfa else False
 
 
-def check_for_choice_mfa(soup):
+def check_for_choice_mfa(soup: BeautifulSoup) -> bool:
+    """Checks a Amazon login page for a MFA selection form."""
     mfa_choice = soup.find("form", id="auth-select-device-form")
     return True if mfa_choice else False
 
 
-def check_for_cvf(soup):
+def check_for_cvf(soup: BeautifulSoup) -> bool:
     cvf = soup.find("div", id="cvf-page-content")
     return True if cvf else False
 
 
-def extract_cookies_from_session(session):
+def check_for_approval_alert(soup: BeautifulSoup) -> bool:
+    """Checks a Amazon login page for an approval alert."""
+    approval_alert = soup.find("div", id="resend-approval-alert")
+    return True if approval_alert else False
+
+
+def extract_cookies_from_session(session: httpx.Client) -> Dict[str, str]:
+    """Extracts cookies from a httpx Client."""
     cookies = dict()
     for cookie in session.cookies.jar:
         cookies[cookie.name] = cookie.value.replace(r'"', r'')
     return cookies
 
 
-def extract_token_from_url(url):
+def extract_token_from_url(url: httpx.URL) -> str:
+    """Extracts the access token from url query after login."""
     parsed_url = parse_qs(url.query)
     return parsed_url["openid.oa2.access_token"][0]
 
@@ -130,10 +148,29 @@ def login(
     country_code: str,
     domain: str,
     market_place_id: str,
-    captcha_callback=None,
-    otp_callback=None,
-    cvf_callback=None
+    captcha_callback: Optional[Callable[[str], str]] = None,
+    otp_callback: Optional[Callable[[], str]] = None,
+    cvf_callback: Optional[Callable[[], str]] = None
 ) -> Dict[str, Any]:
+    """Login to Audible by simulating an Audible App for iOS.
+    
+    Args:
+        username: The Amazon email address.
+        password: The Amazon password.
+        country_code: The country code for the Audible marketplace to login.
+        domain: domain: The top level domain for the Audible marketplace to login.
+        market_place_id: The id for the Audible marketplace to login.
+        captcha_callback: A custom Callable for handling captcha requests. 
+            If ``None`` :func:`default_captcha_callback` is used.
+        otp_callback: A custom Callable for providing one-time passwords.
+            If ``None`` :func:`default_otp_callback` is used.
+        cvf_callback: A custom Callback for providing the answer for a CVF code.
+            If ``None`` :func:`default_cvf_callback` is used.
+    
+    Returns:
+        An ``access_token`` with ``expires`` timestamp and the 
+        ``website_cookies`` from the authorized Client.
+    """
 
     amazon_url = f"https://www.amazon.{domain}"
     sign_in_url = amazon_url + "/ap/signin"
@@ -152,6 +189,7 @@ def login(
     login_inputs = get_inputs_from_soup(oauth_soup)
     login_inputs["email"] = username
     login_inputs["password"] = password
+    
     metadata = meta_audible_app(USER_AGENT, amazon_url)
     login_inputs["metadata1"] = encrypt_metadata(metadata)
 
@@ -226,6 +264,14 @@ def login(
         login_resp = session.post(cvf_url, data=inputs)
         login_soup = get_soup(login_resp)
 
+    # check for approval alert
+    while check_for_approval_alert(login_soup):
+        default_approval_alert_callback()
+        url = login_soup.find_all("a", class_="a-link-normal")[1]["href"]
+
+        login_resp = session.get(url)
+        login_soup = get_soup(login_resp)
+
     if login_resp.status_code != 404:
         raise Exception("Unable to login")
 
@@ -240,309 +286,3 @@ def login(
         "website_cookies": website_cookies,
         "expires": expires
     }
-
-
-# constants used for encrypt/decrypt metadata
-WRAP_CONSTANT = 2654435769
-CONSTANTS = [1888420705, 2576816180, 2347232058, 874813317]
-
-
-def _data_to_int_list(data: Union[str, bytes]) -> List[int]:
-    data_bytes = data.encode() if isinstance(data, str) else data
-    data_list_int = []
-    for i in range(0, len(data_bytes), 4):
-        data_list_int.append(int.from_bytes(data_bytes[i:i + 4], "little"))
-
-    return data_list_int
-
-
-def _list_int_to_bytes(data: List[int]) -> bytearray:
-    data_list = data
-    data_bytes = bytearray()
-    for i in data_list:
-        data_bytes += i.to_bytes(4, 'little')
-
-    return data_bytes
-
-
-def _encrypt_data(data: List[int]) -> List[int]:
-    temp2 = data
-    rounds = len(temp2)
-    minor_rounds = int(6 + (52 / rounds // 1))
-    last = temp2[-1]
-    inner_roll = 0
-
-    for _ in range(minor_rounds):
-        inner_roll += WRAP_CONSTANT
-        inner_variable = inner_roll >> 2 & 3
-
-        for i in range(rounds):
-            first = temp2[(i + 1) % rounds]
-            temp2[i] += (
-                (last >> 5 ^ first << 2) + (first >> 3 ^ last << 4) ^
-                (inner_roll ^ first) +
-                (CONSTANTS[i & 3 ^ inner_variable] ^ last)
-            )
-            last = temp2[i] = temp2[i] & 0xffffffff
-
-    return temp2
-
-
-def _decrypt_data(data: List[int]) -> List[int]:
-    temp2 = data
-    rounds = len(temp2)
-    minor_rounds = int(6 + (52 / rounds // 1))
-    inner_roll = 0
-
-    for _ in range(minor_rounds + 1):
-        inner_roll += WRAP_CONSTANT
-
-    for _ in range(minor_rounds):
-        inner_roll -= WRAP_CONSTANT
-        inner_variable = inner_roll >> 2 & 3
-
-        for i in range(rounds):
-            i = rounds - i - 1
-
-            first = temp2[(i + 1) % rounds]
-            last = temp2[(i - 1) % rounds]
-
-            temp2[i] -= (
-                (last >> 5 ^ first << 2) + (first >> 3 ^ last << 4) ^
-                (inner_roll ^ first) +
-                (CONSTANTS[i & 3 ^ inner_variable] ^ last)
-            )
-            temp2[i] &= 0xffffffff
-
-    return temp2
-
-
-def _generate_hex_checksum(data: str) -> str:
-    checksum_int = binascii.crc32(data.encode()) & 0xffffffff
-    return checksum_int.to_bytes(4, byteorder='big').hex().upper()
-
-
-def encrypt_metadata(metadata: str) -> str:
-    """
-    Encrypts metadata to be used to log in to amazon.
-
-    """
-    checksum = _generate_hex_checksum(metadata)
-    object_str = f"{checksum}#{metadata}"
-    object_list_int = _data_to_int_list(object_str)
-    object_list_int_enc = _encrypt_data(object_list_int)
-    object_bytes = _list_int_to_bytes(object_list_int_enc)
-    object_base64 = base64.b64encode(object_bytes)
-
-    return f"ECdITeCs:{object_base64.decode()}"
-
-
-def decrypt_metadata(metadata: str) -> str:
-    """Decrypt metadata. For testing purposes only."""
-    object_base64 = metadata.lstrip("ECdITeCs:")
-    object_bytes = base64.b64decode(object_base64)
-    object_list_int = _data_to_int_list(object_bytes)
-    object_list_int_dec = _decrypt_data(object_list_int)
-    object_bytes = _list_int_to_bytes(object_list_int_dec).rstrip(b"\0")
-    object_str = object_bytes.decode()
-    checksum, metadata = object_str.split("#", 1)
-
-    assert _generate_hex_checksum(metadata) == checksum
-
-    return metadata
-
-
-def now_to_unix_ms() -> int:
-    return math.floor(datetime.now().timestamp() * 1000)
-
-
-def meta_audible_app(user_agent: str, oauth_url: str) -> str:
-    """
-    Returns json-formatted metadata to simulate sign-in from iOS audible app.
-    """
-
-    meta_dict = {
-        "start": now_to_unix_ms(),
-        "interaction": {
-            "keys": 0,
-            "keyPressTimeIntervals": [],
-            "copies": 0,
-            "cuts": 0,
-            "pastes": 0,
-            "clicks": 0,
-            "touches": 0,
-            "mouseClickPositions": [],
-            "keyCycles": [],
-            "mouseCycles": [],
-            "touchCycles": []
-        },
-        "version": "3.0.0",
-        "lsUbid": "X39-6721012-8795219:1549849158",
-        "timeZone": -6,
-        "scripts": {
-            "dynamicUrls": [
-                ("https://images-na.ssl-images-amazon.com/images/I/"
-                 "61HHaoAEflL._RC|11-BZEJ8lnL.js,01qkmZhGmAL.js,71qOHv6nKaL."
-                 "js_.js?AUIClients/AudibleiOSMobileWhiteAuthSkin#mobile"),
-                ("https://images-na.ssl-images-amazon.com/images/I/"
-                 "21T7I7qVEeL._RC|21T1XtqIBZL.js,21WEJWRAQlL.js,31DwnWh8lFL."
-                 "js,21VKEfzET-L.js,01fHQhWQYWL.js,51TfwrUQAQL.js_.js?"
-                 "AUIClients/AuthenticationPortalAssets#mobile"),
-                ("https://images-na.ssl-images-amazon.com/images/I/"
-                 "0173Lf6yxEL.js?AUIClients/AuthenticationPortalInlineAssets"),
-                ("https://images-na.ssl-images-amazon.com/images/I/"
-                 "211S6hvLW6L.js?AUIClients/CVFAssets"),
-                ("https://images-na.ssl-images-amazon.com/images/G/"
-                 "01/x-locale/common/login/fwcim._CB454428048_.js")
-            ],
-            "inlineHashes": [
-                -1746719145, 1334687281, -314038750, 1184642547, -137736901,
-                318224283, 585973559, 1103694443, 11288800, -1611905557,
-                1800521327, -1171760960, -898892073
-            ],
-            "elapsed": 52,
-            "dynamicUrlCount": 5,
-            "inlineHashesCount": 13
-        },
-        "plugins": "unknown||320-568-548-32-*-*-*",
-        "dupedPlugins": "unknown||320-568-548-32-*-*-*",
-        "screenInfo": "320-568-548-32-*-*-*",
-        "capabilities": {
-            "js": {
-                "audio": True,
-                "geolocation": True,
-                "localStorage": "supported",
-                "touch": True,
-                "video": True,
-                "webWorker": True
-            },
-            "css": {
-                "textShadow": True,
-                "textStroke": True,
-                "boxShadow": True,
-                "borderRadius": True,
-                "borderImage": True,
-                "opacity": True,
-                "transform": True,
-                "transition": True
-            },
-            "elapsed": 1
-        },
-        "referrer": "",
-        "userAgent": user_agent,
-        "location": oauth_url,
-        "webDriver": None,
-        "history": {
-            "length": 1
-        },
-        "gpu": {
-            "vendor": "Apple Inc.",
-            "model": "Apple A9 GPU",
-            "extensions": []
-        },
-        "math": {
-            "tan": "-1.4214488238747243",
-            "sin": "0.8178819121159085",
-            "cos": "-0.5753861119575491"
-        },
-        "performance": {
-            "timing": {
-                "navigationStart": now_to_unix_ms(),
-                "unloadEventStart": 0,
-                "unloadEventEnd": 0,
-                "redirectStart": 0,
-                "redirectEnd": 0,
-                "fetchStart": now_to_unix_ms(),
-                "domainLookupStart": now_to_unix_ms(),
-                "domainLookupEnd": now_to_unix_ms(),
-                "connectStart": now_to_unix_ms(),
-                "connectEnd": now_to_unix_ms(),
-                "secureConnectionStart": now_to_unix_ms(),
-                "requestStart": now_to_unix_ms(),
-                "responseStart": now_to_unix_ms(),
-                "responseEnd": now_to_unix_ms(),
-                "domLoading": now_to_unix_ms(),
-                "domInteractive": now_to_unix_ms(),
-                "domContentLoadedEventStart": now_to_unix_ms(),
-                "domContentLoadedEventEnd": now_to_unix_ms(),
-                "domComplete": now_to_unix_ms(),
-                "loadEventStart": now_to_unix_ms(),
-                "loadEventEnd": now_to_unix_ms()
-            }
-        },
-        "end": now_to_unix_ms(),
-        "timeToSubmit": 108873,
-        "form": {
-            "email": {
-                "keys": 0,
-                "keyPressTimeIntervals": [],
-                "copies": 0,
-                "cuts": 0,
-                "pastes": 0,
-                "clicks": 0,
-                "touches": 0,
-                "mouseClickPositions": [],
-                "keyCycles": [],
-                "mouseCycles": [],
-                "touchCycles": [],
-                "width": 290,
-                "height": 43,
-                "checksum": "C860E86B",
-                "time": 12773,
-                "autocomplete": False,
-                "prefilled": False
-            },
-            "password": {
-                "keys": 0,
-                "keyPressTimeIntervals": [],
-                "copies": 0,
-                "cuts": 0,
-                "pastes": 0,
-                "clicks": 0,
-                "touches": 0,
-                "mouseClickPositions": [],
-                "keyCycles": [],
-                "mouseCycles": [],
-                "touchCycles": [],
-                "width": 290,
-                "height": 43,
-                "time": 10353,
-                "autocomplete": False,
-                "prefilled": False
-            }
-        },
-        "canvas": {
-            "hash": -373378155,
-            "emailHash": -1447130560,
-            "histogramBins": []
-        },
-        "token": None,
-        "errors": [],
-        "metrics": [
-            {"n": "fwcim-mercury-collector", "t": 0},
-            {"n": "fwcim-instant-collector", "t": 0},
-            {"n": "fwcim-element-telemetry-collector", "t": 2},
-            {"n": "fwcim-script-version-collector", "t": 0},
-            {"n": "fwcim-local-storage-identifier-collector", "t": 0},
-            {"n": "fwcim-timezone-collector", "t": 0},
-            {"n": "fwcim-script-collector", "t": 1},
-            {"n": "fwcim-plugin-collector", "t": 0},
-            {"n": "fwcim-capability-collector", "t": 1},
-            {"n": "fwcim-browser-collector", "t": 0},
-            {"n": "fwcim-history-collector", "t": 0},
-            {"n": "fwcim-gpu-collector", "t": 1},
-            {"n": "fwcim-battery-collector", "t": 0},
-            {"n": "fwcim-dnt-collector", "t": 0},
-            {"n": "fwcim-math-fingerprint-collector", "t": 0},
-            {"n": "fwcim-performance-collector", "t": 0},
-            {"n": "fwcim-timer-collector", "t": 0},
-            {"n": "fwcim-time-to-submit-collector", "t": 0},
-            {"n": "fwcim-form-input-telemetry-collector", "t": 4},
-            {"n": "fwcim-canvas-collector", "t": 2},
-            {"n": "fwcim-captcha-telemetry-collector", "t": 0},
-            {"n": "fwcim-proof-of-work-collector", "t": 1},
-            {"n": "fwcim-ubf-collector", "t": 0},
-            {"n": "fwcim-timer-collector", "t": 0}
-        ]
-    }
-    return json.dumps(meta_dict, separators=(',', ':'))

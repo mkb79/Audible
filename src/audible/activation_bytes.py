@@ -1,110 +1,128 @@
 import base64
-import binascii
 import hashlib
 import pathlib
-from urllib.parse import parse_qs
+import struct
+import urllib.parse
+from typing import Optional, TYPE_CHECKING, Union
 
 import httpx
 
+if TYPE_CHECKING:
+    import audible
 
-def get_player_id():
+
+def get_player_id() -> str:
+    """Build a software player Id."""
     player_id = base64.encodebytes(hashlib.sha1(b"").digest()).rstrip()
     return player_id.decode("ascii")
 
 
-def extract_token_from_url(url):
-    parsed_url = url.query
-    query_dict = parse_qs(parsed_url)
-    return query_dict["playerToken"]
+def get_player_token(auth: "audible.Authenticator") -> str:
+    """Fetches a player token for further authentication.
 
+    Args:    
+        auth: The Authenticator.
 
-def get_player_token(auth) -> str:
+    Returns:
+        The player token.
+    """
+    params = {
+        "ipRedirectOverride": True,
+        "playerType": "software",
+        "bp_ua": "y",
+        "playerModel": "Desktop",
+        "playerId": get_player_id(),
+        "playerManufacturer": "Audible",
+        "serial": ""
+    }
+
+    url = f"https://www.audible.{auth.locale.domain}/player-auth-token"
     with httpx.Client(cookies=auth.website_cookies) as session:
-        audible_base_url = f"https://www.audible.{auth.locale.domain}"
-        params = {
-            "ipRedirectOverride": True,
-            "playerType": "software",
-            "bp_ua": "y",
-            "playerModel": "Desktop",
-            "playerId": get_player_id(),
-            "playerManufacturer": "Audible",
-            "serial": ""
-        }
-        resp = session.get(f"{audible_base_url}/player-auth-token",
-                           params=params)
-    
-        player_token = extract_token_from_url(resp.url)[0]
-    
-        return player_token
+        resp = session.get(url, params=params)
+
+    query = resp.url.query
+    parsed_query = urllib.parse.parse_qs(query)
+    player_token = parsed_query.get("playerToken")[0]
+    return player_token
 
 
-def extract_activation_bytes(data):
+def extract_activation_bytes(data: bytes) -> str:
+    """Extracts the activation bytes from activation blob.
+
+    Args:    
+        data: A activation blob returned by ``fetch_activation`` function
+    
+    Returns:
+        The extracted activation bytes.
+    
+    Raises:
+        ValueError: If `data` is not a valid activation blob.
+    """
     if (b"BAD_LOGIN" in data or b"Whoops" in data) or \
             b"group_id" not in data:
         print(data)
         print("\nActivation failed! ;(")
         raise ValueError("data wrong")
-    a = data.rfind(b"group_id")
-    b = data[a:].find(b")")
-    keys = data[a + b + 1 + 1:]
-    output = []
-    output_keys = []
-    # each key is of 70 bytes
-    for i in range(0, 8):
-        key = keys[i * 70 + i:(i + 1) * 70 + i]
-        h = binascii.hexlify(bytes(key))
-        h = [h[i:i+2] for i in range(0, len(h), 2)]
-        h = b','.join(h)
-        output_keys.append(h)
-        output.append(h.decode("utf-8"))
 
-    # only 4 bytes of output_keys[0] are necessary for decryption! ;)
-    activation_bytes = output_keys[0].replace(b",", b"")[0:8]
-    # get the endianness right (reverse string in pairs of 2)
-    activation_bytes = b"".join(reversed([activation_bytes[i:i+2] for i in
-                                         range(0, len(activation_bytes), 2)]))
-    activation_bytes = activation_bytes.decode("ascii")
+    # https://github.com/kennedn/kindlepass/blob/master/kindlepass/kindlepass.py
 
-    return activation_bytes, output
+    # Audible returns activation that contains metadata, extracting 0x238 bytes
+    # from the end discards this metadata.
+    data = data[-0x238:]
+
+    # Strips newline characters from activation body
+    fmt = "70s1x" * 8
+    data = b''.join(struct.unpack(fmt, data))
+
+    return "{:x}".format(*struct.unpack("<I", data[:4]))
 
 
-def fetch_activation_bytes(player_token, filename=None):
+def fetch_activation(player_token: str) -> bytes:
+    """Fetches the activation blob from Audible server.
 
-    base_url_license = "https://www.audible.com"
-    rurl = base_url_license + "/license/licenseForCustomerToken"
+    Args:    
+        player_token: A player token returned by ``get_player_token`` function.
+    
+    Returns:
+        The activation blob.
+    """
+    url = "https://www.audible.com/license/licenseForCustomerToken"
+
     # register params
-    params = {
-        "customer_token": player_token
-    }
+    rparams = {"customer_token": player_token}
+
     # deregister params
-    dparams = {
-        "customer_token": player_token,
-        "action": "de-register"
-    }
+    dparams = {"customer_token": player_token, "action": "de-register"}
 
-    headers = {
-        "User-Agent": "Audible Download Manager"
-    }
-
+    headers = {"User-Agent": "Audible Download Manager"}
     with httpx.Client(headers=headers) as session:
-        session.get(rurl, params=dparams)
-
-        resp = session.get(rurl, params=params)
-        register_response_content = resp.content
-
-        if filename:
-            pathlib.Path(filename).write_bytes(register_response_content)
-
-        activation_bytes, _ = extract_activation_bytes(register_response_content)
-
-        session.get(rurl, params=dparams)
-
-        return activation_bytes
+        session.get(url, params=dparams)
+        try:
+            resp = session.get(url, params=rparams)
+            return resp.content
+        finally:
+            session.get(url, params=dparams)
 
 
-def get_activation_bytes(auth, filename=None):
+def get_activation_bytes(auth: "audible.Authenticator",
+                         filename: Optional[Union[str, pathlib.Path]] = None,
+                         extract: bool = True) -> Union[str, bytes]:
+    """Fetches the activation blob from Audible and extracts the bytes.
 
+    Args:    
+        auth: The Authenticator.
+        filename: The filename to save the activation blob (Default: None).
+        extract: If True, returns the extracted activation bytes otherwise
+            the whole activation blob (Default: True).
+    
+    Returns:
+        The activation bytes or activation blob.
+    """
     player_token = get_player_token(auth)
-    activation_bytes = fetch_activation_bytes(player_token, filename)
+    activation = fetch_activation(player_token)
+    pathlib.Path(filename).write_bytes(activation) if filename else ""
 
-    return activation_bytes
+    if extract:
+        activation = extract_activation_bytes(activation)
+
+    return activation

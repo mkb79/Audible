@@ -1,235 +1,36 @@
 import json
 import logging
-from typing import Union, Optional
+from typing import Dict, Optional, Tuple, Union
 
 import httpx
-from httpx._models import URL
+from httpx import URL
 
-from .auth import LoginAuthenticator, FileAuthenticator
+from .auth import Authenticator
 from .exceptions import (
     BadRequest, NotFoundError, NotResponding, NetworkError, ServerError,
     Unauthorized, UnexpectedError, RatelimitError, RequestError
 )
 from .localization import LOCALE_TEMPLATES, Locale
-from .utils import test_convert
 
-logger = logging.getLogger('audible.client')
-
-
-class AudibleAPI:
-    """
-    .. deprecated:: v0.4.0
-       Use :class:`Client` or :class:`AsyncClient` instead
-    """
-
-    REQUEST_LOG = '{method} {url} has received {text}, has returned {status}'
-
-    def __init__(
-            self,
-            auth: Optional[
-                Union[LoginAuthenticator, FileAuthenticator]] = None,
-            session=None,
-            is_async=False,
-            **options
-    ) -> None:
-        self.auth = auth
-
-        self.is_async = is_async
-        self.session = (
-            session or
-            (httpx.AsyncClient() if is_async else httpx.Client())
-        )
-        headers = {
-            "Accept": "application/json",
-            "Content-Type": "application/json"
-        }
-        self.session.headers.update(headers)
-
-        locale = test_convert("locale", options.get("locale", auth.locale))
-        domain = options.get("domain", locale.domain)
-        self.api_root_url = options.get("url", f"https://api.audible.{domain}")
-
-        self.timeout = options.get('timeout', 10)
-
-    def __enter__(self):
-        return self
-
-    def __exit__(self, exc_type, exc_value, traceback):
-        self.close()
-
-    async def __aenter__(self):
-        return self
-
-    async def __aexit__(self, exc_type, exc_value, traceback):
-        await self.aclose()
-
-    def __repr__(self):
-        return f"<AudibleAPI Client async={self.is_async}>"
-
-    def close(self):
-        if self.is_async:
-            logger.warning(
-                "Please use aclose() method to close a async client."
-            )
-        return self.session.close()
-
-    async def aclose(self):
-        await self.session.aclose()
-
-    def switch_marketplace(self, locale):
-        locale = test_convert("locale", locale)
-        domain = locale.domain
-        self.api_root_url = f"https://api.audible.{domain}"
-
-    @property
-    def marketplace(self):
-        for value in LOCALE_TEMPLATES.values():
-            domain = value["domain"]
-            api_root_for_domain = f"https://api.audible.{domain}"
-
-            if api_root_for_domain == self.api_root_url:
-                return value["country_code"]
-
-    def switch_user(self, auth: Union[LoginAuthenticator, FileAuthenticator]):
-        self.auth = auth
-
-    def get_user_profile(self):
-        self.auth.refresh_access_token()
-        return self.auth.user_profile()
-
-    @property
-    def user_name(self):
-        user_profile = self.get_user_profile()
-        return user_profile["name"]
-
-    def _raise_for_status(self, resp, text, *, method=None, return_raw=True):
-        try:
-            data = json.loads(text)
-        except json.JSONDecodeError:
-            data = text
-        code = getattr(resp, 'status', None) or getattr(resp, 'status_code')
-
-        logger.debug(
-            self.REQUEST_LOG.format(
-                method=method or resp.request_info.method,
-                url=resp.url,
-                text=text,
-                status=code
-            )
-        )
-
-        if 300 > code >= 200:  # Request was successful
-            if not return_raw:
-                return data
-            return data, resp  # value, response 
-        elif code == 400:
-            raise BadRequest(resp, data)
-        elif code in (401, 403):  # Unauthorized request - Invalid credentials
-            raise Unauthorized(resp, data)
-        elif code == 404:  # not found
-            raise NotFoundError(resp, data)
-        elif code == 429:
-            raise RatelimitError(resp, data)
-        elif code == 503:  # Maintainence
-            raise ServerError(resp, data)
-        else:
-            raise UnexpectedError(resp, data)
-
-    async def _arequest(self, method, url, **kwargs):
-        timeout = kwargs.pop('timeout', self.timeout)
-        return_raw = kwargs.pop("return_raw", True)
-
-        try:
-            resp = await self.session.request(
-                method, url, timeout=timeout, auth=self.auth, **kwargs
-            )
-            return self._raise_for_status(
-                resp, resp.text, method=method, return_raw=return_raw
-            )
-        except (
-                httpx.ConnectTimeout, httpx.ReadTimeout, httpx.WriteTimeout,
-                httpx.PoolTimeout
-        ):
-            raise NotResponding
-        except httpx.NetworkError:
-            raise NetworkError
-        finally:
-            try:
-                await resp.aclose()
-            except UnboundLocalError:
-                pass
-
-    def _request(self, method, url, **kwargs):
-        if self.is_async:  # return a coroutine
-            return self._arequest(method, url, **kwargs)
-        timeout = kwargs.pop('timeout', self.timeout)
-        return_raw = kwargs.pop("return_raw", True)
-
-        try:
-            resp = self.session.request(
-                method, url, timeout=timeout, auth=self.auth, **kwargs
-            )
-            return self._raise_for_status(
-                resp, resp.text, method=method, return_raw=return_raw
-            )
-        except (
-                httpx.ConnectTimeout, httpx.ReadTimeout, httpx.WriteTimeout,
-                httpx.PoolTimeout
-        ):
-            raise NotResponding
-        except httpx.NetworkError:
-            raise NetworkError
-        finally:
-            try:
-                resp.close()
-            except UnboundLocalError:
-                pass
-
-    def _split_kwargs(self, **kwargs):
-        protected_kwargs = [
-            "method", "url", "params", "data", "json", "headers", "cookies",
-            "files", "auth", "timeout", "allow_redirects", "proxies", "verify",
-            "stream", "cert", "return_raw"
-        ]
-        params = kwargs.pop("params", {})
-        for key in list(kwargs.keys()):
-            if key not in protected_kwargs:
-                params[key] = kwargs.pop(key)
-
-        return params, kwargs
-
-    def get(self, path, api_version="1.0", **kwargs):
-        params, kwargs = self._split_kwargs(**kwargs)
-        url = "/".join((self.api_root_url, api_version, path))
-        return self._request("GET", url, params=params, **kwargs)
-
-    def post(self, path, body, api_version="1.0", **kwargs):
-        params, kwargs = self._split_kwargs(**kwargs)
-        url = "/".join((self.api_root_url, api_version, path))
-        return self._request("POST", url, params=params, json=body, **kwargs)
-
-    def delete(self, path, api_version="1.0", **kwargs):
-        params, kwargs = self._split_kwargs(**kwargs)
-        url = "/".join((self.api_root_url, api_version, path))
-        return self._request("DELETE", url, params=params, **kwargs)
+logger = logging.getLogger("audible.client")
 
 
-def convert_response_content(resp):
+def convert_response_content(resp: httpx.Response) -> Union[Dict, str]:
     try:
         return resp.json()
     except json.JSONDecodeError:
         return resp.text
 
+
 class Client:
     _API_URL_TEMP = "https://api.audible."
     _API_VERSION = "1.0"
     _SESSION = httpx.Client
-    _REQUEST_LOG = '{method} {url} has received {text}, has returned {status}'
+    _REQUEST_LOG = "{method} {url} has received {text}, has returned {status}"
 
     def __init__(
             self,
-            auth: Optional[
-                Union[LoginAuthenticator, FileAuthenticator]] = None,
+            auth: Authenticator,
             country_code: Optional[str] = None,
             timeout: int = 10
     ):
@@ -253,15 +54,15 @@ class Client:
     def __repr__(self):
         return f"<Sync Client for *{self.marketplace}* marketplace>"
 
-    def close(self):
+    def close(self) -> None:
         self.session.close()
 
-    def switch_marketplace(self, country_code):
+    def switch_marketplace(self, country_code: str) -> None:
         locale = Locale(country_code.lower())
         self.session.base_url = URL(self._API_URL_TEMP + locale.domain)
 
     @property
-    def marketplace(self):
+    def marketplace(self) -> str:
         base_url = str(self.session.base_url)
         slice_len = len(self._API_URL_TEMP)
         domain = base_url[slice_len:]
@@ -271,28 +72,28 @@ class Client:
                 return country["country_code"]
 
     @property
-    def auth(self):
+    def auth(self) -> Authenticator:
         return self.session.auth
 
     def switch_user(
             self,
-            auth: Union[LoginAuthenticator, FileAuthenticator],
+            auth: Authenticator,
             switch_to_default_marketplace: bool = False
-    ):
+    ) -> None:
         if switch_to_default_marketplace:
             self.switch_marketplace(auth.locale.country_code)
         self.session.auth = auth
 
-    def get_user_profile(self):
+    def get_user_profile(self) -> Dict:
         self.auth.refresh_access_token()
         return self.auth.user_profile()
 
     @property
-    def user_name(self):
+    def user_name(self) -> str:
         user_profile = self.get_user_profile()
         return user_profile["name"]
 
-    def _raise_for_status_error(self, resp):
+    def _raise_for_status_error(self, resp: httpx.Response):
         code = resp.status_code
 
         data = convert_response_content(resp)
@@ -312,7 +113,7 @@ class Client:
         else:
             raise UnexpectedError(resp, data)
 
-    def _prepare_path(self, path):
+    def _prepare_path(self, path: str) -> str:
         if path.startswith("/"):
             path = path[1:]
 
@@ -321,7 +122,7 @@ class Client:
 
         return "/".join((self._API_VERSION, path))
 
-    def _request(self, method: str, path: str, **kwargs):
+    def _request(self, method: str, path: str, **kwargs) -> Union[Dict, str]:
         url = self._prepare_path(path)
 
         try:
@@ -358,7 +159,7 @@ class Client:
             except UnboundLocalError:
                 pass
 
-    def _split_kwargs(self, **kwargs):
+    def _split_kwargs(self, **kwargs) -> Tuple:
         protected_kwargs = [
             "method", "url", "params", "data", "json", "headers", "cookies",
             "files", "auth", "timeout", "allow_redirects", "proxies", "verify",
@@ -371,17 +172,21 @@ class Client:
 
         return params, kwargs
 
-    def get(self, path, **kwargs):
+    def get(self, path: str, **kwargs) -> Union[Dict, str]:
         params, kwargs = self._split_kwargs(**kwargs)
         return self._request("GET", path, params=params, **kwargs)
 
-    def post(self, path, body, **kwargs):
+    def post(self, path: str, body: Dict, **kwargs) -> Union[Dict, str]:
         params, kwargs = self._split_kwargs(**kwargs)
         return self._request("POST", path, params=params, json=body, **kwargs)
 
-    def delete(self, path, **kwargs):
+    def delete(self, path: str, **kwargs) -> Union[Dict, str]:
         params, kwargs = self._split_kwargs(**kwargs)
         return self._request("DELETE", path, params=params, **kwargs)
+
+    def put(self, path: str, body: Dict, **kwargs) -> Union[Dict, str]:
+        params, kwargs = self._split_kwargs(**kwargs)
+        return self._request("PUT", path, params=params, json=body, **kwargs)
 
 
 class AsyncClient(Client):
@@ -396,10 +201,10 @@ class AsyncClient(Client):
     def __repr__(self):
         return f"<AyncClient for *{self.marketplace}* marketplace>"
 
-    async def close(self):
+    async def close(self) -> None:
         await self.session.aclose()
 
-    async def _request(self, method: str, path: str, **kwargs):
+    async def _request(self, method: str, path: str, **kwargs) -> Union[Dict, str]:
         url = self._prepare_path(path)
 
         try:

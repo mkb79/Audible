@@ -1,5 +1,5 @@
 import logging
-from typing import Any, Dict, Optional
+from typing import Dict, Optional
 from urllib.parse import parse_qs, urlparse
 
 import httpx
@@ -57,7 +57,7 @@ LOCALE_TEMPLATES = {
 }
 
 
-def search_template(key: str, value: Any):
+def search_template(key: str, value: str) -> Optional[Dict[str, str]]:
     for country in LOCALE_TEMPLATES:
         locale = LOCALE_TEMPLATES[country]
         if locale[key] == value:
@@ -69,12 +69,17 @@ def search_template(key: str, value: Any):
 
 
 def autodetect_locale(domain: str) -> Dict[str, str]:
-    """
-    Try to automatically detect correct settings for marketplace.
+    """Try to automatically detect correct settings for marketplace.
 
     Needs the top level domain of the audible page to continue with
     (e.g. co.uk, co.jp) and returns results found.
-
+    
+    Args:
+        domain: The top level domain for the Audible marketplace to
+            detect settings for (e.g. com).
+    
+    Returns:
+        The settings for the found Audible marketplace.
     """
     domain = domain.lstrip(".")
     site = f"https://www.audible.{domain}"
@@ -103,7 +108,7 @@ def autodetect_locale(domain: str) -> Dict[str, str]:
 
 class Locale:
     """
-    Adjustments for the different marketplaces who are provided by audible.
+    Adjustments for the different marketplaces who are provided by Audible.
 
     Look at `locales.json` for examples. You can try to
     ``autodetect_locale`` if your marketplace is not in `locales.json`.

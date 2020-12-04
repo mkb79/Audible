@@ -51,7 +51,7 @@ async def main(auth):
 if __name__ == "__main__":
     # authenticate with login
     # don't stores any credentials on your system
-    auth = audible.LoginAuthenticator(
+    auth = audible.Authenticator.from_login(
         "USERNAME",
         "PASSWORD",
         locale="us"
@@ -73,7 +73,7 @@ if __name__ == "__main__":
     auth.to_file()
 
     # load credentials from file
-    auth = audible.FileAuthenticator(
+    auth = audible.Authenticator.from_file(
         filename="FILENAME",
         password="PASSWORD"
     )

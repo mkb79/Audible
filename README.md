@@ -9,12 +9,13 @@
 [![CodeFactor](https://www.codefactor.io/repository/github/mkb79/audible/badge)](https://www.codefactor.io/repository/github/mkb79/audible)
 [![image](https://img.shields.io/pypi/dm/audible.svg)](https://pypi.org/project/audible/)
 
-**Sync/Async Interface for internal Audible API written in pure Python.**
+**Audible is a Python low-level interface to communicate with the non-publicly 
+[Audible](https://en.m.wikipedia.org/wiki/Audible_(service)) API.** 
 
-Code and README are forked from omarroth‘s fantastic [audible.cr](https://github.com/omarroth/audible.cr) API written in crystal.
-The whole code is written with Pythonista for iOS.
+It enables Python developers to create there own Audible services. 
+Asynchronous communication with the Audible API is supported.
 
-For a command line interface take a look on my [audible-cli](https://github.com/mkb79/audible-cli) package.
+For a very basic command line interface take a look on my [audible-cli](https://github.com/mkb79/audible-cli) package.
 
 ## Requirements
 

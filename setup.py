@@ -1,4 +1,3 @@
-import os
 import pathlib
 import re
 import sys
@@ -47,12 +46,20 @@ setup(
     ],
     install_requires=[
         'beautifulsoup4',
-        'httpx==0.14.*',
+        'httpx==0.16.*',
         'pbkdf2',
         'Pillow',
         'pyaes',
         'rsa'
     ],
+    extras_require={
+        'docs': [
+            'sphinx',
+            'sphinx_rtd_theme',
+            'sphinxcontrib-httpdomain',
+            'sphinx-autodoc-typehints'
+        ]
+    },
     python_requires='>=3.6',
     keywords='Audible, API, async',
     long_description=long_description,
