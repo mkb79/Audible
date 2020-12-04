@@ -31,7 +31,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Added a guide to use authentication with [Postman](https://www.postman.com).
 - Rework documentation.
 - Added `.readthedocs.yml` config file
-- Added module description (autodoc) to docs 
+- Added module description (autodoc) to docs
+- Uses `httpx` 0.16.* for now
 
 ## [0.4.4] - 2020-10-25
 
