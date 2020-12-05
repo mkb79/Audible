@@ -40,7 +40,7 @@ def get_player_token(auth: "audible.Authenticator") -> str:
     with httpx.Client(cookies=auth.website_cookies) as session:
         resp = session.get(url, params=params)
 
-    query = resp.url.query
+    query = resp.url.query.decode()
     parsed_query = urllib.parse.parse_qs(query)
     player_token = parsed_query.get("playerToken")[0]
     return player_token
