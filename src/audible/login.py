@@ -138,7 +138,7 @@ def extract_cookies_from_session(session: httpx.Client) -> Dict[str, str]:
 
 def extract_token_from_url(url: httpx.URL) -> str:
     """Extracts the access token from url query after login."""
-    parsed_url = parse_qs(url.query)
+    parsed_url = parse_qs(url.query.decode())
     return parsed_url["openid.oa2.access_token"][0]
 
 
