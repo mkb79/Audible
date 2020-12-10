@@ -5,6 +5,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## Unreleased
 
+### Added
+
+- Fetched activation bytes (with ``extract=True`` argument) will be stored to ``activation_bytes`` attribute of Authenticator class instance for now. Ignore existing activation bytes and force refresh with ``auth.get_activation_bytes(force_refresh=True)``
+- ``activation_bytes`` will be loaded from and save  to file. Saved auth files are **not backward compatible** to previous audible versions so keep old files save.
 
 ## [0.5.0] - 2020-12-07
 

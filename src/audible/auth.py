@@ -187,6 +187,7 @@ class Authenticator(httpx.Auth):
 
     Attributes:
         access_token (:obj:`str`, :obj:`None`):
+        activation_bytes (:obj:`str`, :obj:`None`):
         adp_token (:obj:`str`, :obj:`None`):
         crypter (:class:`~audible.aescipher.AESCipher`, :obj:`None`):
         customer_info (:obj:`dict`, :obj:`None`):
@@ -202,6 +203,7 @@ class Authenticator(httpx.Auth):
     """
 
     access_token: Optional[str] = None
+    activation_bytes: Optional[str] = None
     adp_token: Optional[str] = None
     crypter: Optional[AESCipher] = None
     customer_info: Optional[Dict] = None
@@ -442,6 +444,12 @@ class Authenticator(httpx.Auth):
                 indent: int = 4,
                 set_default: bool = True,
                 **kwargs) -> None:
+        """Save authentication data to file.
+        
+        .. versionadded:: 0.5.1
+        
+           Save activation bytes to auth file
+       """
 
         if not (filename or self.filename):
             raise ValueError("No filename provided")
@@ -466,7 +474,8 @@ class Authenticator(httpx.Auth):
             "device_info": self.device_info,
             "customer_info": self.customer_info,
             "expires": self.expires,
-            "locale_code": self.locale.country_code
+            "locale_code": self.locale.country_code,
+            "activation_bytes": self.activation_bytes
         }
         json_body = json.dumps(body, indent=indent)
 
@@ -488,7 +497,7 @@ class Authenticator(httpx.Auth):
                 encryption=encryption,
                 indent=indent)
 
-        logger.info(f"saved data to file {filename}")
+        logger.info(f"saved data to file {target_file}")
 
         if set_default:
             self.filename = target_file
@@ -552,16 +561,38 @@ class Authenticator(httpx.Auth):
     def get_activation_bytes(self,
                              filename: Optional[
                                  Union["pathlib.Path", str]] = None,
-                             extract: bool = True) -> Union[str, bytes]:
+                             extract: bool = True,
+                             force_refresh: bool = False) -> Union[str, bytes]:
         """Get Activation bytes from Audible
 
         :param filename: [Optional] filename to save the activation blob
         :type filename: string, pathlib.Path
         :param extract: [Optional] if True, returns the extracted activation
                         bytes otherwise the whole activation blob
-        :type extract: bool
+        :type force_refresh: [Optional] if True, existing activation bytes in 
+                             auth file will be ignored and new activation bytes 
+                             will be requested from server.
+
+        .. versionadded:: 0.5.1
+        
+           The ``force_refresh`` argument. Fetched activation bytes are now 
+           stored to `Authententicator.activation_bytes`.
+
         """
-        return get_ab(self, filename, extract)
+        if not force_refresh and extract and self.activation_bytes is not None:
+            logger.debug(f"Activation bytes already fetched. Returned saved one.")
+            return self.activation_bytes
+
+        logger.debug("Fetch activation blob from server now.")
+        ab = get_ab(self, filename, extract)
+        
+        if extract:
+            logger.debug("Extract activation bytes from blob and store value"
+                         "activation_bytes attribute.")
+            logger.debug(f"Found activation bytes: {ab}")
+            self.activation_bytes = ab
+
+        return ab
 
     def user_profile(self) -> Dict:
         return user_profile(
