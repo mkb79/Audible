@@ -35,14 +35,14 @@ class Client:
             timeout: int = 10
     ):
         locale = Locale(country_code.lower()) if country_code else auth.locale
-        api_url = self._API_URL_TEMP + locale.domain
+        self._api_url = httpx.URL(self._API_URL_TEMP + locale.domain)
         headers = {
             "Accept": "application/json",
             "Accept-Charset": "utf-8",
             "Content-Type": "application/json"
         }
         self.session = self._SESSION(
-            headers=headers, timeout=timeout, base_url=api_url, auth=auth
+            headers=headers, timeout=timeout, auth=auth
         )
 
     def __enter__(self):
@@ -59,7 +59,7 @@ class Client:
 
     def switch_marketplace(self, country_code: str) -> None:
         locale = Locale(country_code.lower())
-        self.session.base_url = URL(self._API_URL_TEMP + locale.domain)
+        self._api_url = URL(self._API_URL_TEMP + locale.domain)
 
     @property
     def marketplace(self) -> str:
@@ -113,17 +113,20 @@ class Client:
         else:
             raise UnexpectedError(resp, data)
 
-    def _prepare_path(self, path: str) -> str:
+    def _prepare_api_path(self, path: str) -> str:
         if path.startswith("/"):
             path = path[1:]
 
-        if path.startswith(self._API_VERSION):
-            return path
+        if path.startswith(self._API_VERSION) or path.startswith("0.0"):
+            pass
+        else:
+            path = "/".join((self._API_VERSION, path))
 
-        return "/".join((self._API_VERSION, path))
+        path = "/" + path
+        return self._api_url.copy_with(path=path)
 
     def _request(self, method: str, path: str, **kwargs) -> Union[Dict, str]:
-        url = self._prepare_path(path)
+        url = self._prepare_api_path(path)
 
         try:
             resp = self.session.request(method, url, **kwargs)
@@ -158,6 +161,42 @@ class Client:
                 resp.close()
             except UnboundLocalError:
                 pass
+
+    def raw_request(self,
+                    method: str,
+                    url: str,
+                    *,
+                    apply_auth_flow: bool = False,
+                    apply_cookies: bool = False,
+                    **kwargs) -> httpx.Response:
+        """Sends a raw request with the underlying httpx Client.
+
+        This method ignores a set api_url and allows send request to custom 
+        hosts. The raw httpx response will be returned.
+
+        Args:
+            method: The http request method.
+            url: The url to make requests to.
+            apply_auth_flow: If `True`, the :meth:`Authenticator.auth_flow`
+                will be applied to the request.
+            apply_cookies: If `True`, website cookies from
+                :attribute:`Authenticator.website_cookies` will be added to 
+                request headers.
+
+        Returns:
+            A unprepared httpx Response object.
+                
+        .. versionadded:: v0.5.1
+        
+        """
+        cookies = self.auth.website_cookies if apply_cookies else {}
+        cookies = httpx.Cookies(cookies)
+        cookies.update(kwargs.pop("cookies", {}))
+        
+        auth = self.session.auth if apply_auth_flow else None
+        return self.session.request(
+            method, url, cookies=cookies, auth=auth, **kwargs)
+        
 
     def _split_kwargs(self, **kwargs) -> Tuple:
         protected_kwargs = [
@@ -205,7 +244,7 @@ class AsyncClient(Client):
         await self.session.aclose()
 
     async def _request(self, method: str, path: str, **kwargs) -> Union[Dict, str]:
-        url = self._prepare_path(path)
+        url = self._prepare_api_path(path)
 
         try:
             resp = await self.session.request(method, url, **kwargs)
