@@ -63,9 +63,9 @@ class Client:
 
     @property
     def marketplace(self) -> str:
-        base_url = str(self.session.base_url)
+        api_url = str(self._api_url)
         slice_len = len(self._API_URL_TEMP)
-        domain = base_url[slice_len:]
+        domain = api_url[slice_len:]
 
         for country in LOCALE_TEMPLATES.values():
             if domain == country["domain"]:
