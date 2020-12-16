@@ -66,6 +66,18 @@ A custom callback can be provided, like so::
        otp_callback=custom_otp_callback
    )
 
+If you have to enter a otp often and don't care about security you can use 
+the `pyotp <https://pypi.org/project/pyotp/>`_ package with a custom callback
+like so::
+
+   from pyotp.totp import TOTP
+
+   def otp_callback():
+       secret = "YOUR-AMAZON-OTP-SECRET"
+       secret = secret.replace(" ", "")
+       otp = TOTP(secret)
+       return str(otp.now())
+
 CVF Code
 --------
 
