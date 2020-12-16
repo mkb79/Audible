@@ -150,7 +150,8 @@ def login(
     market_place_id: str,
     captcha_callback: Optional[Callable[[str], str]] = None,
     otp_callback: Optional[Callable[[], str]] = None,
-    cvf_callback: Optional[Callable[[], str]] = None
+    cvf_callback: Optional[Callable[[], str]] = None,
+    approval_callback: Optional[Callable[[], Any]] = None
 ) -> Dict[str, Any]:
     """Login to Audible by simulating an Audible App for iOS.
     
@@ -164,8 +165,10 @@ def login(
             If ``None`` :func:`default_captcha_callback` is used.
         otp_callback: A custom Callable for providing one-time passwords.
             If ``None`` :func:`default_otp_callback` is used.
-        cvf_callback: A custom Callback for providing the answer for a CVF code.
+        cvf_callback: A custom Callable for providing the answer for a CVF code.
             If ``None`` :func:`default_cvf_callback` is used.
+        approval_callback: A custom Callable for handling approval alerts.
+            If ``None`` :func:`default_approval_alert_callback` is used.
     
     Returns:
         An ``access_token`` with ``expires`` timestamp and the 
@@ -266,7 +269,11 @@ def login(
 
     # check for approval alert
     while check_for_approval_alert(login_soup):
-        default_approval_alert_callback()
+        if approval_callback:
+            approval_callback()
+        else:
+            default_approval_alert_callback()
+
         url = login_soup.find_all("a", class_="a-link-normal")[1]["href"]
 
         login_resp = session.get(url)

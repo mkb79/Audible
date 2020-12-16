@@ -318,7 +318,8 @@ class Authenticator(httpx.Auth):
                    register: bool = False,
                    captcha_callback: Optional[Callable[[str], str]] = None,
                    otp_callback: Optional[Callable[[], str]] = None,
-                   cvf_callback: Optional[Callable[[], str]] = None
+                   cvf_callback: Optional[Callable[[], str]] = None,
+                   approval_callback: Optional[Callable[[], Any]] = None
                    ) -> "Authenticator":
         """Instantiate a new Authenticator with authentication data from login.
 
@@ -331,11 +332,12 @@ class Authenticator(httpx.Auth):
                 instance for the marketplace to login.
             register: If ``True``, register a new device after login.
             captcha_callback: A custom callback to handle captcha requests
-                during login
+                during login.
             otp_callback: A custom callback to handle one-time password
                 requests during login.
             cvf_callback: A custom callback to handle verify code requests
                 during login.
+            approval_callback: A custom Callable for handling approval alerts.
 
         Returns:
             An :class:`~audible.auth.Authenticator` instance.
@@ -348,7 +350,8 @@ class Authenticator(httpx.Auth):
             password=password,
             captcha_callback=captcha_callback,
             otp_callback=otp_callback,
-            cvf_callback=cvf_callback)
+            cvf_callback=cvf_callback,
+            approval_callback=approval_callback)
 
         logger.info(f"logged in to Audible as {username}")
 
@@ -511,7 +514,8 @@ class Authenticator(httpx.Auth):
                  password: str,
                  captcha_callback: Optional[Callable[[str], str]] = None,
                  otp_callback: Optional[Callable[[], str]] = None,
-                 cvf_callback: Optional[Callable[[], str]] = None) -> None:
+                 cvf_callback: Optional[Callable[[], str]] = None,
+                 approval_callback: Optional[Callable[[], Any]] = None) -> None:
 
         login_device = login(
             username=username,
@@ -521,7 +525,8 @@ class Authenticator(httpx.Auth):
             market_place_id=self.locale.market_place_id,
             captcha_callback=captcha_callback,
             otp_callback=otp_callback,
-            cvf_callback=cvf_callback)
+            cvf_callback=cvf_callback,
+            approval_callback=approval_callback)
 
         self._update_attrs(**login_device)
 
