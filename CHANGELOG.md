@@ -11,6 +11,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - ``activation_bytes`` will be loaded from and save  to file. Saved auth files are **not backward compatible** to previous audible versions so keep old files save.
 - `Client.raw_request` and `AsyncClient.raw_request` method.
 
+### Misc
+
+- Add description how to use pyotp with custom otp callback to docs
+
 ## [0.5.0] - 2020-12-07
 
 ### Added
