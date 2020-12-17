@@ -100,3 +100,18 @@ prompt which looks like::
 
 Please approve the amazon email notification and press enter (or another key)
 to proceed.
+
+A custom callback can be provided, like so::
+
+   def custom_approval_callback():
+    
+       # You can let python check for the received Amazon mail and 
+       # open the approval link. The login function wait until
+       # the callback function is executed. The returned value will be
+       # ignored by the login function.
+       
+
+   auth = audible.Authenticator.from_login(
+       ...
+       approval_callback=custom_approval_callback
+       )
