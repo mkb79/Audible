@@ -9,7 +9,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 - Fetched activation bytes (with ``extract=True`` argument) will be stored to ``activation_bytes`` attribute of Authenticator class instance for now. Ignore existing activation bytes and force refresh with ``auth.get_activation_bytes(force_refresh=True)``
 - ``activation_bytes`` will be loaded from and save  to file. Saved auth files are **not backward compatible** to previous audible versions so keep old files save.
-- `Client.raw_request` and `AsyncClient.raw_request` method.
+- Add ``Client.raw_request`` and ``AsyncClient.raw_request`` method.
+- Provide a custom Callback with ``approval_callback`` keyword argument when login.
 
 ### Misc
 
