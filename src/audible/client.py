@@ -166,6 +166,7 @@ class Client:
                     method: str,
                     url: str,
                     *,
+                    stream: bool = False,
                     apply_auth_flow: bool = False,
                     apply_cookies: bool = False,
                     **kwargs) -> httpx.Response:
@@ -191,11 +192,11 @@ class Client:
         """
         cookies = self.auth.website_cookies if apply_cookies else {}
         cookies = httpx.Cookies(cookies)
-        cookies.update(kwargs.pop("cookies", {}))
-        
+        cookies.update(kwargs.pop("cookies", {}))        
         auth = self.session.auth if apply_auth_flow else None
-        return self.session.request(
-            method, url, cookies=cookies, auth=auth, **kwargs)
+
+        r = self.session.stream if stream else self.session.request
+        return r(method, url, cookies=cookies, auth=auth, **kwargs)
         
 
     def _split_kwargs(self, **kwargs) -> Tuple:
