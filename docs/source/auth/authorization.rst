@@ -113,6 +113,10 @@ prompt which looks like::
 Please approve the amazon email notification and press enter (or another key)
 to proceed.
 
+.. versionadded:: 0.5.1
+
+   Provide a custom callback with ``approval_callback``
+
 A custom callback can be provided, like so::
 
    def custom_approval_callback():
