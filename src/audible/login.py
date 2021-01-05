@@ -49,6 +49,21 @@ def default_approval_alert_callback() -> None:
     input("Please press enter when you approve the notification.")
 
 
+
+def default_login_url_callback(url: str) -> str:
+    """Helper function for login with external browsers."""
+    print("Please copy the following url and insert it in a webbrowser of "
+          "your choice:")
+    print("\n" + url + "\n")
+    print("Now you have to login with your Amazon credentials. After submit "
+          "your username and password you have to do this a second time "
+          "and solving a captcha before sending the login form.\n")
+    print("After login, your browser will show you a error page (not found). "
+          "Do not worry about this. It has to be like this. Please copy the "
+          "url from the address bar in your browser now.\n")
+
+    return input("Please insert the copied url (after login):\n")
+
 def get_soup(resp):
     return BeautifulSoup(resp.text, "html.parser")
 
@@ -291,5 +306,46 @@ def login(
     return {
         "access_token": access_token,
         "website_cookies": website_cookies,
+        "expires": expires
+    }
+
+
+def external_login(
+    country_code: str,
+    domain: str,
+    market_place_id: str,
+    login_url_callback: Optional[Callable[[str], str]] = None
+) -> Dict[str, Any]:
+    """Gives the url to login with external browser and prompt for result.
+    
+    Args:
+        country_code: The country code for the Audible marketplace to login.
+        domain: domain: The top level domain for the Audible marketplace to login.
+        market_place_id: The id for the Audible marketplace to login.
+        login_url_callback: A custom Callable for handling login with external 
+            browsers. If ``None`` :func:`default_login_url_callback` is used.
+
+    Returns:
+        An ``access_token`` with ``expires`` timestamp from the 
+        authorized Client.
+    """
+    oauth_url = build_oauth_url(country_code, domain, market_place_id)
+
+    if login_url_callback:
+        response_url = login_url_callback(oauth_url)
+    else:
+        response_url = default_login_url_callback(oauth_url)
+
+    response_url = httpx.URL(response_url)
+    parsed_url = parse_qs(response_url.query.decode())
+
+    access_token = parsed_url["openid.oa2.access_token"][0]
+
+    auth_time = parsed_url["openid.pape.auth_time"][0]
+    auth_time = datetime.strptime(auth_time, "%Y-%m-%dT%H:%M:%SZ")
+    expires = (auth_time + timedelta(seconds=3600)).timestamp()
+
+    return {
+        "access_token": access_token,
         "expires": expires
     }
