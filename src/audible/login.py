@@ -114,7 +114,7 @@ def build_oauth_url(
 def build_init_cookies() -> Dict[str, str]:
     """Build initial cookies to prevent captcha in most cases."""
     frc = urandom(313)
-    frc = base64.b64encode(frc).decode().strip("=")
+    frc = base64.b64encode(frc).decode().rstrip("=")
 
     map_md = {
         "device_user_dictionary": [],
