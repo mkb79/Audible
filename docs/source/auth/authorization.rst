@@ -131,3 +131,44 @@ A custom callback can be provided, like so::
        ...
        approval_callback=custom_approval_callback
        )
+
+Authorization with external browser or program logic
+====================================================
+
+.. versionadded:: v0.5.1
+
+   Login with external browser or program logic
+
+To handle the login with a external browser or program logic you can do the following::
+
+   import audible
+   
+   auth = audible.Authenticator.from_login_external(locale=COUNTRY_CODE)
+
+By default, this code print out the login url for the selected country code. Now you have
+to copy and paste this code into a webbrowser (or a custom program) and authorize yourself. 
+You have to enter your credentials two times. On first time, the password can be a random one.
+On second time, you have to solve a captcha before you can submit the login form with your 
+correct password.
+After authorize successfully you will end in an error page (not found). This is correct. 
+Please copy the url from the address bar from your browser and paste the url to the input 
+field of the python code. This url looks like 
+"https://www.amazon.{domain}/ap/maplanding?...&openid.oa2.access_token=Atna%..."
+
+Custom callback
+---------------
+
+A custom callback can be provided (for example open the url in a webbrowser directly), like so::
+
+   def custom_login_url_callback(login_url):
+    
+       # Do some things with the login_url ... 
+       # maybe you can call webbrowser.open(login_url)
+       # or simply print out the login_url
+
+       return "The postlogin url"
+
+   auth = audible.Authenticator.from_login_external(
+       ...
+       login_url_callback=custom_login_url_callback
+       )
