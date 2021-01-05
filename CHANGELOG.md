@@ -5,6 +5,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## Unreleased
 
+-
+
+## [0.5.1] - 2020-01-05
+
 ### Added
 
 - Fetched activation bytes (with ``extract=True`` argument) will be stored to ``activation_bytes`` attribute of Authenticator class instance for now. Ignore existing activation bytes and force refresh with ``auth.get_activation_bytes(force_refresh=True)``
