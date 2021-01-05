@@ -11,10 +11,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - ``activation_bytes`` will be loaded from and save  to file. Saved auth files are **not backward compatible** to previous audible versions so keep old files save.
 - Add ``Client.raw_request`` and ``AsyncClient.raw_request`` method.
 - Provide a custom Callback with ``approval_callback`` keyword argument when login.
+- Add classmethod ``Authenticator.from_login_external`` and method ``Authenticator.re_login_external``.
+- Add ``login_external`` function to login.py
 
 ### Misc
 
 - Add description how to use pyotp with custom otp callback to docs
+- Add description how to use login external to docs
 
 ## [0.5.0] - 2020-12-07
 
