@@ -12,7 +12,7 @@ from httpx import Cookies
 from .activation_bytes import get_activation_bytes as get_ab
 from .aescipher import AESCipher, detect_file_encryption
 from .exceptions import FileEncryptionError, AuthFlowError, NoRefreshToken
-from .login import login
+from .login import login, external_login
 from .register import deregister as deregister_
 from .register import register as register_
 from .utils import test_convert
@@ -361,6 +361,39 @@ class Authenticator(httpx.Auth):
 
         return auth
 
+    @classmethod
+    def from_login_external(cls,
+                            locale: Union[str, "Locale"],
+                            register: bool = False,
+                            login_url_callback: Optional[Callable[[str], str]] = None
+                           ) -> "Authenticator":
+        """Instantiate a new Authenticator from login with external browser.
+
+        .. versionadded:: v0.5.1
+
+        Args:
+            locale: The ``country_code`` or :class:`audible.localization.Locale`
+                instance for the marketplace to login.
+            register: If ``True``, register a new device after login.
+            login_url_callback: A custom Callable for handling login with 
+                external browsers.
+
+        Returns:
+            An :class:`~audible.auth.Authenticator` instance.
+        """
+        auth = cls()
+        auth.locale = locale
+
+        auth.re_login_external(login_url_callback=login_url_callback)
+
+        logger.info("logged in to Audible.")
+
+        if register:
+            auth.register_device()
+            logger.info("registered Audible device")
+
+        return auth
+
     def auth_flow(self,
                   request: httpx.Request
                   ) -> Generator[httpx.Request, httpx.Response, None]:
@@ -527,6 +560,28 @@ class Authenticator(httpx.Auth):
             otp_callback=otp_callback,
             cvf_callback=cvf_callback,
             approval_callback=approval_callback)
+
+        self._update_attrs(**login_device)
+
+    def re_login_external(self,
+                          login_url_callback: Optional[Callable[[str], str]] = None
+                         ) -> None:
+        """Re-login with a external browser and refreshs the access token.
+
+        .. versionadded:: v0.5.1
+
+        Args:
+            locale: The ``country_code`` or :class:`audible.localization.Locale`
+                instance for the marketplace to login.
+            register: If ``True``, register a new device after login.
+            login_url_callback: A custom Callable for handling login with 
+                external browsers.
+        """
+        login_device = external_login(
+            country_code=self.locale.country_code,
+            domain=self.locale.domain,
+            market_place_id=self.locale.market_place_id,
+            login_url_callback=login_url_callback)
 
         self._update_attrs(**login_device)
 
