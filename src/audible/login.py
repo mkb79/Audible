@@ -1,8 +1,8 @@
 import base64
 import io
 import json
+import secrets
 from datetime import datetime, timedelta
-from os import urandom
 from typing import Any, Callable, Dict, Optional
 from urllib.parse import urlencode, parse_qs
 
@@ -113,8 +113,8 @@ def build_oauth_url(
 
 def build_init_cookies() -> Dict[str, str]:
     """Build initial cookies to prevent captcha in most cases."""
-    frc = urandom(313)
-    frc = base64.b64encode(frc).decode().rstrip("=")
+    frc = secrets.token_bytes(313)
+    frc = base64.b64encode(frc).decode("ascii").rstrip("=")
 
     map_md = {
         "device_user_dictionary": [],
@@ -239,7 +239,7 @@ def login(
     login_inputs = get_inputs_from_soup(oauth_soup)
     login_inputs["email"] = username
     login_inputs["password"] = password
-    
+
     metadata = meta_audible_app(USER_AGENT, amazon_url)
     login_inputs["metadata1"] = encrypt_metadata(metadata)
 
