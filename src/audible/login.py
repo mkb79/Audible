@@ -1,5 +1,8 @@
-from datetime import datetime, timedelta
+import base64
 import io
+import json
+import secrets
+from datetime import datetime, timedelta
 from typing import Any, Callable, Dict, Optional
 from urllib.parse import urlencode, parse_qs
 
@@ -9,8 +12,8 @@ import httpx
 
 from .metadata import encrypt_metadata, meta_audible_app
 
-USER_AGENT = "Mozilla/5.0 (iPhone; CPU iPhone OS 12_3_1 like Mac OS X) " \
-             "AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148"
+USER_AGENT = ("Mozilla/5.0 (iPhone; CPU iPhone OS 14_1 like Mac OS X) "
+             "AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148")
 
 
 def default_captcha_callback(captcha_url: str) -> str:
@@ -108,6 +111,29 @@ def build_oauth_url(
     return f"https://www.amazon.{domain}/ap/signin?{urlencode(oauth_params)}"
 
 
+def build_init_cookies() -> Dict[str, str]:
+    """Build initial cookies to prevent captcha in most cases."""
+    frc = secrets.token_bytes(313)
+    frc = base64.b64encode(frc).decode("ascii").rstrip("=")
+
+    map_md = {
+        "device_user_dictionary": [],
+        "device_registration_data": {
+            "software_version": "33501644"
+        },
+        "app_identifier": {
+            "app_version": "3.35.1",
+            "bundle_id": "com.audible.iphone"
+        }
+    }
+    map_md = json.dumps(map_md)
+    map_md = base64.b64encode(map_md.encode()).decode().rstrip("=")
+
+    amzn_app_id = "MAPiOSLib/6.0/ToHideRetailLink"
+
+    return {"frc": frc, "map-md": map_md, "amzn-app-id": amzn_app_id}
+
+
 def check_for_captcha(soup: BeautifulSoup) -> bool:
     """Checks a Amazon login page for a captcha form."""
     captcha = soup.find("img", alt=lambda x: x and "CAPTCHA" in x)
@@ -194,8 +220,14 @@ def login(
     sign_in_url = amazon_url + "/ap/signin"
     cvf_url = amazon_url + "/ap/cvf/verify"
 
-    default_headers = {"User-Agent": USER_AGENT}
-    session = httpx.Client(headers=default_headers)
+    default_headers = {
+        "User-Agent": USER_AGENT,
+        "Accept-Language": "en-US",
+        "Accept-Encoding": "gzip"
+    }
+    init_cookies = build_init_cookies()
+
+    session = httpx.Client(headers=default_headers, cookies=init_cookies)
 
     while "session-token" not in session.cookies:
         session.get(amazon_url)
@@ -207,7 +239,7 @@ def login(
     login_inputs = get_inputs_from_soup(oauth_soup)
     login_inputs["email"] = username
     login_inputs["password"] = password
-    
+
     metadata = meta_audible_app(USER_AGENT, amazon_url)
     login_inputs["metadata1"] = encrypt_metadata(metadata)
 
