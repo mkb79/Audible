@@ -75,6 +75,10 @@ In addition to above, following data will be stored after a device registration:
 - device_info
 - customer_info
 
+.. versionadded:: 0.5.1
+
+   Stores ``activation_bytes`` to file (if they where fetched before).
+
 Advanced use of encryption/decryption
 =====================================
 
