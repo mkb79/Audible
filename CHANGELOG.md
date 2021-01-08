@@ -5,6 +5,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## Unreleased
 
+-
+
+## [0.5.2] - 2020-01-08
+
 ### Added
 
 - Add initial cookies to login function to prevent captcha requests in most cases.
