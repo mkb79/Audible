@@ -5,7 +5,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## Unreleased
 
--
+### Added
+
+- function `activation_bytes.fetch_activation_sign_auth`
+
+### Changed
+
+- `activation_bytes.get_activation_bytes` uses the new `fetch_activation_sign_auth` function, if `signing` auth method is available. Otherwise activation bytes will be fetched the old way with a `player_token`.
 
 ## [0.5.2] - 2020-01-08
 

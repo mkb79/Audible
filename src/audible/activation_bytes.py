@@ -7,6 +7,8 @@ from typing import Optional, TYPE_CHECKING, Union
 
 import httpx
 
+from .exceptions import AuthFlowError
+
 if TYPE_CHECKING:
     import audible
 
@@ -78,7 +80,7 @@ def extract_activation_bytes(data: bytes) -> str:
 
 
 def fetch_activation(player_token: str) -> bytes:
-    """Fetches the activation blob from Audible server.
+    """Fetches the activation blob with player tokenfrom Audible server.
 
     Args:    
         player_token: A player token returned by ``get_player_token`` function.
@@ -104,6 +106,29 @@ def fetch_activation(player_token: str) -> bytes:
             session.get(url, params=dparams)
 
 
+def fetch_activation_sign_auth(auth: "audible.Authenticator") -> bytes:
+    """Fetches the activation blob with sign authentication from Audible server.
+
+    Args:    
+        auth: A ``Authenticator`` instance with valid `'adp_token`` and 
+            ``device_private_cert``.
+    
+    Returns:
+        The activation blob.
+    """
+    assert "signing" in auth.available_auth_modes
+
+    url = "https://www.audible.com/license/token"
+    params = {
+        "player_manuf": "Audible,iPhone",
+        "action": "register",
+        "player_model": "iPhone"
+    }
+    with httpx.Client(auth=auth) as client:    
+        resp = client.get(url, params=params)
+        return resp.content
+
+
 def get_activation_bytes(auth: "audible.Authenticator",
                          filename: Optional[Union[str, pathlib.Path]] = None,
                          extract: bool = True) -> Union[str, bytes]:
@@ -118,10 +143,16 @@ def get_activation_bytes(auth: "audible.Authenticator",
     Returns:
         The activation bytes or activation blob.
     """
-    player_token = get_player_token(auth)
-    activation = fetch_activation(player_token)
-    pathlib.Path(filename).write_bytes(activation) if filename else ""
+    auth_modes = auth.available_auth_modes
+    if "signing" in auth_modes:
+        activation = fetch_activation_sign_auth(auth)
+    elif "cookies" in auth_modes:
+        player_token = get_player_token(auth)
+        activation = fetch_activation(player_token)
+    else:
+        raise AuthFlowError("No valid auth mode to fetch activation bytes.")
 
+    pathlib.Path(filename).write_bytes(activation) if filename else ""
     if extract:
         activation = extract_activation_bytes(activation)
 
