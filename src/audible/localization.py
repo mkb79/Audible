@@ -53,6 +53,11 @@ LOCALE_TEMPLATES = {
         "country_code": "jp",
         "domain": "co.jp",
         "market_place_id": "A1QAP3MOU4173J"
+    },
+    "spain": {
+        "country_code": "es",
+        "domain": "es",
+        "market_place_id": "ALMIKO4SZCSAR"
     }
 }
 
