@@ -5,9 +5,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## Unreleased
 
+-
+
+## [0.5.3] - 2020-01-25
+
 ### Added
 
 - function `activation_bytes.fetch_activation_sign_auth`
+- Spain marketplace
 
 ### Changed
 
