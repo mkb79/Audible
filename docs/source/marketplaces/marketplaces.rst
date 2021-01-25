@@ -5,7 +5,7 @@ Marketplaces
 General Information
 ===================
 
-Audible offers his service on 9 different marketplaces. You can read more about
+Audible offers his service on 10 different marketplaces. You can read more about
 marketplaces
 `here <https://audible.custhelp.com/app/answers/detail/a_id/7267/~/what-is-an-audible-marketplace-and-which-is-best-for-me%3F>`_.
 
@@ -63,6 +63,9 @@ country code is associated.
    * - Audible.co.in
      - India
      - in
+   * - Audible.es
+     - Spain
+     - es
 
 The locale argument
 ===================
