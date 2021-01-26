@@ -226,7 +226,7 @@ class Authenticator(httpx.Auth):
                    f"add attribute: {attr}.")
             logger.error(msg)
             raise AttributeError(msg)
-                                 
+
         if self._apply_test_convert:
             value = test_convert(attr, value)
         object.__setattr__(self, attr, value)
@@ -365,8 +365,9 @@ class Authenticator(httpx.Auth):
     def from_login_external(cls,
                             locale: Union[str, "Locale"],
                             register: bool = False,
-                            login_url_callback: Optional[Callable[[str], str]] = None
-                           ) -> "Authenticator":
+                            login_url_callback: Optional[
+                                Callable[[str], str]] = None
+                            ) -> "Authenticator":
         """Instantiate a new Authenticator from login with external browser.
 
         .. versionadded:: v0.5.1
@@ -548,7 +549,8 @@ class Authenticator(httpx.Auth):
                  captcha_callback: Optional[Callable[[str], str]] = None,
                  otp_callback: Optional[Callable[[], str]] = None,
                  cvf_callback: Optional[Callable[[], str]] = None,
-                 approval_callback: Optional[Callable[[], Any]] = None) -> None:
+                 approval_callback: Optional[
+                     Callable[[], Any]] = None) -> None:
 
         login_device = login(
             username=username,
@@ -564,17 +566,15 @@ class Authenticator(httpx.Auth):
         self._update_attrs(**login_device)
 
     def re_login_external(self,
-                          login_url_callback: Optional[Callable[[str], str]] = None
-                         ) -> None:
+                          login_url_callback: Optional[
+                              Callable[[str], str]] = None
+                          ) -> None:
         """Re-login with a external browser and refreshs the access token.
 
         .. versionadded:: v0.5.1
 
         Args:
-            locale: The ``country_code`` or :class:`audible.localization.Locale`
-                instance for the marketplace to login.
-            register: If ``True``, register a new device after login.
-            login_url_callback: A custom Callable for handling login with 
+            login_url_callback: A custom Callable for handling login with
                 external browsers.
         """
         login_device = external_login(
@@ -640,12 +640,13 @@ class Authenticator(httpx.Auth):
 
         """
         if not force_refresh and extract and self.activation_bytes is not None:
-            logger.debug(f"Activation bytes already fetched. Returned saved one.")
+            logger.debug(
+                f"Activation bytes already fetched. Returned saved one.")
             return self.activation_bytes
 
         logger.debug("Fetch activation blob from server now.")
         ab = get_ab(self, filename, extract)
-        
+
         if extract:
             logger.debug("Extract activation bytes from blob and store value"
                          "activation_bytes attribute.")

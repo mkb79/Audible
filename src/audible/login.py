@@ -13,7 +13,7 @@ import httpx
 from .metadata import encrypt_metadata, meta_audible_app
 
 USER_AGENT = ("Mozilla/5.0 (iPhone; CPU iPhone OS 14_1 like Mac OS X) "
-             "AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148")
+              "AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148")
 
 
 def default_captcha_callback(captcha_url: str) -> str:
@@ -52,7 +52,6 @@ def default_approval_alert_callback() -> None:
     input("Please press enter when you approve the notification.")
 
 
-
 def default_login_url_callback(url: str) -> str:
     """Helper function for login with external browsers."""
     print("Please copy the following url and insert it in a webbrowser of "
@@ -66,6 +65,7 @@ def default_login_url_callback(url: str) -> str:
           "url from the address bar in your browser now.\n")
 
     return input("Please insert the copied url (after login):\n")
+
 
 def get_soup(resp):
     return BeautifulSoup(resp.text, "html.parser")
