@@ -1,8 +1,9 @@
+=====================
+Modules Documentation
+=====================
+
 audible package
 ===============
-
-Submodules
-----------
 
 audible.activation\_bytes module
 --------------------------------
@@ -16,14 +17,6 @@ audible.aescipher module
 ------------------------
 
 .. automodule:: audible.aescipher
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
-audible.api module
-------------------
-
-.. automodule:: audible.api
    :members:
    :undoc-members:
    :show-inheritance:
@@ -91,5 +84,3 @@ audible.utils module
    :members:
    :undoc-members:
    :show-inheritance:
-
-

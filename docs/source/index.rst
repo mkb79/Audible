@@ -35,8 +35,15 @@ communication with the Audible API is supported.
 
 .. note::
 
-   For a very basic command line interface take a look at my
+   For a basic command line interface take a look at my
    `audible-cli <https://github.com/mkb79/audible-cli>`_ package.
+   This package supports:
+
+   - downloading audiobooks (aax/aaxc), cover, PDF and chapter file
+   - export library to `csv <https://en.wikipedia.org/wiki/Comma-separated_values>`_
+     files
+   - get activation bytes
+   - add own plugin commands
 
 |
 
@@ -56,7 +63,7 @@ communication with the Audible API is supported.
    misc/logging
    misc/external_api
    misc/examples
-   modules/mods
+   modules/audible
 
 
 Indices and tables

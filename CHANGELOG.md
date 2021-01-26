@@ -5,7 +5,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## Unreleased
 
--
+### Misc
+
+- Redesign Module documentation
+- Rework description of audible-cli package in documentation
 
 ## [0.5.3] - 2020-01-25
 
