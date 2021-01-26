@@ -11,7 +11,7 @@ def get_random_device_serial() -> str:
     Using a random serial prevents from unregister devices by other users
     with same `device_serial`.
     """
-    return str(uuid.uuid4()).replace("-", "")
+    return uuid.uuid4().hex
 
 
 def register(access_token: str, domain: str) -> Dict[str, Any]:
