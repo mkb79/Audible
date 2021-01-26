@@ -15,7 +15,15 @@
 It enables Python developers to create there own Audible services. 
 Asynchronous communication with the Audible API is supported.
 
-For a very basic command line interface take a look on my [audible-cli](https://github.com/mkb79/audible-cli) package.
+For a basic command line interface take a look at my 
+[audible-cli](https://github.com/mkb79/audible-cli) package. This package 
+supports:
+
+- downloading audiobooks (aax/aaxc), cover, PDF and chapter files
+- export library to [csv](https://en.wikipedia.org/wiki/Comma-separated_values)
+  files
+- get activation bytes
+- add own plugin commands
 
 ## Requirements
 
