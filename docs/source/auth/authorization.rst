@@ -159,6 +159,12 @@ Please copy the url from the address bar from your browser and paste the url to 
 field of the python code. This url looks like 
 "https://www.amazon.{domain}/ap/maplanding?...&openid.oa2.access_token=Atna%..."
 
+.. note::
+
+   If you are using MacOS and have trouble insert the login result url, simply import the 
+   readline module in your script. See
+   `#34 <https://github.com/mkb79/Audible/issues/34#issuecomment-766408640>`_.
+
 Custom callback
 ---------------
 

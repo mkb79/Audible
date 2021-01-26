@@ -63,7 +63,9 @@ def default_login_url_callback(url: str) -> str:
     print("After login, your browser will show you a error page (not found). "
           "Do not worry about this. It has to be like this. Please copy the "
           "url from the address bar in your browser now.\n")
-
+    print("IMPORTANT:")
+    print("If you are using MacOS and have trouble insert the login result "
+          "url, simply import the readline module in your script.\n")
     return input("Please insert the copied url (after login):\n")
 
 
@@ -349,6 +351,11 @@ def external_login(
     login_url_callback: Optional[Callable[[str], str]] = None
 ) -> Dict[str, Any]:
     """Gives the url to login with external browser and prompt for result.
+
+    Note:
+        If you are using MacOS and have trouble insert the login result url 
+        simply import the readline module in your script. See
+        `#34 <https://github.com/mkb79/Audible/issues/34#issuecomment-766408640>`_.
     
     Args:
         country_code: The country code for the Audible marketplace to login.
