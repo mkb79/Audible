@@ -315,6 +315,7 @@ class Authenticator(httpx.Auth):
                    username: str,
                    password: str,
                    locale: Union[str, "Locale"],
+                   serial: Optional[str] = None,
                    register: bool = False,
                    captcha_callback: Optional[Callable[[str], str]] = None,
                    otp_callback: Optional[Callable[[], str]] = None,
@@ -325,11 +326,15 @@ class Authenticator(httpx.Auth):
 
         .. versionadded:: v0.5.0
 
+        .. versionadded:: v0.5.4
+           The serial argument
+
         Args:
             username: The Amazon email address.
             password: The Amazon password.
             locale: The ``country_code`` or :class:`audible.localization.Locale`
                 instance for the marketplace to login.
+            serial: The device serial. If ``None`` a custom one will be created.
             register: If ``True``, register a new device after login.
             captcha_callback: A custom callback to handle captcha requests
                 during login.
@@ -348,6 +353,7 @@ class Authenticator(httpx.Auth):
         auth.re_login(
             username=username,
             password=password,
+            serial=serial,
             captcha_callback=captcha_callback,
             otp_callback=otp_callback,
             cvf_callback=cvf_callback,
@@ -356,7 +362,7 @@ class Authenticator(httpx.Auth):
         logger.info(f"logged in to Audible as {username}")
 
         if register:
-            auth.register_device()
+            auth.register_device(serial=serial)
             logger.info("registered Audible device")
 
         return auth
@@ -364,6 +370,7 @@ class Authenticator(httpx.Auth):
     @classmethod
     def from_login_external(cls,
                             locale: Union[str, "Locale"],
+                            serial: Optional[str] = None,
                             register: bool = False,
                             login_url_callback: Optional[
                                 Callable[[str], str]] = None
@@ -371,10 +378,14 @@ class Authenticator(httpx.Auth):
         """Instantiate a new Authenticator from login with external browser.
 
         .. versionadded:: v0.5.1
+        
+        .. versionadded:: v0.5.4
+           The serial argument
 
         Args:
             locale: The ``country_code`` or :class:`audible.localization.Locale`
                 instance for the marketplace to login.
+            serial: The device serial. If ``None`` a custom one will be created.
             register: If ``True``, register a new device after login.
             login_url_callback: A custom Callable for handling login with 
                 external browsers.
@@ -385,12 +396,14 @@ class Authenticator(httpx.Auth):
         auth = cls()
         auth.locale = locale
 
-        auth.re_login_external(login_url_callback=login_url_callback)
+        auth.re_login_external(
+            serial=serial, 
+            login_url_callback=login_url_callback)
 
         logger.info("logged in to Audible.")
 
         if register:
-            auth.register_device()
+            auth.register_device(serial=serial)
             logger.info("registered Audible device")
 
         return auth
@@ -546,11 +559,15 @@ class Authenticator(httpx.Auth):
     def re_login(self,
                  username: str,
                  password: str,
+                 serial: Optional[str] = None,
                  captcha_callback: Optional[Callable[[str], str]] = None,
                  otp_callback: Optional[Callable[[], str]] = None,
                  cvf_callback: Optional[Callable[[], str]] = None,
                  approval_callback: Optional[
                      Callable[[], Any]] = None) -> None:
+
+        if serial is None and self.device_info:
+            serial = self.device_info.get("device_serial_number")
 
         login_device = login(
             username=username,
@@ -558,36 +575,58 @@ class Authenticator(httpx.Auth):
             country_code=self.locale.country_code,
             domain=self.locale.domain,
             market_place_id=self.locale.market_place_id,
+            serial=serial,
             captcha_callback=captcha_callback,
             otp_callback=otp_callback,
             cvf_callback=cvf_callback,
             approval_callback=approval_callback)
 
+        serial = login_device.pop("serial")
+        if self.device_info is None:
+            self.device_info = {"device_serial_number": serial}
+
         self._update_attrs(**login_device)
 
     def re_login_external(self,
+                          serial: Optional[str] = None,
                           login_url_callback: Optional[
                               Callable[[str], str]] = None
                           ) -> None:
         """Re-login with a external browser and refreshs the access token.
 
         .. versionadded:: v0.5.1
+        
+        .. versionadded:: v0.5.4
+           The serial argument
 
         Args:
+            serial: The device serial. If ``None`` a custom one will be created.
             login_url_callback: A custom Callable for handling login with
                 external browsers.
         """
+        if serial is None and self.device_info:
+            serial = self.device_info.get("device_serial_number")
+
         login_device = external_login(
             country_code=self.locale.country_code,
             domain=self.locale.domain,
             market_place_id=self.locale.market_place_id,
+            serial=serial,
             login_url_callback=login_url_callback)
+
+        serial = login_device.pop("serial")
+        if self.device_info is None:
+            self.device_info = {"device_serial_number": serial}
 
         self._update_attrs(**login_device)
 
-    def register_device(self) -> None:
+    def register_device(self, serial: Optional[str] = None) -> None:
+        if serial is None and self.device_info:
+            serial = self.device_info.get("device_serial_number")
+
         register_device = register_(
-            access_token=self.access_token, domain=self.locale.domain)
+            access_token=self.access_token, domain=self.locale.domain,
+            serial=serial)
 
         self._update_attrs(**register_device)
 
