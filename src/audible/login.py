@@ -1,6 +1,7 @@
 import base64
 import io
 import json
+import re
 import uuid
 import secrets
 from datetime import datetime, timedelta
@@ -126,6 +127,40 @@ def build_oauth_url(
             serial)
 
 
+def build_oauth_url_username(
+    country_code: str,
+    domain: str,
+    market_place_id: str,
+    serial: Optional[str] = None
+) -> str:
+    """Builds the url to login with username to Audible as an Audible device"""
+    serial = serial or build_device_serial()
+    client_id = build_client_id(serial)
+    oauth_params = {
+        "openid.oa2.response_type": "token",
+        "openid.return_to": f"https://www.audible.{domain}/ap/maplanding",
+        "openid.assoc_handle": f"amzn_audible_ios_lap_{country_code}",
+        "openid.identity": "http://specs.openid.net/auth/2.0/"
+                           "identifier_select",
+        "pageId": "amzn_audible_ios_privatepool",
+        "accountStatusPolicy": "P1",
+        "openid.claimed_id": "http://specs.openid.net/auth/2.0/"
+                             "identifier_select",
+        "openid.mode": "checkid_setup",
+        "openid.ns.oa2": "http://www.amazon.com/ap/ext/oauth/2",
+        "openid.oa2.client_id": f"device:{client_id}",
+        "openid.ns.pape": "http://specs.openid.net/extensions/pape/1.0",
+        "marketPlaceId": market_place_id,
+        "openid.oa2.scope": "device_auth_access",
+        "forceMobileLayout": "true",
+        "openid.ns": "http://specs.openid.net/auth/2.0",
+        "openid.pape.max_auth_age": "0"
+    }
+
+    return (f"https://www.audible.{domain}/ap/signin?{urlencode(oauth_params)}",
+            serial)
+
+
 def build_init_cookies() -> Dict[str, str]:
     """Build initial cookies to prevent captcha in most cases."""
     frc = secrets.token_bytes(313)
@@ -198,6 +233,12 @@ def extract_token_from_url(url: httpx.URL) -> str:
     return parsed_url["openid.oa2.access_token"][0]
 
 
+def is_valid_email(obj: str) -> bool:
+    valid_mail = "^[a-z0-9]+[\._]?[a-z0-9]+[@]\w+[.]\w+$"
+    if re.match(valid_mail, obj):
+        return True
+    return False
+
 def login(
     username: str,
     password: str,
@@ -233,7 +274,14 @@ def login(
         ``website_cookies`` from the authorized Client.
     """
 
+    with_username = False
     amazon_url = f"https://www.amazon.{domain}"
+
+    if not is_valid_email(username):
+        # maybe login with username instead of email
+        with_username = True
+        amazon_url = f"https://www.audible.{domain}"
+
     sign_in_url = amazon_url + "/ap/signin"
     cvf_url = amazon_url + "/ap/cvf/verify"
 
@@ -249,7 +297,11 @@ def login(
     while "session-token" not in session.cookies:
         session.get(amazon_url)
 
-    oauth_url, serial = build_oauth_url(country_code, domain, market_place_id, serial)
+    if with_username:
+        oauth_url, serial = build_oauth_url_username(country_code, domain, market_place_id, serial)
+    else:
+        oauth_url, serial = build_oauth_url(country_code, domain, market_place_id, serial)
+
     oauth_resp = session.get(oauth_url)
     oauth_soup = get_soup(oauth_resp)
 
@@ -365,6 +417,7 @@ def external_login(
     domain: str,
     market_place_id: str,
     serial: Optional[str] = None,
+    with_username: bool = False,
     login_url_callback: Optional[Callable[[str], str]] = None
 ) -> Dict[str, Any]:
     """Gives the url to login with external browser and prompt for result.
@@ -386,7 +439,10 @@ def external_login(
         An ``access_token`` with ``expires`` timestamp from the 
         authorized Client.
     """
-    oauth_url, serial = build_oauth_url(country_code, domain, market_place_id, serial)
+    if with_username:
+        oauth_url, serial = build_oauth_url_username(country_code, domain, market_place_id, serial)
+    else:        
+        oauth_url, serial = build_oauth_url(country_code, domain, market_place_id, serial)
 
     if login_url_callback:
         response_url = login_url_callback(oauth_url)

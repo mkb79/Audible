@@ -372,6 +372,7 @@ class Authenticator(httpx.Auth):
                             locale: Union[str, "Locale"],
                             serial: Optional[str] = None,
                             register: bool = False,
+                            with_username: bool = False,
                             login_url_callback: Optional[
                                 Callable[[str], str]] = None
                             ) -> "Authenticator":
@@ -381,12 +382,14 @@ class Authenticator(httpx.Auth):
         
         .. versionadded:: v0.5.4
            The serial argument
+           The with_username argument
 
         Args:
             locale: The ``country_code`` or :class:`audible.localization.Locale`
                 instance for the marketplace to login.
             serial: The device serial. If ``None`` a custom one will be created.
             register: If ``True``, register a new device after login.
+            with_username: If True login with username instead of mail
             login_url_callback: A custom Callable for handling login with 
                 external browsers.
 
@@ -397,7 +400,8 @@ class Authenticator(httpx.Auth):
         auth.locale = locale
 
         auth.re_login_external(
-            serial=serial, 
+            serial=serial,
+            with_username=with_username,
             login_url_callback=login_url_callback)
 
         logger.info("logged in to Audible.")
