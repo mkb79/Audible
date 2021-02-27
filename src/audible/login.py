@@ -108,12 +108,12 @@ def build_oauth_url(
         base_url = f"https://www.audible.{domain}/ap/signin"
         return_to = f"https://www.audible.{domain}/ap/maplanding"
         assoc_handle = f"amzn_audible_ios_lap_{country_code}"
-        page_id = "amzn_audible_ios"
+        page_id = "amzn_audible_ios_privatepool"
     else:
         base_url = f"https://www.amazon.{domain}/ap/signin"
         return_to = f"https://www.amazon.{domain}/ap/maplanding"
         assoc_handle = f"amzn_audible_ios_{country_code}"
-        page_id = "amzn_audible_ios_privatepool"
+        page_id = "amzn_audible_ios"
 
     oauth_params = {
         "openid.oa2.response_type": "token",
