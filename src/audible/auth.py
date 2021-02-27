@@ -593,6 +593,7 @@ class Authenticator(httpx.Auth):
 
     def re_login_external(self,
                           serial: Optional[str] = None,
+                          with_username: bool = False,
                           login_url_callback: Optional[
                               Callable[[str], str]] = None
                           ) -> None:
@@ -602,9 +603,11 @@ class Authenticator(httpx.Auth):
         
         .. versionadded:: v0.5.4
            The serial argument
+           The with_username argument
 
         Args:
             serial: The device serial. If ``None`` a custom one will be created.
+            with_username: If ``True`` login with username instead of mail.
             login_url_callback: A custom Callable for handling login with
                 external browsers.
         """
@@ -616,6 +619,7 @@ class Authenticator(httpx.Auth):
             domain=self.locale.domain,
             market_place_id=self.locale.market_place_id,
             serial=serial,
+            with_username=with_username,
             login_url_callback=login_url_callback)
 
         serial = login_device.pop("serial")
@@ -728,9 +732,13 @@ class LoginAuthenticator:
                 otp_callback: Optional[Callable[[], str]] = None,
                 cvf_callback: Optional[Callable[[], str]] = None
                 ) -> "Authenticator":
-        return Authenticator.from_login(username, password, locale, register,
-                                        captcha_callback, otp_callback,
-                                        cvf_callback)
+        return Authenticator.from_login(username=username,
+                                        password=password,
+                                        locale=locale,
+                                        register=register,
+                                        captcha_callback=captcha_callback,
+                                        otp_callback=otp_callback,
+                                        cvf_callbac=cvf_callback)
 
 
 class FileAuthenticator:
@@ -747,5 +755,8 @@ class FileAuthenticator:
                 locale: Optional[Union[str, "Locale"]] = None,
                 encryption: Optional[Union[bool, str]] = None,
                 **kwargs) -> "Authenticator":
-        return Authenticator.from_file(filename, password, locale, encryption,
+        return Authenticator.from_file(filename=filename,
+                                       password=password,
+                                       locale=locale,
+                                       encryption=encryption,
                                        **kwargs)
