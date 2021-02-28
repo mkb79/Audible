@@ -5,6 +5,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## Unreleased
 
+-
+
+## [0.5.4] - 2020-02-28
+
 ### Added
 
 - Provide a custom serial when login
