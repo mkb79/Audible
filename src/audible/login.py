@@ -1,6 +1,7 @@
 import base64
 import io
 import json
+import logging
 import re
 import uuid
 import secrets
@@ -13,6 +14,9 @@ from PIL import Image
 import httpx
 
 from .metadata import encrypt_metadata, meta_audible_app
+
+
+logger = logging.getLogger("audible.login")
 
 USER_AGENT = ("Mozilla/5.0 (iPhone; CPU iPhone OS 14_1 like Mac OS X) "
               "AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148")
@@ -101,6 +105,10 @@ def build_oauth_url(
     with_username=False
 ) -> Tuple[str, str]:
     """Builds the url to login to Amazon as an Audible device"""
+    if with_username and domain.lower() not in ("de", "com", "co.uk"):
+        raise ValueError("Login with username is only supported for DE, US "
+                         "and UK marketplaces!")
+        
     serial = serial or build_device_serial()
     client_id = build_client_id(serial)
 
@@ -225,6 +233,7 @@ def login(
     domain: str,
     market_place_id: str,
     serial: Optional[str] = None,
+    with_username: bool = False,
     captcha_callback: Optional[Callable[[str], str]] = None,
     otp_callback: Optional[Callable[[], str]] = None,
     cvf_callback: Optional[Callable[[], str]] = None,
@@ -240,6 +249,8 @@ def login(
             login.
         market_place_id: The id for the Audible marketplace to login.
         serial: The device serial. If ``None`` a custom one will be created.
+        with_username: If ``True`` login with Audible username instead 
+            of Amazon account.
         captcha_callback: A custom Callable for handling captcha requests. 
             If ``None`` :func:`default_captcha_callback` is used.
         otp_callback: A custom Callable for providing one-time passwords.
@@ -253,13 +264,15 @@ def login(
         An ``access_token`` with ``expires`` timestamp and the 
         ``website_cookies`` from the authorized Client.
     """
-    if is_valid_email(username):
-        base_url = f"https://www.amazon.{domain}"
-        with_username = False
-    else:
-        # maybe login with username instead of email
+    if not with_username and not is_valid_email(username):
+        raise ValueError("Username %s is not a valid mail address." % username)
+    
+    if with_username:
         base_url = f"https://www.audible.{domain}"
-        with_username = True
+        logger.info("Login with Audible username.")                    
+    else:
+        base_url = f"https://www.amazon.{domain}"
+        logger.info("Login with Amazon Account.")
 
     sign_in_url = base_url + "/ap/signin"
     cvf_url = base_url + "/ap/cvf/verify"
@@ -410,11 +423,12 @@ def external_login(
     
     Args:
         country_code: The country code for the Audible marketplace to login.
-        domain: domain: The top level domain for the Audible marketplace to
+        domain: The top level domain for the Audible marketplace to
             login.
         market_place_id: The id for the Audible marketplace to login.
         serial: The device serial. If ``None`` a custom one will be created.
-        with_username: If ``True`` login with username instead of mail.
+        with_username: If ``True`` login with Audible username instead 
+            of Amazon account.
         login_url_callback: A custom Callable for handling login with external 
             browsers. If ``None`` :func:`default_login_url_callback` is used.
 
