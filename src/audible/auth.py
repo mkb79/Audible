@@ -316,6 +316,7 @@ class Authenticator(httpx.Auth):
                    password: str,
                    locale: Union[str, "Locale"],
                    serial: Optional[str] = None,
+                   with_username: bool = False,
                    register: bool = False,
                    captcha_callback: Optional[Callable[[str], str]] = None,
                    otp_callback: Optional[Callable[[], str]] = None,
@@ -328,6 +329,7 @@ class Authenticator(httpx.Auth):
 
         .. versionadded:: v0.5.4
            The serial argument
+           The with_username argument
 
         Args:
             username: The Amazon email address.
@@ -335,6 +337,8 @@ class Authenticator(httpx.Auth):
             locale: The ``country_code`` or :class:`audible.localization.Locale`
                 instance for the marketplace to login.
             serial: The device serial. If ``None`` a custom one will be created.
+            with_username: If ``True`` login with Audible username instead 
+                of Amazon account.
             register: If ``True``, register a new device after login.
             captcha_callback: A custom callback to handle captcha requests
                 during login.
@@ -354,6 +358,7 @@ class Authenticator(httpx.Auth):
             username=username,
             password=password,
             serial=serial,
+            with_username=with_username,
             captcha_callback=captcha_callback,
             otp_callback=otp_callback,
             cvf_callback=cvf_callback,
@@ -372,6 +377,7 @@ class Authenticator(httpx.Auth):
                             locale: Union[str, "Locale"],
                             serial: Optional[str] = None,
                             register: bool = False,
+                            with_username: bool = False,
                             login_url_callback: Optional[
                                 Callable[[str], str]] = None
                             ) -> "Authenticator":
@@ -381,12 +387,15 @@ class Authenticator(httpx.Auth):
         
         .. versionadded:: v0.5.4
            The serial argument
+           The with_username argument
 
         Args:
             locale: The ``country_code`` or :class:`audible.localization.Locale`
                 instance for the marketplace to login.
             serial: The device serial. If ``None`` a custom one will be created.
             register: If ``True``, register a new device after login.
+            with_username: If ``True`` login with Audible username instead 
+                of Amazon account.
             login_url_callback: A custom Callable for handling login with 
                 external browsers.
 
@@ -397,7 +406,8 @@ class Authenticator(httpx.Auth):
         auth.locale = locale
 
         auth.re_login_external(
-            serial=serial, 
+            serial=serial,
+            with_username=with_username,
             login_url_callback=login_url_callback)
 
         logger.info("logged in to Audible.")
@@ -560,6 +570,7 @@ class Authenticator(httpx.Auth):
                  username: str,
                  password: str,
                  serial: Optional[str] = None,
+                 with_username: bool = False,
                  captcha_callback: Optional[Callable[[str], str]] = None,
                  otp_callback: Optional[Callable[[], str]] = None,
                  cvf_callback: Optional[Callable[[], str]] = None,
@@ -576,6 +587,7 @@ class Authenticator(httpx.Auth):
             domain=self.locale.domain,
             market_place_id=self.locale.market_place_id,
             serial=serial,
+            with_username=with_username,
             captcha_callback=captcha_callback,
             otp_callback=otp_callback,
             cvf_callback=cvf_callback,
@@ -589,6 +601,7 @@ class Authenticator(httpx.Auth):
 
     def re_login_external(self,
                           serial: Optional[str] = None,
+                          with_username: bool = False,
                           login_url_callback: Optional[
                               Callable[[str], str]] = None
                           ) -> None:
@@ -598,9 +611,12 @@ class Authenticator(httpx.Auth):
         
         .. versionadded:: v0.5.4
            The serial argument
+           The with_username argument
 
         Args:
             serial: The device serial. If ``None`` a custom one will be created.
+            with_username: If ``True`` login with Audible username instead 
+                of Amazon account.
             login_url_callback: A custom Callable for handling login with
                 external browsers.
         """
@@ -612,6 +628,7 @@ class Authenticator(httpx.Auth):
             domain=self.locale.domain,
             market_place_id=self.locale.market_place_id,
             serial=serial,
+            with_username=with_username,
             login_url_callback=login_url_callback)
 
         serial = login_device.pop("serial")
@@ -724,9 +741,13 @@ class LoginAuthenticator:
                 otp_callback: Optional[Callable[[], str]] = None,
                 cvf_callback: Optional[Callable[[], str]] = None
                 ) -> "Authenticator":
-        return Authenticator.from_login(username, password, locale, register,
-                                        captcha_callback, otp_callback,
-                                        cvf_callback)
+        return Authenticator.from_login(username=username,
+                                        password=password,
+                                        locale=locale,
+                                        register=register,
+                                        captcha_callback=captcha_callback,
+                                        otp_callback=otp_callback,
+                                        cvf_callbac=cvf_callback)
 
 
 class FileAuthenticator:
@@ -743,5 +764,8 @@ class FileAuthenticator:
                 locale: Optional[Union[str, "Locale"]] = None,
                 encryption: Optional[Union[bool, str]] = None,
                 **kwargs) -> "Authenticator":
-        return Authenticator.from_file(filename, password, locale, encryption,
+        return Authenticator.from_file(filename=filename,
+                                       password=password,
+                                       locale=locale,
+                                       encryption=encryption,
                                        **kwargs)
