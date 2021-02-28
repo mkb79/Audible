@@ -182,3 +182,4 @@ A custom callback can be provided (for example open the url in a webbrowser dire
        ...
        login_url_callback=custom_login_url_callback
        )
+

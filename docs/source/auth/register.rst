@@ -19,6 +19,7 @@ To authorize and register a new device in one step you can do::
        username,
        password,
        locale=country_code,
+       with_username=False,
        register=True)
 
 .. note::

@@ -13,10 +13,10 @@ First Authorization
 ===================
 
 Before you can communicate with the non-publicly Audible Api, you need to
-authorize (login) yourself to Audible with your Amazon username and password.
-Please make sure to select the correct Audible marketplace. An overview about
-all known Audible marketplaces and associated country codes you can find at
-:ref:`country_codes`.
+authorize (login) yourself to Audible with your Audible username or Amazon
+account. Please make sure to select the correct Audible marketplace. An
+overview about all known Audible marketplaces and associated country codes you
+can find at :ref:`country_codes`.
 
 .. code-block::
 
@@ -25,14 +25,18 @@ all known Audible marketplaces and associated country codes you can find at
    auth = audible.Authenticator.from_login(
        USERNAME,
        PASSWORD,
-       locale=COUNTRY_CODE
+       locale=COUNTRY_CODE,
+       with_username=False
    )
+
+Set `with_username=True` to login with your Audible username (for US, UK or DE
+marketplace only).
 
 .. note::
 
-   For security reasons you have to solve a Captcha and complete some extra
-   steps. Please take a look at the :ref:`authorization` section for more
-   information.
+   For security reasons in some cases you have to solve a Captcha and complete
+   some extra steps. Please take a look at the :ref:`authorization` section for
+   more information.
 
 .. _hello_library:
 

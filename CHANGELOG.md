@@ -8,6 +8,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ### Added
 
 - Provide a custom serial when login
+- Login with Audible username instead of Amazon account for US, UK and DE
+  markteplace
 
 ### Bugfix
 
