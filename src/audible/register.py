@@ -1,6 +1,6 @@
 import uuid
 from datetime import datetime, timedelta
-from typing import Any, Dict
+from typing import Any, Dict, Optional
 
 import httpx
 
@@ -14,7 +14,9 @@ def get_random_device_serial() -> str:
     return uuid.uuid4().hex
 
 
-def register(access_token: str, domain: str) -> Dict[str, Any]:
+def register(access_token: str,
+             domain: str,
+             serial: Optional[str] = None) -> Dict[str, Any]:
     """Registers a dummy Audible device. 
 
     Args:
@@ -37,7 +39,7 @@ def register(access_token: str, domain: str) -> Dict[str, Any]:
             "app_version":
                 "3.26.1",
             "device_serial":
-                get_random_device_serial(),
+                serial or get_random_device_serial(),
             "device_type":
                 "A2CZJZGLK2JJVM",
             "device_name": (

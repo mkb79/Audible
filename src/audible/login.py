@@ -1,6 +1,7 @@
 import base64
 import io
 import json
+import uuid
 import secrets
 from datetime import datetime, timedelta
 from typing import Any, Callable, Dict, Optional
@@ -82,10 +83,24 @@ def get_inputs_from_soup(soup: BeautifulSoup) -> Dict[str, str]:
     return inputs
 
 
+def build_device_serial() -> str:
+    return uuid.uuid4().hex.upper()
+
+
+def build_client_id(serial: str) -> str:
+    client_id = serial.encode() + b"#A2CZJZGLK2JJVM"
+    return client_id.hex()
+
+
 def build_oauth_url(
-    country_code: str, domain: str, market_place_id: str
+    country_code: str,
+    domain: str,
+    market_place_id: str,
+    serial: Optional[str] = None
 ) -> str:
     """Builds the url to login to Amazon as an Audible device"""
+    serial = serial or build_device_serial()
+    client_id = build_client_id(serial)
     oauth_params = {
         "openid.oa2.response_type": "token",
         "openid.return_to": f"https://www.amazon.{domain}/ap/maplanding",
@@ -98,10 +113,7 @@ def build_oauth_url(
                              "identifier_select",
         "openid.mode": "checkid_setup",
         "openid.ns.oa2": "http://www.amazon.com/ap/ext/oauth/2",
-        "openid.oa2.client_id": "device:6a52316c62706d53427a57355"
-                                "05a76477a45375959566674327959465"
-                                "a6374424a53497069546d45234132435"
-                                "a4a5a474c4b324a4a564d",
+        "openid.oa2.client_id": f"device:{client_id}",
         "openid.ns.pape": "http://specs.openid.net/extensions/pape/1.0",
         "marketPlaceId": market_place_id,
         "openid.oa2.scope": "device_auth_access",
@@ -110,7 +122,8 @@ def build_oauth_url(
         "openid.pape.max_auth_age": "0"
     }
 
-    return f"https://www.amazon.{domain}/ap/signin?{urlencode(oauth_params)}"
+    return (f"https://www.amazon.{domain}/ap/signin?{urlencode(oauth_params)}",
+            serial)
 
 
 def build_init_cookies() -> Dict[str, str]:
@@ -191,6 +204,7 @@ def login(
     country_code: str,
     domain: str,
     market_place_id: str,
+    serial: Optional[str] = None,
     captcha_callback: Optional[Callable[[str], str]] = None,
     otp_callback: Optional[Callable[[], str]] = None,
     cvf_callback: Optional[Callable[[], str]] = None,
@@ -204,6 +218,7 @@ def login(
         country_code: The country code for the Audible marketplace to login.
         domain: domain: The top level domain for the Audible marketplace to login.
         market_place_id: The id for the Audible marketplace to login.
+        serial: The device serial. If ``None`` a custom one will be created.
         captcha_callback: A custom Callable for handling captcha requests. 
             If ``None`` :func:`default_captcha_callback` is used.
         otp_callback: A custom Callable for providing one-time passwords.
@@ -234,7 +249,7 @@ def login(
     while "session-token" not in session.cookies:
         session.get(amazon_url)
 
-    oauth_url = build_oauth_url(country_code, domain, market_place_id)
+    oauth_url, serial = build_oauth_url(country_code, domain, market_place_id, serial)
     oauth_resp = session.get(oauth_url)
     oauth_soup = get_soup(oauth_resp)
 
@@ -340,7 +355,8 @@ def login(
     return {
         "access_token": access_token,
         "website_cookies": website_cookies,
-        "expires": expires
+        "expires": expires,
+        "serial": serial
     }
 
 
@@ -348,6 +364,7 @@ def external_login(
     country_code: str,
     domain: str,
     market_place_id: str,
+    serial: Optional[str] = None,
     login_url_callback: Optional[Callable[[str], str]] = None
 ) -> Dict[str, Any]:
     """Gives the url to login with external browser and prompt for result.
@@ -361,6 +378,7 @@ def external_login(
         country_code: The country code for the Audible marketplace to login.
         domain: domain: The top level domain for the Audible marketplace to login.
         market_place_id: The id for the Audible marketplace to login.
+        serial: The device serial. If ``None`` a custom one will be created.
         login_url_callback: A custom Callable for handling login with external 
             browsers. If ``None`` :func:`default_login_url_callback` is used.
 
@@ -368,7 +386,7 @@ def external_login(
         An ``access_token`` with ``expires`` timestamp from the 
         authorized Client.
     """
-    oauth_url = build_oauth_url(country_code, domain, market_place_id)
+    oauth_url, serial = build_oauth_url(country_code, domain, market_place_id, serial)
 
     if login_url_callback:
         response_url = login_url_callback(oauth_url)
@@ -386,5 +404,6 @@ def external_login(
 
     return {
         "access_token": access_token,
-        "expires": expires
+        "expires": expires,
+        "serial": serial
     }
