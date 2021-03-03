@@ -220,7 +220,7 @@ def extract_token_from_url(url: httpx.URL) -> str:
 
 
 def is_valid_email(obj: str) -> bool:
-    valid_mail = r"^[a-z0-9]+[\._]?[a-z0-9]+[@]\w+[.]\w+$"
+    valid_mail = r"^[a-z0-9]+[\._-]?[a-z0-9]+[@]\w+[.]\w+$"
     if re.match(valid_mail, obj):
         return True
     return False
@@ -265,7 +265,7 @@ def login(
         ``website_cookies`` from the authorized Client.
     """
     if not with_username and not is_valid_email(username):
-        raise ValueError("Username %s is not a valid mail address." % username)
+        logger.warning("Username %s is not a valid mail address." % username)
     
     if with_username:
         base_url = f"https://www.audible.{domain}"
