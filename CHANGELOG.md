@@ -1,11 +1,23 @@
 # Changelog
+
 All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## Unreleased
 
--
+### Added
+
+- logging error messages during login
+
+### Changed
+
+- extend allowed chars by email check during login
+- instead of raising an exception, invalid email will now be logged as warning
+
+### Misc
+
+- Add description to the docs, to handling 2FA
 
 ## [0.5.4] - 2020-02-28
 

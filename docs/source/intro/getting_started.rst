@@ -29,7 +29,13 @@ can find at :ref:`country_codes`.
        with_username=False
    )
 
-Set `with_username=True` to login with your Audible username (for US, UK or DE
+.. note::
+
+   If you have activated 2-factor-authentication for your amazon account, you can append the current OTP to the password.
+
+.. note::
+
+   Set `with_username=True` to login with your Audible username (for US, UK or DE
 marketplace only).
 
 .. note::

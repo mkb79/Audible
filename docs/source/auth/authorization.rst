@@ -82,6 +82,8 @@ like so::
        otp = TOTP(secret)
        return str(otp.now())
 
+Another approach for submit the OTP is to append the current OTP to the password.
+
 CVF Code
 --------
 

@@ -24,15 +24,10 @@ USER_AGENT = ("Mozilla/5.0 (iPhone; CPU iPhone OS 14_1 like Mac OS X) "
 
 def default_captcha_callback(captcha_url: str) -> str:
     """Helper function for handling captcha."""
-    # on error print captcha url instead of display captcha
-    try:
-        captcha = httpx.get(captcha_url).content
-        f = io.BytesIO(captcha)
-        img = Image.open(f)
-        img.show()
-    except:
-        print(captcha_url)
-
+    captcha = httpx.get(captcha_url).content
+    f = io.BytesIO(captcha)
+    img = Image.open(f)
+    img.show()
     guess = input("Answer for CAPTCHA: ")
     return str(guess).strip().lower()
 
@@ -55,7 +50,7 @@ def default_cvf_callback() -> str:
 def default_approval_alert_callback() -> None:
     """Helper function for handling approval alerts."""
     print("Approval alert detected! Amazon sends you a mail.")
-    input("Please press enter when you approve the notification.")
+    input("Please press ENTER when you approve the notification.")
 
 
 def default_login_url_callback(url: str) -> str:
@@ -75,16 +70,42 @@ def default_login_url_callback(url: str) -> str:
     return input("Please insert the copied url (after login):\n")
 
 
-def get_soup(resp):
-    return BeautifulSoup(resp.text, "html.parser")
+def get_soup(resp, log_errors=True):
+    soup = BeautifulSoup(resp.text, "html.parser")
+
+    if not log_errors:
+        return soup
+
+    errorbox = (soup.find(id="auth-error-message-box") or
+                soup.find(id="auth-warning-message-box"))
+    if errorbox:
+        error_message = errorbox.find("h4").string.strip()
+        for list_item in errorbox.findAll("li"):
+            error_message += " " + list_item.find("span").string.strip()
+        logger.error("Error message: %s", error_message)
+
+    aperror = soup.find(id="ap_error_page_message")
+    if aperror:
+        error_message = aperror.find(recursive=False, text=True).strip()
+        logger.error("Error message: %s", error_message)
+
+    return soup
 
 
-def get_inputs_from_soup(soup: BeautifulSoup) -> Dict[str, str]:
+def get_inputs_from_soup(soup: BeautifulSoup,
+                         search_field: Optional[Dict[str, str]] = None
+                         ) -> Dict[str, str]:
     """Extracts hidden form input fields from a Amazon login page."""
+    search_field = search_field or {"name": "signIn"}
+    form = soup.find("form", search_field) or soup.find("form")
     inputs = {}
-    for node in soup.select("input[type=hidden]"):
-        if node.attrs.get("name") and node.attrs.get("value"):
-            inputs[node["name"]] = node["value"]
+    for field in form.find_all("input"):
+        try:
+            inputs[field["name"]] = ""
+            if field["type"] and field["type"] == "hidden":
+                inputs[field["name"]] = field["value"]
+        except BaseException:
+            pass
     return inputs
 
 
@@ -287,9 +308,6 @@ def login(
 
     session = httpx.Client(headers=default_headers, cookies=init_cookies)
 
-    while "session-token" not in session.cookies:
-        session.get(base_url)
-
     oauth_url, serial = build_oauth_url(country_code=country_code,
                                         domain=domain,
                                         market_place_id=market_place_id,
@@ -389,14 +407,16 @@ def login(
         login_resp = session.get(url)
         login_soup = get_soup(login_resp)
 
-    if login_resp.status_code != 404:
-        raise Exception("Unable to login")
+    session.close()
+
+    if not b"openid.oa2.access_token" in login_resp.url.query:
+        raise Exception("Login failed. Please check the log.")
+
+    logger.debug(f"Login confirmed for {username}")
 
     access_token = extract_token_from_url(login_resp.url)
     website_cookies = extract_cookies_from_session(session)
     expires = (datetime.utcnow() + timedelta(seconds=3600)).timestamp()
-
-    session.close()
 
     return {
         "access_token": access_token,
