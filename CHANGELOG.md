@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## Unreleased
 
+### Misc
+
+- switch from httpx 0.16.x to 0.18.x
+
 ### Added
 
 - logging error messages during login
