@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## Unreleased
 
+-
+
+## [0.5.5] - 2021-07-22
+
 ### Misc
 
 - switch from httpx 0.16.x to 0.18.x
@@ -23,7 +27,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 - Add description to the docs, to handling 2FA
 
-## [0.5.4] - 2020-02-28
+## [0.5.4] - 2021-02-28
 
 ### Added
 
@@ -40,7 +44,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Redesign Module documentation
 - Rework description of audible-cli package in documentation
 
-## [0.5.3] - 2020-01-25
+## [0.5.3] - 2021-01-25
 
 ### Added
 
@@ -51,13 +55,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 - `activation_bytes.get_activation_bytes` uses the new `fetch_activation_sign_auth` function, if `signing` auth method is available. Otherwise activation bytes will be fetched the old way with a `player_token`.
 
-## [0.5.2] - 2020-01-08
+## [0.5.2] - 2021-01-08
 
 ### Added
 
 - Add initial cookies to login function to prevent captcha requests in most cases.
 
-## [0.5.1] - 2020-01-05
+## [0.5.1] - 2021-01-05
 
 ### Added
 
