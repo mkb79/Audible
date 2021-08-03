@@ -35,7 +35,10 @@ def get_download_link(license_response):
 
 
 def download_file(url, filename):
-    with httpx.stream("GET", url) as r:
+    headers = {
+        "User-Agent": "Audible/671 CFNetwork/1240.0.4 Darwin/20.6.0"
+    }
+    with httpx.stream("GET", url, headers=headers) as r:
         with open(filename, 'wb') as f:
             for chunck in r.iter_bytes():
                 f.write(chunck)
