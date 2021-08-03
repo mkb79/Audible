@@ -400,7 +400,7 @@ GET /1.0/catalog/products/%{asin}/sims
    :type asin: string
    :<json string supported_drm_types: [Mpeg, Adrm]
    :<json string consumption_type: [Streaming, Offline, Download]
-   :<json string drm_type: [Hls, PlayReady, Hds, Adrm]
+   :<json string drm_type: [Mpeg, PlayReady, Hls, Dash, FairPlay, Widevine, HlsCmaf, Adrm]
    :<json string quality: [High, Normal, Extreme, Low]
    :<json integer num_active_offline_licenses: (max: 10)
    :<json string response_groups: [last_position_heard, pdf_url,
@@ -412,7 +412,7 @@ POST /1.0/content/%{asin}/licenserequest
 :body:
    - supported_drm_types: [Mpeg, Adrm]
    - consumption_type: [Streaming, Offline, Download]
-   - drm_type: [Hls, PlayReady, Hds, Adrm]
+   - drm_type: [Mpeg, PlayReady, Hls, Dash, FairPlay, Widevine, HlsCmaf, Adrm]
    - quality: [High, Normal, Extreme, Low]
    - num_active_offline_licenses: \\d+ (max: 10)
    - response_groups: [last_position_heard,pdf_url,content_reference,chapter_info]
@@ -440,7 +440,7 @@ GET /1.0/content/%{asin}/metadata
    - response_groups: [chapter_info, always-returned, content_reference, content_url]
    - acr:
    - quality: [High, Normal, Extreme, Low]
-   - drm_type: [Hls, Dash, HlsCmaf, Adrm]
+   - drm_type: [Mpeg, PlayReady, Hls, Dash, FairPlay, Widevine, HlsCmaf, Adrm]
    
 
 GET /1.0/annotations/lastpositions
