@@ -412,7 +412,7 @@ POST /1.0/content/%{asin}/licenserequest
 :body:
    - supported_drm_types: [Mpeg, Adrm]
    - consumption_type: [Streaming, Offline, Download]
-   - drm_type: [Hls, PlayReady, Hds, Adrm]
+   - drm_type: [Mpeg, PlayReady, Hls, Dash, FairPlay, Widevine, HlsCmaf, Adrm]
    - quality: [High, Normal, Extreme, Low]
    - num_active_offline_licenses: \\d+ (max: 10)
    - response_groups: [last_position_heard,pdf_url,content_reference,chapter_info]
