@@ -35,8 +35,7 @@ can find at :ref:`country_codes`.
 
 .. note::
 
-   Set `with_username=True` to login with your Audible username (for US, UK or DE
-marketplace only).
+   Set `with_username=True` to login with your Audible username (for US, UK or DE marketplace only).
 
 .. note::
 
