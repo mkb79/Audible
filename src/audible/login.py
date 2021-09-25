@@ -402,7 +402,7 @@ def login(
         else:
             default_approval_alert_callback()
 
-        url = soup.find(id="resend-approval-link")
+        url = soup.find(id="resend-approval-link")["href"]
 
         login_resp = session.get(url)
         login_soup = get_soup(login_resp)
