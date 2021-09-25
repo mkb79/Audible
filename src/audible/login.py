@@ -222,7 +222,7 @@ def check_for_cvf(soup: BeautifulSoup) -> bool:
 
 def check_for_approval_alert(soup: BeautifulSoup) -> bool:
     """Checks a Amazon login page for an approval alert."""
-    approval_alert = soup.find("div", id="resend-approval-alert")
+    approval_alert = soup.find(id="resend-approval-alert") or soup.find(id="resend-approval-form")
     return True if approval_alert else False
 
 
@@ -402,7 +402,7 @@ def login(
         else:
             default_approval_alert_callback()
 
-        url = login_soup.find_all("a", class_="a-link-normal")[1]["href"]
+        url = soup.find(id="resend-approval-link")
 
         login_resp = session.get(url)
         login_soup = get_soup(login_resp)
