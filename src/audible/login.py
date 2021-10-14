@@ -118,6 +118,16 @@ def get_inputs_from_soup(
     return inputs
 
 
+def get_next_action_from_soup(
+        soup: BeautifulSoup, search_field: Optional[Dict[str, str]] = None
+) -> Tuple[str, str]:
+    form = soup.find("form", search_field) or soup.find("form")
+    method = form["method"]
+    url = form["action"]
+
+    return method, url
+    
+
 def create_code_verifier(length: int = 32) -> bytes:
     verifier = secrets.token_bytes(length)
     return base64.urlsafe_b64encode(verifier).rstrip(b'=')
@@ -311,19 +321,14 @@ def login(
         ``device serial`` from the authorized Client.
     """
 
-    if not with_username and not is_valid_email(username):
-        logger.warning("Username %s is not a valid mail address." % username)
-
     if with_username:
         base_url = f"https://www.audible.{domain}"
         logger.info("Login with Audible username.")
     else:
+        if not is_valid_email(username):
+            logger.warning(f"Username {username} is not a valid mail address.")
         base_url = f"https://www.amazon.{domain}"
         logger.info("Login with Amazon Account.")
-
-    sign_in_url = base_url + "/ap/signin"
-    cvf_url = base_url + "/ap/cvf/verify"
-    mfa_url = base_url + "/ap/mfa"
 
     default_headers = {
         "User-Agent": USER_AGENT,
@@ -332,7 +337,11 @@ def login(
     }
     init_cookies = build_init_cookies()
 
-    session = httpx.Client(headers=default_headers, cookies=init_cookies)
+    session = httpx.Client(
+        base_url=base_url,
+        headers=default_headers,
+        cookies=init_cookies
+    )
     code_verifier = create_code_verifier()
 
     oauth_url, serial = build_oauth_url(
@@ -354,7 +363,9 @@ def login(
     metadata = meta_audible_app(USER_AGENT, base_url)
     login_inputs["metadata1"] = encrypt_metadata(metadata)
 
-    login_resp = session.post(sign_in_url, data=login_inputs)
+    method, url = get_next_action_from_soup(oauth_soup, {"name": "signIn"})
+
+    login_resp = session.request(method, url, data=login_inputs)
     login_soup = get_soup(login_resp)
 
     # check for captcha
@@ -373,7 +384,9 @@ def login(
         inputs["email"] = username
         inputs["password"] = password
 
-        login_resp = session.post(sign_in_url, data=inputs)
+        method, url = get_next_action_from_soup(login_soup)
+
+        login_resp = session.request(method, url, data=inputs)
         login_soup = get_soup(login_resp)
 
     # check for choice mfa
@@ -388,7 +401,9 @@ def login(
                 inp_node = node.find("input")
                 inputs[inp_node["name"]] = inp_node["value"]
 
-        login_resp = session.post(mfa_url, data=inputs)
+        method, url = get_next_action_from_soup(login_soup)
+
+        login_resp = session.request(method, url, data=inputs)
         login_soup = get_soup(login_resp)
 
     # check for mfa (otp_code)
@@ -403,7 +418,9 @@ def login(
         inputs["mfaSubmit"] = "Submit"
         inputs["rememberDevice"] = "false"
 
-        login_resp = session.post(sign_in_url, data=inputs)
+        method, url = get_next_action_from_soup(login_soup)
+
+        login_resp = session.request(method, url, data=inputs)
         login_soup = get_soup(login_resp)
 
     # check for cvf
@@ -415,14 +432,18 @@ def login(
 
         inputs = get_inputs_from_soup(login_soup)
 
-        login_resp = session.post(cvf_url, data=inputs)
+        method, url = get_next_action_from_soup(login_soup)
+
+        login_resp = session.request(method, url, data=inputs)
         login_soup = get_soup(login_resp)
 
         inputs = get_inputs_from_soup(login_soup)
         inputs["action"] = "code"
         inputs["code"] = cvf_code
 
-        login_resp = session.post(cvf_url, data=inputs)
+        method, url = get_next_action_from_soup(login_soup)
+
+        login_resp = session.request(method, url, data=inputs)
         login_soup = get_soup(login_resp)
 
     # check for approval alert
@@ -511,3 +532,4 @@ def external_login(
         "domain": domain,
         "serial": serial
     }
+
