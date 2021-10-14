@@ -8,7 +8,7 @@ from .login import build_client_id
 
 def register(
         authorization_code: str,
-        code_verifier: str,
+        code_verifier: bytes,
         domain: str,
         serial: str = None) -> Dict[str, Any]:
     """Registers a dummy Audible device. 

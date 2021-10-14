@@ -6,7 +6,6 @@ import logging
 import re
 import secrets
 import uuid
-from datetime import datetime, timedelta
 from typing import Any, Callable, Dict, Optional, Tuple
 from urllib.parse import urlencode, parse_qs
 
@@ -142,7 +141,7 @@ def build_oauth_url(
         country_code: str,
         domain: str,
         market_place_id: str,
-        code_verifier: str,
+        code_verifier: bytes,
         serial: Optional[str] = None,
         with_username=False) -> Tuple[str, str]:
     """Builds the url to login to Amazon as an Audible device"""
