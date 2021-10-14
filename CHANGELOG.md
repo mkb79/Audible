@@ -6,7 +6,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## Unreleased
 
--
+### Bugfix
+
+- Fix a bug when searching for "resend-approval-link" in login page
+
+### Misc
+
+- Correct documentation
+- Update example download_books_aaxc.py
 
 ## [0.5.5] - 2021-07-22
 
