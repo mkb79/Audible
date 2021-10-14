@@ -11,12 +11,14 @@ def get_random_device_serial() -> str:
     Using a random serial prevents from unregister devices by other users
     with same `device_serial`.
     """
+
     return uuid.uuid4().hex
 
 
-def register(access_token: str,
-             domain: str,
-             serial: Optional[str] = None) -> Dict[str, Any]:
+def register(
+        access_token: str,
+        domain: str,
+        serial: Optional[str] = None) -> Dict[str, Any]:
     """Registers a dummy Audible device. 
 
     Args:
@@ -26,33 +28,32 @@ def register(access_token: str,
     Returns:
         Additional authentication data needed for access Audible API.
     """
+
     body = {
-        "requested_token_type":
-            ["bearer", "mac_dms", "website_cookies",
-             "store_authentication_cookie"],
+        "requested_token_type": [
+            "bearer", "mac_dms", "website_cookies",
+            "store_authentication_cookie"
+        ],
         "cookies": {
             "website_cookies": [],
-            "domain": f".amazon.{domain}"},
+            "domain": f".amazon.{domain}"
+        },
         "registration_data": {
-            "domain":
-                "Device",
-            "app_version":
-                "3.26.1",
-            "device_serial":
-                serial or get_random_device_serial(),
-            "device_type":
-                "A2CZJZGLK2JJVM",
+            "domain": "Device",
+            "app_version": "3.26.1",
+            "device_serial": serial or get_random_device_serial(),
+            "device_type": "A2CZJZGLK2JJVM",
             "device_name": (
                 "%FIRST_NAME%%FIRST_NAME_POSSESSIVE_STRING%%DUPE_"
-                "STRATEGY_1ST%Audible for iPhone"),
-            "os_version":
-                "13.5.1",
-            "device_model":
-                "iPhone",
-            "app_name":
-                "Audible"},
+                "STRATEGY_1ST%Audible for iPhone"
+            ),
+            "os_version": "13.5.1",
+            "device_model": "iPhone",
+            "app_name": "Audible"
+        },
         "auth_data": {
-            "access_token": access_token},
+            "access_token": access_token
+        },
         "requested_extensions": ["device_info", "customer_info"]
     }
 
@@ -94,8 +95,9 @@ def register(access_token: str,
     }
 
 
-def deregister(access_token: str, domain: str,
-               deregister_all: bool = False) -> Dict[str, Any]:
+def deregister(
+        access_token: str, domain: str, deregister_all: bool = False
+) -> Dict[str, Any]:
     """Deregisters a dummy Audible device.
     
     Note:
@@ -111,6 +113,7 @@ def deregister(access_token: str, domain: str,
     Returns:
         The response for the deregister request. Contains errors, if some occurs.
     """
+
     body = {"deregister_all_existing_accounts": deregister_all}
     headers = {"Authorization": f"Bearer {access_token}"}
 

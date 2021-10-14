@@ -17,7 +17,7 @@ def raw_xxtea(v: List, n: int, k: Union[List, Tuple]) -> int:
 
     def mx():
         return ((z >> 5) ^ (y << 2)) + ((y >> 3) ^ (z << 4)) ^ (sum_ ^ y) + (
-                    k[(p & 3) ^ e] ^ z)
+                k[(p & 3) ^ e] ^ z)
 
     def u32(x):
         return x % 2 ** 32
@@ -95,6 +95,7 @@ class XXTEA:
         Note:        
             The key must be 128-bit (16 characters) in length.
         """
+
         key = key.encode() if isinstance(key, str) else key
         if len(key) != 16:
             raise XXTEAException("Invalid key")
@@ -103,6 +104,7 @@ class XXTEA:
 
     def encrypt(self, data: Union[str, bytes]) -> bytes:
         """Encrypts and returns a block of data."""
+
         ldata = round(len(data) / 4)
         idata = _bytes_to_longs(data)
         if raw_xxtea(idata, ldata, self.key) != 0:
@@ -111,6 +113,7 @@ class XXTEA:
 
     def decrypt(self, data: Union[str, bytes]) -> bytes:
         """Decrypts and returns a block of data."""
+
         ldata = round(len(data) / 4)
         idata = _bytes_to_longs(data)
         if raw_xxtea(idata, -ldata, self.key) != 0:
@@ -123,6 +126,7 @@ metadata_crypter = XXTEA(_longs_to_bytes(CONSTANTS))
 
 def encrypt_metadata(metadata: str) -> str:
     """Encrypts metadata to be used to log in to Amazon"""
+
     checksum = _generate_hex_checksum(metadata)
     object_str = f"{checksum}#{metadata}"
     object_enc = metadata_crypter.encrypt(object_str)
@@ -133,6 +137,7 @@ def encrypt_metadata(metadata: str) -> str:
 
 def decrypt_metadata(metadata: str) -> str:
     """Decrypts metadata for testing purposes only."""
+
     object_base64 = metadata.lstrip("ECdITeCs:")
     object_bytes = base64.b64decode(object_base64)
     object_dec = metadata_crypter.decrypt(object_bytes)

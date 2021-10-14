@@ -53,15 +53,15 @@ def refresh_access_token(refresh_token: str, domain: str) -> Dict[str, Any]:
     resp_dict = resp.json()
 
     expires_in_sec = int(resp_dict["expires_in"])
-    expires = (
-            datetime.utcnow() + timedelta(seconds=expires_in_sec)).timestamp()
+    expires = (datetime.utcnow() + timedelta(seconds=expires_in_sec)).\
+        timestamp()
 
     return {"access_token": resp_dict["access_token"], "expires": expires}
 
 
-def refresh_website_cookies(refresh_token: str,
-                            domain: str,
-                            cookies_domain: str) -> Dict[str, str]:
+def refresh_website_cookies(
+        refresh_token: str, domain: str, cookies_domain: str
+) -> Dict[str, str]:
     """Fetches website cookies for a specific domain.
 
     Args:
@@ -76,6 +76,7 @@ def refresh_website_cookies(refresh_token: str,
         The requested cookies for the Amazon and Audible website for the given
         `cookies_domain` scope.
     """
+
     url = f"https://www.amazon.{domain}/ap/exchangetoken"
 
     body = {
@@ -95,8 +96,8 @@ def refresh_website_cookies(refresh_token: str,
     website_cookies = dict()
     for cookies_domain in raw_cookies:
         for cookie in raw_cookies[cookies_domain]:
-            website_cookies[cookie["Name"]] = cookie["Value"].replace(
-                r'"', r'')
+            website_cookies[cookie["Name"]] = cookie["Value"]. \
+                replace(r'"', r'')
 
     return website_cookies
 
@@ -116,7 +117,8 @@ def user_profile(access_token: str, domain: str) -> Dict[str, Any]:
     headers = {"Authorization": f"Bearer {access_token}"}
 
     resp = httpx.get(
-        f"https://api.amazon.{domain}/user/profile", headers=headers)
+        f"https://api.amazon.{domain}/user/profile", headers=headers
+    )
     resp.raise_for_status()
 
     return resp.json()
@@ -137,17 +139,20 @@ def user_profile_audible(access_token: str, domain: str) -> Dict[str, Any]:
     headers = {"Authorization": f"Bearer {access_token}"}
 
     resp = httpx.get(
-        f"https://api.audible.{domain}/user/profile", headers=headers)
+        f"https://api.audible.{domain}/user/profile",
+        headers=headers
+    )
     resp.raise_for_status()
 
     return resp.json()
 
 
-def sign_request(method: str,
-                 path: str,
-                 body: bytes,
-                 adp_token: str,
-                 private_key: str) -> Dict[str, str]:
+def sign_request(
+        method: str,
+        path: str,
+        body: bytes,
+        adp_token: str,
+        private_key: str) -> Dict[str, str]:
     """Helper function who creates signed headers for http requests.
 
     Args:
@@ -160,6 +165,7 @@ def sign_request(method: str,
     Returns:
         A dict with the signed headers.
     """
+
     date = datetime.utcnow().isoformat("T") + "Z"
     body = body.decode("utf-8")
 
@@ -247,12 +253,13 @@ class Authenticator(httpx.Auth):
             setattr(self, attr, value)
 
     @classmethod
-    def from_file(cls,
-                  filename: Union[str, "pathlib.Path"],
-                  password: Optional[str] = None,
-                  locale: Optional[Union[str, "Locale"]] = None,
-                  encryption: Optional[Union[bool, str]] = None,
-                  **kwargs) -> "Authenticator":
+    def from_file(
+            cls,
+            filename: Union[str, "pathlib.Path"],
+            password: Optional[str] = None,
+            locale: Optional[Union[str, "Locale"]] = None,
+            encryption: Optional[Union[bool, str]] = None,
+            **kwargs) -> "Authenticator":
         """Instantiate an Authenticator from authentication file.
 
         .. versionadded:: v0.5.0
@@ -278,6 +285,7 @@ class Authenticator(httpx.Auth):
         Returns:
             A new Authenticator instance.
         """
+
         auth = cls()
         auth.filename = filename
         auth.encryption = encryption or detect_file_encryption(auth.filename)
@@ -306,23 +314,26 @@ class Authenticator(httpx.Auth):
 
         auth._update_attrs(**json_data)
 
-        logger.info((f"load data from file {auth.filename} for "
-                     f"locale {auth.locale.country_code}"))
+        logger.info(
+            (f"load data from file {auth.filename} for "
+             f"locale {auth.locale.country_code}")
+        )
         return auth
 
     @classmethod
-    def from_login(cls,
-                   username: str,
-                   password: str,
-                   locale: Union[str, "Locale"],
-                   serial: Optional[str] = None,
-                   with_username: bool = False,
-                   register: bool = False,
-                   captcha_callback: Optional[Callable[[str], str]] = None,
-                   otp_callback: Optional[Callable[[], str]] = None,
-                   cvf_callback: Optional[Callable[[], str]] = None,
-                   approval_callback: Optional[Callable[[], Any]] = None
-                   ) -> "Authenticator":
+    def from_login(
+            cls,
+            username: str,
+            password: str,
+            locale: Union[str, "Locale"],
+            serial: Optional[str] = None,
+            with_username: bool = False,
+            register: bool = False,
+            captcha_callback: Optional[Callable[[str], str]] = None,
+            otp_callback: Optional[Callable[[], str]] = None,
+            cvf_callback: Optional[Callable[[], str]] = None,
+            approval_callback: Optional[Callable[[], Any]] = None
+    ) -> "Authenticator":
         """Instantiate a new Authenticator with authentication data from login.
 
         .. versionadded:: v0.5.0
@@ -351,6 +362,7 @@ class Authenticator(httpx.Auth):
         Returns:
             An :class:`~audible.auth.Authenticator` instance.
         """
+
         auth = cls()
         auth.locale = locale
 
@@ -362,7 +374,8 @@ class Authenticator(httpx.Auth):
             captcha_callback=captcha_callback,
             otp_callback=otp_callback,
             cvf_callback=cvf_callback,
-            approval_callback=approval_callback)
+            approval_callback=approval_callback
+        )
 
         logger.info(f"logged in to Audible as {username}")
 
@@ -373,14 +386,14 @@ class Authenticator(httpx.Auth):
         return auth
 
     @classmethod
-    def from_login_external(cls,
-                            locale: Union[str, "Locale"],
-                            serial: Optional[str] = None,
-                            register: bool = False,
-                            with_username: bool = False,
-                            login_url_callback: Optional[
-                                Callable[[str], str]] = None
-                            ) -> "Authenticator":
+    def from_login_external(
+            cls,
+            locale: Union[str, "Locale"],
+            serial: Optional[str] = None,
+            register: bool = False,
+            with_username: bool = False,
+            login_url_callback: Optional[Callable[[str], str]] = None
+    ) -> "Authenticator":
         """Instantiate a new Authenticator from login with external browser.
 
         .. versionadded:: v0.5.1
@@ -402,13 +415,15 @@ class Authenticator(httpx.Auth):
         Returns:
             An :class:`~audible.auth.Authenticator` instance.
         """
+
         auth = cls()
         auth.locale = locale
 
         auth.re_login_external(
             serial=serial,
             with_username=with_username,
-            login_url_callback=login_url_callback)
+            login_url_callback=login_url_callback
+        )
 
         logger.info("logged in to Audible.")
 
@@ -418,9 +433,9 @@ class Authenticator(httpx.Auth):
 
         return auth
 
-    def auth_flow(self,
-                  request: httpx.Request
-                  ) -> Generator[httpx.Request, httpx.Response, None]:
+    def auth_flow(
+            self, request: httpx.Request
+    ) -> Generator[httpx.Request, httpx.Response, None]:
         """Auth flow to be executed on every request by :mod:`httpx`.
 
         Args:
@@ -429,6 +444,7 @@ class Authenticator(httpx.Auth):
         Yields:
             The next request
         """
+
         available_modes = self.available_auth_modes
 
         if "signing" in available_modes:
@@ -443,11 +459,13 @@ class Authenticator(httpx.Auth):
         yield request
 
     def _apply_signing_auth_flow(self, request: httpx.Request) -> None:
-        headers = sign_request(method=request.method,
-                               path=request.url.raw_path.decode(),
-                               body=request.content,
-                               adp_token=self.adp_token,
-                               private_key=self.device_private_key)
+        headers = sign_request(
+            method=request.method,
+            path=request.url.raw_path.decode(),
+            body=request.content,
+            adp_token=self.adp_token,
+            private_key=self.device_private_key
+        )
 
         request.headers.update(headers)
         logger.info("signing auth flow applied to request")
@@ -477,6 +495,7 @@ class Authenticator(httpx.Auth):
         .. deprecated:: 0.5.0
            Use :meth:`self._apply_signing_auth_flow` instead.
         """
+
         self._apply_signing_auth_flow(request)
 
     @property
@@ -497,13 +516,14 @@ class Authenticator(httpx.Auth):
 
         return available_modes
 
-    def to_file(self,
-                filename: Union["pathlib.Path", str] = None,
-                password: str = None,
-                encryption: Union[bool, str] = "default",
-                indent: int = 4,
-                set_default: bool = True,
-                **kwargs) -> None:
+    def to_file(
+            self,
+            filename: Union["pathlib.Path", str] = None,
+            password: str = None,
+            encryption: Union[bool, str] = "default",
+            indent: int = 4,
+            set_default: bool = True,
+            **kwargs) -> None:
         """Save authentication data to file.
         
         .. versionadded:: 0.5.1
@@ -544,8 +564,9 @@ class Authenticator(httpx.Auth):
             crypter = None
         else:
             if password:
-                crypter = test_convert("crypter", AESCipher(
-                    password, **kwargs))
+                crypter = test_convert(
+                    "crypter", AESCipher(password, **kwargs)
+                )
             elif self.crypter:
                 crypter = self.crypter
             else:
@@ -555,7 +576,8 @@ class Authenticator(httpx.Auth):
                 json_body,
                 filename=target_file,
                 encryption=encryption,
-                indent=indent)
+                indent=indent
+            )
 
         logger.info(f"saved data to file {target_file}")
 
@@ -566,16 +588,16 @@ class Authenticator(httpx.Auth):
 
         logger.info(f"set filename {target_file} as default")
 
-    def re_login(self,
-                 username: str,
-                 password: str,
-                 serial: Optional[str] = None,
-                 with_username: bool = False,
-                 captcha_callback: Optional[Callable[[str], str]] = None,
-                 otp_callback: Optional[Callable[[], str]] = None,
-                 cvf_callback: Optional[Callable[[], str]] = None,
-                 approval_callback: Optional[
-                     Callable[[], Any]] = None) -> None:
+    def re_login(
+            self,
+            username: str,
+            password: str,
+            serial: Optional[str] = None,
+            with_username: bool = False,
+            captcha_callback: Optional[Callable[[str], str]] = None,
+            otp_callback: Optional[Callable[[], str]] = None,
+            cvf_callback: Optional[Callable[[], str]] = None,
+            approval_callback: Optional[Callable[[], Any]] = None) -> None:
 
         if serial is None and self.device_info:
             serial = self.device_info.get("device_serial_number")
@@ -591,7 +613,8 @@ class Authenticator(httpx.Auth):
             captcha_callback=captcha_callback,
             otp_callback=otp_callback,
             cvf_callback=cvf_callback,
-            approval_callback=approval_callback)
+            approval_callback=approval_callback
+        )
 
         serial = login_device.pop("serial")
         if self.device_info is None:
@@ -599,12 +622,11 @@ class Authenticator(httpx.Auth):
 
         self._update_attrs(**login_device)
 
-    def re_login_external(self,
-                          serial: Optional[str] = None,
-                          with_username: bool = False,
-                          login_url_callback: Optional[
-                              Callable[[str], str]] = None
-                          ) -> None:
+    def re_login_external(
+            self,
+            serial: Optional[str] = None,
+            with_username: bool = False,
+            login_url_callback: Optional[Callable[[str], str]] = None) -> None:
         """Re-login with a external browser and refreshs the access token.
 
         .. versionadded:: v0.5.1
@@ -620,6 +642,7 @@ class Authenticator(httpx.Auth):
             login_url_callback: A custom Callable for handling login with
                 external browsers.
         """
+
         if serial is None and self.device_info:
             serial = self.device_info.get("device_serial_number")
 
@@ -629,7 +652,8 @@ class Authenticator(httpx.Auth):
             market_place_id=self.locale.market_place_id,
             serial=serial,
             with_username=with_username,
-            login_url_callback=login_url_callback)
+            login_url_callback=login_url_callback
+        )
 
         serial = login_device.pop("serial")
         if self.device_info is None:
@@ -643,16 +667,18 @@ class Authenticator(httpx.Auth):
 
         register_device = register_(
             access_token=self.access_token, domain=self.locale.domain,
-            serial=serial)
+            serial=serial
+        )
 
         self._update_attrs(**register_device)
 
-    def deregister_device(self, deregister_all: bool = False) -> Dict[
-            str, Any]:
+    def deregister_device(
+            self, deregister_all: bool = False) -> Dict[str, Any]:
         return deregister_(
             access_token=self.access_token,
             deregister_all=deregister_all,
-            domain=self.locale.domain)
+            domain=self.locale.domain
+        )
 
     def refresh_access_token(self, force: bool = False) -> None:
         if force or self.access_token_expired:
@@ -661,12 +687,16 @@ class Authenticator(httpx.Auth):
                 logger.critical(message)
                 raise NoRefreshToken(message)
             refresh_data = refresh_access_token(
-                refresh_token=self.refresh_token, domain=self.locale.domain)
+                refresh_token=self.refresh_token,
+                domain=self.locale.domain
+            )
 
             self._update_attrs(**refresh_data)
         else:
-            logger.info("Access Token not expired. No refresh necessary. "
-                        "To force refresh please use force=True")
+            logger.info(
+                "Access Token not expired. No refresh necessary. "
+                "To force refresh please use force=True"
+            )
 
     def set_website_cookies_for_country(self, country_code: str) -> None:
         cookies_domain = test_convert("locale", country_code).domain
@@ -674,11 +704,11 @@ class Authenticator(httpx.Auth):
         self.website_cookies = refresh_website_cookies(
             self.refresh_token, self.locale.domain, cookies_domain)
 
-    def get_activation_bytes(self,
-                             filename: Optional[
-                                 Union["pathlib.Path", str]] = None,
-                             extract: bool = True,
-                             force_refresh: bool = False) -> Union[str, bytes]:
+    def get_activation_bytes(
+            self,
+            filename: Optional[Union["pathlib.Path", str]] = None,
+            extract: bool = True,
+            force_refresh: bool = False) -> Union[str, bytes]:
         """Get Activation bytes from Audible
 
         :param filename: [Optional] filename to save the activation blob
@@ -695,17 +725,21 @@ class Authenticator(httpx.Auth):
            stored to `Authententicator.activation_bytes`.
 
         """
+
         if not force_refresh and extract and self.activation_bytes is not None:
             logger.debug(
-                f"Activation bytes already fetched. Returned saved one.")
+                f"Activation bytes already fetched. Returned saved one."
+            )
             return self.activation_bytes
 
         logger.debug("Fetch activation blob from server now.")
         ab = get_ab(self, filename, extract)
 
         if extract:
-            logger.debug("Extract activation bytes from blob and store value"
-                         "activation_bytes attribute.")
+            logger.debug(
+                "Extract activation bytes from blob and store value"
+                "activation_bytes attribute."
+            )
             logger.debug(f"Found activation bytes: {ab}")
             self.activation_bytes = ab
 
@@ -713,7 +747,9 @@ class Authenticator(httpx.Auth):
 
     def user_profile(self) -> Dict:
         return user_profile(
-            access_token=self.access_token, domain=self.locale.domain)
+            access_token=self.access_token,
+            domain=self.locale.domain
+        )
 
     @property
     def access_token_expires(self) -> timedelta:
@@ -732,22 +768,25 @@ class LoginAuthenticator:
        Use :meth:`audible.Authenticator.from_login` instead.
     """
 
-    def __new__(cls,
-                username: str,
-                password: str,
-                locale: Union[str, "Locale"],
-                register: bool = False,
-                captcha_callback: Optional[Callable[[str], str]] = None,
-                otp_callback: Optional[Callable[[], str]] = None,
-                cvf_callback: Optional[Callable[[], str]] = None
-                ) -> "Authenticator":
-        return Authenticator.from_login(username=username,
-                                        password=password,
-                                        locale=locale,
-                                        register=register,
-                                        captcha_callback=captcha_callback,
-                                        otp_callback=otp_callback,
-                                        cvf_callbac=cvf_callback)
+    def __new__(
+            cls,
+            username: str,
+            password: str,
+            locale: Union[str, "Locale"],
+            register: bool = False,
+            captcha_callback: Optional[Callable[[str], str]] = None,
+            otp_callback: Optional[Callable[[], str]] = None,
+            cvf_callback: Optional[Callable[[], str]] = None
+    ) -> "Authenticator":
+        return Authenticator.from_login(
+            username=username,
+            password=password,
+            locale=locale,
+            register=register,
+            captcha_callback=captcha_callback,
+            otp_callback=otp_callback,
+            cvf_callback=cvf_callback
+        )
 
 
 class FileAuthenticator:
@@ -758,14 +797,17 @@ class FileAuthenticator:
        Use :meth:`audible.Authenticator.from_file` instead.
     """
 
-    def __new__(cls,
-                filename: Union[str, "pathlib.Path"],
-                password: Optional[str] = None,
-                locale: Optional[Union[str, "Locale"]] = None,
-                encryption: Optional[Union[bool, str]] = None,
-                **kwargs) -> "Authenticator":
-        return Authenticator.from_file(filename=filename,
-                                       password=password,
-                                       locale=locale,
-                                       encryption=encryption,
-                                       **kwargs)
+    def __new__(
+            cls,
+            filename: Union[str, "pathlib.Path"],
+            password: Optional[str] = None,
+            locale: Optional[Union[str, "Locale"]] = None,
+            encryption: Optional[Union[bool, str]] = None,
+            **kwargs) -> "Authenticator":
+        return Authenticator.from_file(
+            filename=filename,
+            password=password,
+            locale=locale,
+            encryption=encryption,
+            **kwargs
+        )

@@ -32,8 +32,7 @@ class Client:
             self,
             auth: Authenticator,
             country_code: Optional[str] = None,
-            timeout: int = 10
-    ):
+            timeout: int = 10):
         locale = Locale(country_code.lower()) if country_code else auth.locale
         self._api_url = httpx.URL(self._API_URL_TEMP + locale.domain)
         headers = {
@@ -42,7 +41,9 @@ class Client:
             "Content-Type": "application/json"
         }
         self.session = self._SESSION(
-            headers=headers, timeout=timeout, auth=auth
+            headers=headers,
+            timeout=timeout,
+            auth=auth
         )
 
     def __enter__(self):
@@ -78,8 +79,7 @@ class Client:
     def switch_user(
             self,
             auth: Authenticator,
-            switch_to_default_marketplace: bool = False
-    ) -> None:
+            switch_to_default_marketplace: bool = False) -> None:
         if switch_to_default_marketplace:
             self.switch_marketplace(auth.locale.country_code)
         self.session.auth = auth
@@ -145,8 +145,8 @@ class Client:
             return convert_response_content(resp)
 
         except (
-                httpx.ConnectTimeout, httpx.ReadTimeout, httpx.WriteTimeout,
-                httpx.PoolTimeout
+            httpx.ConnectTimeout, httpx.ReadTimeout, httpx.WriteTimeout,
+            httpx.PoolTimeout
         ):
             raise NotResponding
         except httpx.NetworkError:
@@ -162,14 +162,15 @@ class Client:
             except UnboundLocalError:
                 pass
 
-    def raw_request(self,
-                    method: str,
-                    url: str,
-                    *,
-                    stream: bool = False,
-                    apply_auth_flow: bool = False,
-                    apply_cookies: bool = False,
-                    **kwargs) -> httpx.Response:
+    def raw_request(
+            self,
+            method: str,
+            url: str,
+            *,
+            stream: bool = False,
+            apply_auth_flow: bool = False,
+            apply_cookies: bool = False,
+            **kwargs) -> httpx.Response:
         """Sends a raw request with the underlying httpx Client.
 
         This method ignores a set api_url and allows send request to custom 
@@ -190,14 +191,14 @@ class Client:
         .. versionadded:: v0.5.1
         
         """
+
         cookies = self.auth.website_cookies if apply_cookies else {}
         cookies = httpx.Cookies(cookies)
-        cookies.update(kwargs.pop("cookies", {}))        
+        cookies.update(kwargs.pop("cookies", {}))
         auth = self.session.auth if apply_auth_flow else None
 
         r = self.session.stream if stream else self.session.request
         return r(method, url, cookies=cookies, auth=auth, **kwargs)
-        
 
     def _split_kwargs(self, **kwargs) -> Tuple:
         protected_kwargs = [
@@ -244,7 +245,8 @@ class AsyncClient(Client):
     async def close(self) -> None:
         await self.session.aclose()
 
-    async def _request(self, method: str, path: str, **kwargs) -> Union[Dict, str]:
+    async def _request(
+            self, method: str, path: str, **kwargs) -> Union[Dict, str]:
         url = self._prepare_api_path(path)
 
         try:
@@ -264,8 +266,8 @@ class AsyncClient(Client):
             return convert_response_content(resp)
 
         except (
-                httpx.ConnectTimeout, httpx.ReadTimeout, httpx.WriteTimeout,
-                httpx.PoolTimeout
+            httpx.ConnectTimeout, httpx.ReadTimeout, httpx.WriteTimeout,
+            httpx.PoolTimeout
         ):
             raise NotResponding
         except httpx.NetworkError:

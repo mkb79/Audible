@@ -86,6 +86,7 @@ def autodetect_locale(domain: str) -> Dict[str, str]:
     Returns:
         The settings for the found Audible marketplace.
     """
+
     domain = domain.lstrip(".")
     site = f"https://www.audible.{domain}"
     params = {"ipRedirectOverride": True, "overrideBaseCountry": True}
@@ -124,8 +125,7 @@ class Locale:
             self,
             country_code: Optional[str] = None,
             domain: Optional[str] = None,
-            market_place_id: Optional[str] = None
-    ) -> None:
+            market_place_id: Optional[str] = None) -> None:
 
         if not all([country_code, domain, market_place_id]):
             locale = None

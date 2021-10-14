@@ -14,6 +14,7 @@ log_formatter = logging.Formatter(
 class AudibleLogHelper:
     def set_level(self, level: Union[str, int]) -> None:
         """Set logging level for the audible package."""
+
         self._set_level(logger, level)
 
     @staticmethod
@@ -34,9 +35,10 @@ class AudibleLogHelper:
         logger.addHandler(handler)
         self._set_level(handler, level)
 
-    def set_console_logger(self,
-                           level: Optional[Union[str, int]] = None) -> None:
+    def set_console_logger(
+            self, level: Optional[Union[str, int]] = None) -> None:
         """Set up a console logger to the audible package."""
+
         handler = logging.StreamHandler()
         # noinspection PyTypeChecker
         self._set_handler(handler, "ConsoleLogger", level)
@@ -45,6 +47,7 @@ class AudibleLogHelper:
             self, filename: str, level: Optional[Union[str, int]] = None
     ) -> None:
         """Set up a file logger to the audible package."""
+
         filename = pathlib.Path(filename)
         handler = logging.FileHandler(filename)
         # noinspection PyTypeChecker
@@ -53,6 +56,7 @@ class AudibleLogHelper:
     @staticmethod
     def capture_warnings(status: bool = True) -> None:
         """Lets the logger capture warnings."""
+
         logging.captureWarnings(status)
         logger.info(
             f"Capture warnings {'activated' if status else 'deactivated'}"

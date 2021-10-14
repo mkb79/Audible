@@ -15,6 +15,7 @@ if TYPE_CHECKING:
 
 def get_player_id() -> str:
     """Build a software player Id."""
+
     player_id = base64.encodebytes(hashlib.sha1(b"").digest()).rstrip()
     return player_id.decode("ascii")
 
@@ -28,6 +29,7 @@ def get_player_token(auth: "audible.Authenticator") -> str:
     Returns:
         The player token.
     """
+
     params = {
         "ipRedirectOverride": True,
         "playerType": "software",
@@ -60,6 +62,7 @@ def extract_activation_bytes(data: bytes) -> str:
     Raises:
         ValueError: If `data` is not a valid activation blob.
     """
+
     if (b"BAD_LOGIN" in data or b"Whoops" in data) or \
             b"group_id" not in data:
         print(data)
@@ -88,6 +91,7 @@ def fetch_activation(player_token: str) -> bytes:
     Returns:
         The activation blob.
     """
+
     url = "https://www.audible.com/license/licenseForCustomerToken"
 
     # register params
@@ -116,6 +120,7 @@ def fetch_activation_sign_auth(auth: "audible.Authenticator") -> bytes:
     Returns:
         The activation blob.
     """
+
     assert "signing" in auth.available_auth_modes
 
     url = "https://www.audible.com/license/token"
@@ -124,14 +129,15 @@ def fetch_activation_sign_auth(auth: "audible.Authenticator") -> bytes:
         "action": "register",
         "player_model": "iPhone"
     }
-    with httpx.Client(auth=auth) as client:    
+    with httpx.Client(auth=auth) as client:
         resp = client.get(url, params=params)
         return resp.content
 
 
-def get_activation_bytes(auth: "audible.Authenticator",
-                         filename: Optional[Union[str, pathlib.Path]] = None,
-                         extract: bool = True) -> Union[str, bytes]:
+def get_activation_bytes(
+        auth: "audible.Authenticator",
+        filename: Optional[Union[str, pathlib.Path]] = None,
+        extract: bool = True) -> Union[str, bytes]:
     """Fetches the activation blob from Audible and extracts the bytes.
 
     Args:    
@@ -143,6 +149,7 @@ def get_activation_bytes(auth: "audible.Authenticator",
     Returns:
         The activation bytes or activation blob.
     """
+
     auth_modes = auth.available_auth_modes
     if "signing" in auth_modes:
         activation = fetch_activation_sign_auth(auth)

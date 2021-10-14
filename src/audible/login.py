@@ -3,27 +3,29 @@ import io
 import json
 import logging
 import re
-import uuid
 import secrets
+import uuid
 from datetime import datetime, timedelta
 from typing import Any, Callable, Dict, Optional, Tuple
 from urllib.parse import urlencode, parse_qs
 
-from bs4 import BeautifulSoup
-from PIL import Image
 import httpx
+from PIL import Image
+from bs4 import BeautifulSoup
 
 from .metadata import encrypt_metadata, meta_audible_app
 
-
 logger = logging.getLogger("audible.login")
 
-USER_AGENT = ("Mozilla/5.0 (iPhone; CPU iPhone OS 14_1 like Mac OS X) "
-              "AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148")
+USER_AGENT = (
+    "Mozilla/5.0 (iPhone; CPU iPhone OS 14_1 like Mac OS X) "
+    "AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148"
+)
 
 
 def default_captcha_callback(captcha_url: str) -> str:
     """Helper function for handling captcha."""
+
     captcha = httpx.get(captcha_url).content
     f = io.BytesIO(captcha)
     img = Image.open(f)
@@ -34,6 +36,7 @@ def default_captcha_callback(captcha_url: str) -> str:
 
 def default_otp_callback() -> str:
     """Helper function for handling 2-factor authentication."""
+
     guess = input("OTP Code: ")
     return str(guess).strip().lower()
 
@@ -43,18 +46,21 @@ def default_cvf_callback() -> str:
     
     Amazon sends a verify code via Mail or SMS.
     """
+
     guess = input("CVF Code: ")
     return str(guess).strip().lower()
 
 
 def default_approval_alert_callback() -> None:
     """Helper function for handling approval alerts."""
+
     print("Approval alert detected! Amazon sends you a mail.")
     input("Please press ENTER when you approve the notification.")
 
 
 def default_login_url_callback(url: str) -> str:
     """Helper function for login with external browsers."""
+
     print("Please copy the following url and insert it in a webbrowser of "
           "your choice:")
     print("\n" + url + "\n")
@@ -76,8 +82,10 @@ def get_soup(resp, log_errors=True):
     if not log_errors:
         return soup
 
-    errorbox = (soup.find(id="auth-error-message-box") or
-                soup.find(id="auth-warning-message-box"))
+    errorbox = (
+            soup.find(id="auth-error-message-box") or
+            soup.find(id="auth-warning-message-box")
+    )
     if errorbox:
         error_message = errorbox.find("h4").string.strip()
         for list_item in errorbox.findAll("li"):
@@ -92,10 +100,11 @@ def get_soup(resp, log_errors=True):
     return soup
 
 
-def get_inputs_from_soup(soup: BeautifulSoup,
-                         search_field: Optional[Dict[str, str]] = None
-                         ) -> Dict[str, str]:
+def get_inputs_from_soup(
+        soup: BeautifulSoup,
+        search_field: Optional[Dict[str, str]] = None) -> Dict[str, str]:
     """Extracts hidden form input fields from a Amazon login page."""
+
     search_field = search_field or {"name": "signIn"}
     form = soup.find("form", search_field) or soup.find("form")
     inputs = {}
@@ -119,17 +128,19 @@ def build_client_id(serial: str) -> str:
 
 
 def build_oauth_url(
-    country_code: str,
-    domain: str,
-    market_place_id: str,
-    serial: Optional[str] = None,
-    with_username=False
-) -> Tuple[str, str]:
+        country_code: str,
+        domain: str,
+        market_place_id: str,
+        serial: Optional[str] = None,
+        with_username=False) -> Tuple[str, str]:
     """Builds the url to login to Amazon as an Audible device"""
+
     if with_username and domain.lower() not in ("de", "com", "co.uk"):
-        raise ValueError("Login with username is only supported for DE, US "
-                         "and UK marketplaces!")
-        
+        raise ValueError(
+            "Login with username is only supported for DE, US "
+            "and UK marketplaces!"
+        )
+
     serial = serial or build_device_serial()
     client_id = build_client_id(serial)
 
@@ -170,6 +181,7 @@ def build_oauth_url(
 
 def build_init_cookies() -> Dict[str, str]:
     """Build initial cookies to prevent captcha in most cases."""
+
     frc = secrets.token_bytes(313)
     frc = base64.b64encode(frc).decode("ascii").rstrip("=")
 
@@ -193,24 +205,28 @@ def build_init_cookies() -> Dict[str, str]:
 
 def check_for_captcha(soup: BeautifulSoup) -> bool:
     """Checks a Amazon login page for a captcha form."""
+
     captcha = soup.find("img", alt=lambda x: x and "CAPTCHA" in x)
     return True if captcha else False
 
 
 def extract_captcha_url(soup: BeautifulSoup) -> Optional[str]:
     """Returns the captcha url from a Amazon login page."""
+
     captcha = soup.find("img", alt=lambda x: x and "CAPTCHA" in x)
     return captcha["src"] if captcha else None
 
 
 def check_for_mfa(soup: BeautifulSoup) -> bool:
     """Checks a Amazon login page for a multi-factor authentication form."""
+
     mfa = soup.find("form", id=lambda x: x and "auth-mfa-form" in x)
     return True if mfa else False
 
 
 def check_for_choice_mfa(soup: BeautifulSoup) -> bool:
     """Checks a Amazon login page for a MFA selection form."""
+
     mfa_choice = soup.find("form", id="auth-select-device-form")
     return True if mfa_choice else False
 
@@ -222,12 +238,15 @@ def check_for_cvf(soup: BeautifulSoup) -> bool:
 
 def check_for_approval_alert(soup: BeautifulSoup) -> bool:
     """Checks a Amazon login page for an approval alert."""
-    approval_alert = soup.find(id="resend-approval-alert") or soup.find(id="resend-approval-form")
+
+    approval_alert = soup.find(id="resend-approval-alert") or soup.find(
+        id="resend-approval-form")
     return True if approval_alert else False
 
 
 def extract_cookies_from_session(session: httpx.Client) -> Dict[str, str]:
     """Extracts cookies from a httpx Client."""
+
     cookies = dict()
     for cookie in session.cookies.jar:
         cookies[cookie.name] = cookie.value.replace(r'"', r'')
@@ -236,6 +255,7 @@ def extract_cookies_from_session(session: httpx.Client) -> Dict[str, str]:
 
 def extract_token_from_url(url: httpx.URL) -> str:
     """Extracts the access token from url query after login."""
+
     parsed_url = parse_qs(url.query.decode())
     return parsed_url["openid.oa2.access_token"][0]
 
@@ -248,17 +268,17 @@ def is_valid_email(obj: str) -> bool:
 
 
 def login(
-    username: str,
-    password: str,
-    country_code: str,
-    domain: str,
-    market_place_id: str,
-    serial: Optional[str] = None,
-    with_username: bool = False,
-    captcha_callback: Optional[Callable[[str], str]] = None,
-    otp_callback: Optional[Callable[[], str]] = None,
-    cvf_callback: Optional[Callable[[], str]] = None,
-    approval_callback: Optional[Callable[[], Any]] = None
+        username: str,
+        password: str,
+        country_code: str,
+        domain: str,
+        market_place_id: str,
+        serial: Optional[str] = None,
+        with_username: bool = False,
+        captcha_callback: Optional[Callable[[str], str]] = None,
+        otp_callback: Optional[Callable[[], str]] = None,
+        cvf_callback: Optional[Callable[[], str]] = None,
+        approval_callback: Optional[Callable[[], Any]] = None
 ) -> Dict[str, Any]:
     """Login to Audible by simulating an Audible App for iOS.
     
@@ -285,12 +305,13 @@ def login(
         An ``access_token`` with ``expires`` timestamp and the 
         ``website_cookies`` from the authorized Client.
     """
+
     if not with_username and not is_valid_email(username):
         logger.warning("Username %s is not a valid mail address." % username)
-    
+
     if with_username:
         base_url = f"https://www.audible.{domain}"
-        logger.info("Login with Audible username.")                    
+        logger.info("Login with Audible username.")
     else:
         base_url = f"https://www.amazon.{domain}"
         logger.info("Login with Amazon Account.")
@@ -308,11 +329,13 @@ def login(
 
     session = httpx.Client(headers=default_headers, cookies=init_cookies)
 
-    oauth_url, serial = build_oauth_url(country_code=country_code,
-                                        domain=domain,
-                                        market_place_id=market_place_id,
-                                        serial=serial,
-                                        with_username=with_username)
+    oauth_url, serial = build_oauth_url(
+        country_code=country_code,
+        domain=domain,
+        market_place_id=market_place_id,
+        serial=serial,
+        with_username=with_username
+    )
 
     oauth_resp = session.get(oauth_url)
     oauth_soup = get_soup(oauth_resp)
@@ -409,7 +432,7 @@ def login(
 
     session.close()
 
-    if not b"openid.oa2.access_token" in login_resp.url.query:
+    if b"openid.oa2.access_token" not in login_resp.url.query:
         raise Exception("Login failed. Please check the log.")
 
     logger.debug(f"Login confirmed for {username}")
@@ -427,12 +450,12 @@ def login(
 
 
 def external_login(
-    country_code: str,
-    domain: str,
-    market_place_id: str,
-    serial: Optional[str] = None,
-    with_username: bool = False,
-    login_url_callback: Optional[Callable[[str], str]] = None
+        country_code: str,
+        domain: str,
+        market_place_id: str,
+        serial: Optional[str] = None,
+        with_username: bool = False,
+        login_url_callback: Optional[Callable[[str], str]] = None
 ) -> Dict[str, Any]:
     """Gives the url to login with external browser and prompt for result.
 
@@ -456,11 +479,14 @@ def external_login(
         An ``access_token`` with ``expires`` timestamp from the 
         authorized Client.
     """
-    oauth_url, serial = build_oauth_url(country_code=country_code,
-                                        domain=domain,
-                                        market_place_id=market_place_id,
-                                        serial=serial,
-                                        with_username=with_username)
+
+    oauth_url, serial = build_oauth_url(
+        country_code=country_code,
+        domain=domain,
+        market_place_id=market_place_id,
+        serial=serial,
+        with_username=with_username
+    )
 
     if login_url_callback:
         response_url = login_url_callback(oauth_url)
