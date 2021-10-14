@@ -10,10 +10,20 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 - Fix a bug when searching for "resend-approval-link" in login page
 
+### Changed
+
+- switched to `auth_code_flow` when login (gives an auth code instead of an access token for security purposes)
+- `Authenticator.from_login` and `Authenticator_from_login_external` now always register a new device
+
 ### Misc
 
 - Correct documentation
 - Update example download_books_aaxc.py
+
+### Remove
+
+- `LoginAuthenticator` and `FileAuthenticator`
+- `Authenticator.register_device`, `Authenticator.re_login` and `Authenticator.re_login_external`
 
 ## [0.5.5] - 2021-07-22
 
