@@ -7,6 +7,7 @@ from typing import Any, Dict, Optional, Union
 from .aescipher import AESCipher
 from .localization import Locale
 
+
 logger = logging.getLogger("audible.utils")
 
 
@@ -149,3 +150,4 @@ class ElapsedTime:
 
     def __call__(self):
         return time.time() - self.start_time
+

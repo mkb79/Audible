@@ -127,3 +127,4 @@ def deregister(
         raise Exception(resp_json)
 
     return resp_json
+

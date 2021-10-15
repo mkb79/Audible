@@ -164,3 +164,4 @@ def get_activation_bytes(
         activation = extract_activation_bytes(activation)
 
     return activation
+

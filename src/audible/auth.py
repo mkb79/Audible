@@ -21,6 +21,7 @@ if TYPE_CHECKING:
     import pathlib
     from .localization import Locale
 
+
 logger = logging.getLogger("audible.auth")
 
 
@@ -675,3 +676,4 @@ class Authenticator(httpx.Auth):
     @property
     def access_token_expired(self) -> bool:
         return datetime.fromtimestamp(self.expires) <= datetime.utcnow()
+

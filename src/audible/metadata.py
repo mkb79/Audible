@@ -6,6 +6,7 @@ import struct
 from datetime import datetime
 from typing import List, Tuple, Union
 
+
 # constants used for encrypt/decrypt metadata
 CONSTANTS = [1888420705, 2576816180, 2347232058, 874813317]
 
@@ -342,3 +343,4 @@ def meta_audible_app(user_agent: str, oauth_url: str) -> str:
         ]
     }
     return json.dumps(meta_dict, separators=(',', ':'))
+

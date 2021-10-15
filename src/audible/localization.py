@@ -6,6 +6,7 @@ import httpx
 from bs4 import BeautifulSoup
 from httpcore import ConnectError
 
+
 logger = logging.getLogger("audible.localization")
 
 LOCALE_TEMPLATES = {
@@ -116,8 +117,8 @@ class Locale:
     """
     Adjustments for the different marketplaces who are provided by Audible.
 
-    Look at `locales.json` for examples. You can try to
-    ``autodetect_locale`` if your marketplace is not in `locales.json`.
+    You can try to ``autodetect_locale`` if your marketplace is 
+    not in templates`.
     
     """
 
@@ -165,3 +166,4 @@ class Locale:
     @property
     def market_place_id(self) -> str:
         return self._market_place_id
+

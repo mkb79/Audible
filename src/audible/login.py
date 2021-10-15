@@ -15,6 +15,7 @@ from bs4 import BeautifulSoup
 
 from .metadata import encrypt_metadata, meta_audible_app
 
+
 logger = logging.getLogger("audible.login")
 
 USER_AGENT = (
