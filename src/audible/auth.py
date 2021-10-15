@@ -592,6 +592,7 @@ class Authenticator(httpx.Auth):
 
     def deregister_device(
             self, deregister_all: bool = False) -> Dict[str, Any]:
+        self.refresh_access_token()
         return deregister_(
             access_token=self.access_token,
             deregister_all=deregister_all,
