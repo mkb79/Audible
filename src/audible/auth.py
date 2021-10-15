@@ -43,7 +43,7 @@ def refresh_access_token(refresh_token: str, domain: str) -> Dict[str, Any]:
 
     body = {
         "app_name": "Audible",
-        "app_version": "3.26.1",
+        "app_version": "3.56.2",
         "source_token": refresh_token,
         "requested_token_type": "access_token",
         "source_token_type": "refresh_token"
@@ -82,7 +82,7 @@ def refresh_website_cookies(
 
     body = {
         "app_name": "Audible",
-        "app_version": "3.26.1",
+        "app_version": "3.56.2",
         "source_token": refresh_token,
         "requested_token_type": "auth_cookies",
         "source_token_type": "refresh_token",
