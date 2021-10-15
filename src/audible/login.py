@@ -19,7 +19,7 @@ from .metadata import encrypt_metadata, meta_audible_app
 logger = logging.getLogger("audible.login")
 
 USER_AGENT = (
-    "Mozilla/5.0 (iPhone; CPU iPhone OS 14_1 like Mac OS X) "
+    "Mozilla/5.0 (iPhone; CPU iPhone OS 15_0 like Mac OS X) "
     "AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148"
 )
 
