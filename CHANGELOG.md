@@ -14,6 +14,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 - switched to `auth_code_flow` when login (gives an auth code instead of an access token for security purposes)
 - `Authenticator.from_login` and `Authenticator_from_login_external` now always register a new device
+- `Authenticator` now refreshes `access_token` (when needed) before deregister the device
+- now simulate Audible app version 3.56.2 under iOS version 15.0.0
+- login process now auto-detect next request method and url
 
 ### Misc
 
