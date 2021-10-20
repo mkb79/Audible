@@ -15,6 +15,7 @@ from pyaes import AESModeOfOperationCBC, Encrypter, Decrypter
 if TYPE_CHECKING:
     import audible
 
+
 logger = logging.getLogger('audible.aescipher')
 
 BLOCK_SIZE: int = 16  # the AES block size
@@ -335,12 +336,11 @@ class AESCipher:
             encrypted_dict = json.loads(encrypted_json)
             return self.from_dict(encrypted_dict)
 
-        elif encryption == "bytes":
+        if encryption == "bytes":
             encrypted_data = filename.read_bytes()
             return self.from_bytes(encrypted_data)
 
-        else:
-            raise ValueError("encryption must be \"json\" or \"bytes\".")
+        raise ValueError("encryption must be \"json\" or \"bytes\".")
 
 
 def detect_file_encryption(filename: pathlib.Path) -> Optional[str]:
@@ -460,4 +460,6 @@ def decrypt_voucher_from_licenserequest(
         customer_id=customer_id,
         device_type=device_type,
         asin=asin,
-        voucher=encrypted_voucher)
+        voucher=encrypted_voucher
+    )
+

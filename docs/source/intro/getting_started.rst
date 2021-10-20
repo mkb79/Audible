@@ -9,33 +9,45 @@ If you are new to Audible, this is the place to begin. The goal of this tutorial
 is to get you set-up and rolling with Audible. I won't go into too much detail
 here, just some important basics.
 
-First Authorization
-===================
+First Audible device
+====================
 
 Before you can communicate with the non-publicly Audible Api, you need to
 authorize (login) yourself to Audible with your Audible username or Amazon
-account. Please make sure to select the correct Audible marketplace. An
-overview about all known Audible marketplaces and associated country codes you
-can find at :ref:`country_codes`.
+account and register a new "virtual" Audible device. Please make sure to
+select the correct Audible marketplace. An overview about all known Audible
+marketplaces and associated country codes be found at :ref:`country_codes`.
 
 .. code-block::
 
    import audible
    
+   # Authorize and register in one step
    auth = audible.Authenticator.from_login(
        USERNAME,
        PASSWORD,
        locale=COUNTRY_CODE,
        with_username=False
    )
+   
+   # Save credendtials to file
+   auth.to_file(FILENAME)
+
+.. important::
+
+   Every device registration will be shown on the Amazon devices list. So only
+   register once and reuse your authentication data or deregister the device
+   with ``auth.deregister_device()`` before you close your session.
 
 .. note::
 
-   If you have activated 2-factor-authentication for your amazon account, you can append the current OTP to the password.
+   If you have activated 2-factor-authentication for your Amazon account, you
+   can append the current OTP to the password.
 
 .. note::
 
-   Set `with_username=True` to login with your Audible username (for US, UK or DE marketplace only).
+   Set `with_username=True` to login with your Audible username (for US, UK or
+   DE marketplace only).
 
 .. note::
 
@@ -48,8 +60,8 @@ can find at :ref:`country_codes`.
 Hello Library
 =============
 
-After the authorization is successfully completed, you are ready to make your
-first API call. To get and print out all books from your Audible library
+After the device creation was successfully completed, you are ready to make
+your first API call. To fetch and print out all books from your Audible library
 (sorted by purchase date in descending order) you can do::
 
    with audible.Client(auth=auth) as client:
@@ -69,33 +81,14 @@ first API call. To get and print out all books from your Audible library
    :http:get:`/1.0/library` for all known `response_groups` and other parameter
    for the library endpoint.
 
-Register an Audible device
-==========================
-
-Working with an *authorized only* Client have some limitations. The
-authentication data from an authorized Client expires after 60 minutes and
-some API requests are forbidden. To deal with these limitations, simply
-register a Audible device after an successfully authorization with::
-
-   auth.register_device()
-
-After these step the Client can use a better method of authentication.
-
-.. important::
-
-   Every device registration will be shown on the amazon devices list. So only
-   register once and reuse your authentication data or deregister the device
-   with ``auth.deregister_device()`` before you close your session.
-
 Reuse authentication data
 =========================
 
-You can store your authentication data after an authorization or device
-registration with::
+You can store your authentication data after an device registration with::
 
    auth.to_file(FILENAME)
 
-And load the data from file to reuse it later with::
+And load the data from file to reuse it with::
 
    auth = audible.Authenticator.from_file(FILENAME)
 

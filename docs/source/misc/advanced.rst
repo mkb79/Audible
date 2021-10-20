@@ -113,10 +113,10 @@ Authenticator classes
 
    The ``LoginAuthenticator`` and the ``FileAuthenticator``
 
-.. versionchanged:: v0.5.0
+.. versionchanged:: v0.6.0
 
-   The ``LoginAuthenticator`` and the ``FileAuthenticator`` now instantiate the
-   the new :class:`Authenticator` instead a class of its own. 
+The ``LoginAuthenticator`` and the ``FileAuthenticator`` are removed from the
+Audible package.
 
 .. versionadded:: v0.5.0
 
@@ -131,11 +131,8 @@ previous saved authentication data.
 With an Authenticator you can:
 
 - Save credentials to file with ``auth.to_file()``
-- Register a device with ``auth.register_device()`` after a fresh authorization.
 - Deregister a previously registered device with ``auth.deregister_device()``.
-- Relogin a previously authorized user with ``auth.re_login()`` when 
-  the master access token is expired. Don't use this after a device registration.
-- Refresh a access token from previously registered device with 
+- Refresh an access token from a previously registered device with 
   ``auth.refresh_access_token()``.
 - Get user profile with ``auth.user_profile()``. Needs a valid access token.
 

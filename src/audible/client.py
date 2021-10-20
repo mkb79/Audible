@@ -12,6 +12,7 @@ from .exceptions import (
 )
 from .localization import LOCALE_TEMPLATES, Locale
 
+
 logger = logging.getLogger("audible.client")
 
 
@@ -282,3 +283,4 @@ class AsyncClient(Client):
                 await resp.aclose()
             except UnboundLocalError:
                 pass
+

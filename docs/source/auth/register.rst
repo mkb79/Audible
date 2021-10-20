@@ -5,31 +5,21 @@ Register a Audible device
 Register
 ========
 
-To deal with the limitations if working with *authorized only* clients
-(expiration and restricted API calls) you can register a audible device.
 Clients are obtaining additional authentication data and information after
-registration.
+registration a "virtual" Audible device.
 
-To register a new device you can call ``auth.register_device()`` after a
-successfully authorization.
-
-To authorize and register a new device in one step you can do::
+To authorize and register a new device you can do::
 
    auth = audible.Authenticator.from_login(
        username,
        password,
        locale=country_code,
        with_username=False,
-       register=True)
-
-.. note::
-
-   Only an `master` access token from a fresh authorization can register a new
-   device. An access token from a previous registered device will not work.
+   )
 
 .. important::
 
-   Every device registration will be shown on the amazon devices list. So only
+   Every device registration will be shown on the Amazon devices list. So only
    register once and save your credentials or deregister the device before you
    close your session.
 

@@ -11,9 +11,8 @@ marketplaces
 
 .. note::
 
-   Except website cookies, authentication data from authorization or device
-   registration are valid for all marketplaces, no matter which marketplace are
-   used.
+   Except website cookies, authentication data from device registration are valid 
+   for all marketplaces, no matter which marketplace are used.
 
 .. _country_codes:
 

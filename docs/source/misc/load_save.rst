@@ -58,22 +58,19 @@ be loaded like so::
 Which data are saved?
 =====================
 
-If you save authentication data following data will be stored to file after an
-authorization:
+The following data will be stored:
 
 - website_cookies
 - access_token
-- locale_code (our country code)
-- expires (access token)
-
-In addition to above, following data will be stored after a device registration:
-
+- locale_code (our country_code)
+- access_token expiration timestamp
 - refresh_token
 - adp_token
 - device_private_key
 - store_authentication_cookie
-- device_info
-- customer_info
+- device_info data
+- customer_info data
+- activation_bytes
 
 .. versionadded:: 0.5.1
 

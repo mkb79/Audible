@@ -1,29 +1,23 @@
-import uuid
 from datetime import datetime, timedelta
-from typing import Any, Dict, Optional
+from typing import Any, Dict
 
 import httpx
 
-
-def get_random_device_serial() -> str:
-    """Generates and prepares a random uuid version 4.
-    
-    Using a random serial prevents from unregister devices by other users
-    with same `device_serial`.
-    """
-
-    return uuid.uuid4().hex
+from .login import build_client_id
 
 
 def register(
-        access_token: str,
+        authorization_code: str,
+        code_verifier: bytes,
         domain: str,
-        serial: Optional[str] = None) -> Dict[str, Any]:
+        serial: str = None) -> Dict[str, Any]:
     """Registers a dummy Audible device. 
 
     Args:
-        access_token: An access token fetches from :func:`audible.auth.login`.
+        authorization_code: The code given after a successful authorization
+        code_verifier: The verifier code from authorization
         domain: The top level domain of the requested Amazon server (e.g. com).
+        serial: The device serial
     
     Returns:
         Additional authentication data needed for access Audible API.
@@ -40,19 +34,24 @@ def register(
         },
         "registration_data": {
             "domain": "Device",
-            "app_version": "3.26.1",
-            "device_serial": serial or get_random_device_serial(),
+            "app_version": "3.56.2",
+            "device_serial": serial,
             "device_type": "A2CZJZGLK2JJVM",
             "device_name": (
                 "%FIRST_NAME%%FIRST_NAME_POSSESSIVE_STRING%%DUPE_"
                 "STRATEGY_1ST%Audible for iPhone"
             ),
-            "os_version": "13.5.1",
+            "os_version": "15.0.0",
+            "software_version": "35602678",
             "device_model": "iPhone",
             "app_name": "Audible"
         },
         "auth_data": {
-            "access_token": access_token
+            "client_id": build_client_id(serial),
+            "authorization_code": authorization_code,
+            "code_verifier": code_verifier.decode(),
+            "code_algorithm": "SHA-256",
+            "client_domain": "DeviceLegacy"
         },
         "requested_extensions": ["device_info", "customer_info"]
     }
@@ -98,7 +97,7 @@ def register(
 def deregister(
         access_token: str, domain: str, deregister_all: bool = False
 ) -> Dict[str, Any]:
-    """Deregisters a dummy Audible device.
+    """Deregister a previous registered Audible device.
     
     Note:
         Except of the ``access_token``, all authentication data will loose 
@@ -124,7 +123,8 @@ def deregister(
     )
 
     resp_json = resp.json()
-    if not resp.status_code == 200:
+    if resp.status_code != 200:
         raise Exception(resp_json)
 
     return resp_json
+

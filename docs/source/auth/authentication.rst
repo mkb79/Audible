@@ -40,10 +40,10 @@ Bearer method
 API requests with the bearer method are restricted. Some API call like the
 :http:post:`/1.0/content/(string:asin)/licenserequest` doesn't work. To use
 the bearer method you need an access token and a client id. You receive the
-token after an authorization or device registration. Which values are valid
-for the client-id is unknown but 0 does work. An access token expires after
-60 minutes. It can be renewed with a refresh token. A refresh token is obtained
-by a device registration only. Headers for the bearer method look like::
+token after a device registration. Which values are valid for the client-id 
+is unknown but 0 does work. An access token expires after 60 minutes. It 
+can be renewed with a refresh token. A refresh token is obtained by a device 
+registration only. Headers for the bearer method look like::
 
    Authorization: Bearer Atna|...
    client-id: 0

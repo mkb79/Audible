@@ -1,11 +1,11 @@
 import base64
+import hashlib
 import io
 import json
 import logging
 import re
 import secrets
 import uuid
-from datetime import datetime, timedelta
 from typing import Any, Callable, Dict, Optional, Tuple
 from urllib.parse import urlencode, parse_qs
 
@@ -15,10 +15,11 @@ from bs4 import BeautifulSoup
 
 from .metadata import encrypt_metadata, meta_audible_app
 
+
 logger = logging.getLogger("audible.login")
 
 USER_AGENT = (
-    "Mozilla/5.0 (iPhone; CPU iPhone OS 14_1 like Mac OS X) "
+    "Mozilla/5.0 (iPhone; CPU iPhone OS 15_0 like Mac OS X) "
     "AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148"
 )
 
@@ -118,6 +119,26 @@ def get_inputs_from_soup(
     return inputs
 
 
+def get_next_action_from_soup(
+        soup: BeautifulSoup, search_field: Optional[Dict[str, str]] = None
+) -> Tuple[str, str]:
+    form = soup.find("form", search_field) or soup.find("form")
+    method = form["method"]
+    url = form["action"]
+
+    return method, url
+    
+
+def create_code_verifier(length: int = 32) -> bytes:
+    verifier = secrets.token_bytes(length)
+    return base64.urlsafe_b64encode(verifier).rstrip(b'=')
+
+
+def create_s256_code_challenge(verifier: bytes):
+    m = hashlib.sha256(verifier)
+    return base64.urlsafe_b64encode(m.digest()).rstrip(b'=')
+
+
 def build_device_serial() -> str:
     return uuid.uuid4().hex.upper()
 
@@ -131,6 +152,7 @@ def build_oauth_url(
         country_code: str,
         domain: str,
         market_place_id: str,
+        code_verifier: bytes,
         serial: Optional[str] = None,
         with_username=False) -> Tuple[str, str]:
     """Builds the url to login to Amazon as an Audible device"""
@@ -143,20 +165,23 @@ def build_oauth_url(
 
     serial = serial or build_device_serial()
     client_id = build_client_id(serial)
+    code_challenge = create_s256_code_challenge(code_verifier)
+
+    base_url = f"https://www.amazon.{domain}/ap/signin"
+    return_to = f"https://www.amazon.{domain}/ap/maplanding"
+    assoc_handle = f"amzn_audible_ios_{country_code}"
+    page_id = "amzn_audible_ios"
 
     if with_username:
         base_url = f"https://www.audible.{domain}/ap/signin"
         return_to = f"https://www.audible.{domain}/ap/maplanding"
         assoc_handle = f"amzn_audible_ios_lap_{country_code}"
         page_id = "amzn_audible_ios_privatepool"
-    else:
-        base_url = f"https://www.amazon.{domain}/ap/signin"
-        return_to = f"https://www.amazon.{domain}/ap/maplanding"
-        assoc_handle = f"amzn_audible_ios_{country_code}"
-        page_id = "amzn_audible_ios"
 
     oauth_params = {
-        "openid.oa2.response_type": "token",
+        "openid.oa2.response_type": "code",
+        "openid.oa2.code_challenge_method": "S256",
+        "openid.oa2.code_challenge": code_challenge,
         "openid.return_to": return_to,
         "openid.assoc_handle": assoc_handle,
         "openid.identity": "http://specs.openid.net/auth/2.0/"
@@ -188,10 +213,10 @@ def build_init_cookies() -> Dict[str, str]:
     map_md = {
         "device_user_dictionary": [],
         "device_registration_data": {
-            "software_version": "33501644"
+            "software_version": "35602678"
         },
         "app_identifier": {
-            "app_version": "3.35.1",
+            "app_version": "3.56.2",
             "bundle_id": "com.audible.iphone"
         }
     }
@@ -244,20 +269,11 @@ def check_for_approval_alert(soup: BeautifulSoup) -> bool:
     return True if approval_alert else False
 
 
-def extract_cookies_from_session(session: httpx.Client) -> Dict[str, str]:
-    """Extracts cookies from a httpx Client."""
-
-    cookies = dict()
-    for cookie in session.cookies.jar:
-        cookies[cookie.name] = cookie.value.replace(r'"', r'')
-    return cookies
-
-
-def extract_token_from_url(url: httpx.URL) -> str:
+def extract_code_from_url(url: httpx.URL) -> str:
     """Extracts the access token from url query after login."""
 
     parsed_url = parse_qs(url.query.decode())
-    return parsed_url["openid.oa2.access_token"][0]
+    return parsed_url["openid.oa2.authorization_code"][0]
 
 
 def is_valid_email(obj: str) -> bool:
@@ -302,23 +318,18 @@ def login(
             If ``None`` :func:`default_approval_alert_callback` is used.
     
     Returns:
-        An ``access_token`` with ``expires`` timestamp and the 
-        ``website_cookies`` from the authorized Client.
+        An ``authorization_code``, a ``code_verifier`` and the
+        ``device serial`` from the authorized Client.
     """
-
-    if not with_username and not is_valid_email(username):
-        logger.warning("Username %s is not a valid mail address." % username)
 
     if with_username:
         base_url = f"https://www.audible.{domain}"
         logger.info("Login with Audible username.")
     else:
+        if not is_valid_email(username):
+            logger.warning(f"Username {username} is not a valid mail address.")
         base_url = f"https://www.amazon.{domain}"
         logger.info("Login with Amazon Account.")
-
-    sign_in_url = base_url + "/ap/signin"
-    cvf_url = base_url + "/ap/cvf/verify"
-    mfa_url = base_url + "/ap/mfa"
 
     default_headers = {
         "User-Agent": USER_AGENT,
@@ -327,12 +338,18 @@ def login(
     }
     init_cookies = build_init_cookies()
 
-    session = httpx.Client(headers=default_headers, cookies=init_cookies)
+    session = httpx.Client(
+        base_url=base_url,
+        headers=default_headers,
+        cookies=init_cookies
+    )
+    code_verifier = create_code_verifier()
 
     oauth_url, serial = build_oauth_url(
         country_code=country_code,
         domain=domain,
         market_place_id=market_place_id,
+        code_verifier=code_verifier,
         serial=serial,
         with_username=with_username
     )
@@ -347,7 +364,9 @@ def login(
     metadata = meta_audible_app(USER_AGENT, base_url)
     login_inputs["metadata1"] = encrypt_metadata(metadata)
 
-    login_resp = session.post(sign_in_url, data=login_inputs)
+    method, url = get_next_action_from_soup(oauth_soup, {"name": "signIn"})
+
+    login_resp = session.request(method, url, data=login_inputs)
     login_soup = get_soup(login_resp)
 
     # check for captcha
@@ -366,7 +385,9 @@ def login(
         inputs["email"] = username
         inputs["password"] = password
 
-        login_resp = session.post(sign_in_url, data=inputs)
+        method, url = get_next_action_from_soup(login_soup)
+
+        login_resp = session.request(method, url, data=inputs)
         login_soup = get_soup(login_resp)
 
     # check for choice mfa
@@ -381,7 +402,9 @@ def login(
                 inp_node = node.find("input")
                 inputs[inp_node["name"]] = inp_node["value"]
 
-        login_resp = session.post(mfa_url, data=inputs)
+        method, url = get_next_action_from_soup(login_soup)
+
+        login_resp = session.request(method, url, data=inputs)
         login_soup = get_soup(login_resp)
 
     # check for mfa (otp_code)
@@ -396,7 +419,9 @@ def login(
         inputs["mfaSubmit"] = "Submit"
         inputs["rememberDevice"] = "false"
 
-        login_resp = session.post(sign_in_url, data=inputs)
+        method, url = get_next_action_from_soup(login_soup)
+
+        login_resp = session.request(method, url, data=inputs)
         login_soup = get_soup(login_resp)
 
     # check for cvf
@@ -408,14 +433,18 @@ def login(
 
         inputs = get_inputs_from_soup(login_soup)
 
-        login_resp = session.post(cvf_url, data=inputs)
+        method, url = get_next_action_from_soup(login_soup)
+
+        login_resp = session.request(method, url, data=inputs)
         login_soup = get_soup(login_resp)
 
         inputs = get_inputs_from_soup(login_soup)
         inputs["action"] = "code"
         inputs["code"] = cvf_code
 
-        login_resp = session.post(cvf_url, data=inputs)
+        method, url = get_next_action_from_soup(login_soup)
+
+        login_resp = session.request(method, url, data=inputs)
         login_soup = get_soup(login_resp)
 
     # check for approval alert
@@ -432,19 +461,17 @@ def login(
 
     session.close()
 
-    if b"openid.oa2.access_token" not in login_resp.url.query:
+    if b"openid.oa2.authorization_code" not in login_resp.url.query:
         raise Exception("Login failed. Please check the log.")
 
     logger.debug(f"Login confirmed for {username}")
 
-    access_token = extract_token_from_url(login_resp.url)
-    website_cookies = extract_cookies_from_session(session)
-    expires = (datetime.utcnow() + timedelta(seconds=3600)).timestamp()
+    authorization_code = extract_code_from_url(login_resp.url)
 
     return {
-        "access_token": access_token,
-        "website_cookies": website_cookies,
-        "expires": expires,
+        "authorization_code": authorization_code,
+        "code_verifier": code_verifier,
+        "domain": domain,
         "serial": serial
     }
 
@@ -476,14 +503,16 @@ def external_login(
             browsers. If ``None`` :func:`default_login_url_callback` is used.
 
     Returns:
-        An ``access_token`` with ``expires`` timestamp from the 
-        authorized Client.
+        An ``authorization_code``, a ``code_verifier`` and the
+        ``device serial`` from the authorized Client.
     """
 
+    code_verifier = create_code_verifier()
     oauth_url, serial = build_oauth_url(
         country_code=country_code,
         domain=domain,
         market_place_id=market_place_id,
+        code_verifier=code_verifier,
         serial=serial,
         with_username=with_username
     )
@@ -496,14 +525,12 @@ def external_login(
     response_url = httpx.URL(response_url)
     parsed_url = parse_qs(response_url.query.decode())
 
-    access_token = parsed_url["openid.oa2.access_token"][0]
-
-    auth_time = parsed_url["openid.pape.auth_time"][0]
-    auth_time = datetime.strptime(auth_time, "%Y-%m-%dT%H:%M:%SZ")
-    expires = (auth_time + timedelta(seconds=3600)).timestamp()
+    authorization_code = parsed_url["openid.oa2.authorization_code"][0]
 
     return {
-        "access_token": access_token,
-        "expires": expires,
+        "authorization_code": authorization_code,
+        "code_verifier": code_verifier,
+        "domain": domain,
         "serial": serial
     }
+
