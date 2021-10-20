@@ -46,10 +46,10 @@ extensions = [
     'sphinx.ext.coverage',
     'sphinx.ext.napoleon',
     'sphinx_rtd_theme',
-    'sphinx.ext.autosummary',
     'sphinx.ext.viewcode',
     'sphinxcontrib.httpdomain',
-    'sphinx_autodoc_typehints'
+    'sphinx_autodoc_typehints',
+    'sphinx.ext.autosummary'
 ]
 
 # Napoleon

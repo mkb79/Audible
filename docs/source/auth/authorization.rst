@@ -5,13 +5,9 @@ Authorization (Login)
 Information
 ===========
 
-Clients are authorized using OpenID. Once a client has successfully authorized
-to Amazon, they are get an `master` access token and website cookies for
-further authentication to Audible/Amazon.
-
-An `master` access token can be used to register a new audible device or to
-make *restricted* requests to the Audible API. The token expires after 60
-minutes. After expiration you have to authorize again to obtain a new one.
+Clients are authorized using OpenID in Authorization Code Flow with PKCE. 
+Once a client has successfully authorized to Amazon, they are get an 
+`authorization code` for device registration to Audible/Amazon.
 
 .. _authorization:
 
@@ -153,13 +149,14 @@ To handle the login with a external browser or program logic you can do the foll
 
 By default, this code print out the login url for the selected country code. Now you have
 to copy and paste this code into a webbrowser (or a custom program) and authorize yourself. 
-You have to enter your credentials two times. On first time, the password can be a random one.
+You have to enter your credentials two times (because of missing init cookies). 
+On first time, the password can be a random one.
 On second time, you have to solve a captcha before you can submit the login form with your 
 correct password.
 After authorize successfully you will end in an error page (not found). This is correct. 
 Please copy the url from the address bar from your browser and paste the url to the input 
 field of the python code. This url looks like 
-"https://www.amazon.{domain}/ap/maplanding?...&openid.oa2.access_token=Atna%..."
+"https://www.amazon.{domain}/ap/maplanding?...&openid.oa2.authorization_code=..."
 
 .. note::
 

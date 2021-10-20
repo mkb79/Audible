@@ -22,12 +22,15 @@ marketplaces and associated country codes be found at :ref:`country_codes`.
 
    import audible
    
+   # Authorize and register in one step
    auth = audible.Authenticator.from_login(
        USERNAME,
        PASSWORD,
        locale=COUNTRY_CODE,
        with_username=False
    )
+   
+   # Save credendtials to file
    auth.to_file(FILENAME)
 
 .. important::
@@ -38,7 +41,7 @@ marketplaces and associated country codes be found at :ref:`country_codes`.
 
 .. note::
 
-   If you have activated 2-factor-authentication for your amazon account, you
+   If you have activated 2-factor-authentication for your Amazon account, you
    can append the current OTP to the password.
 
 .. note::
