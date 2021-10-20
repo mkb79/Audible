@@ -22,6 +22,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 - Correct documentation
 - Update example download_books_aaxc.py
+- Bump httpx to v0.20.*
 
 ### Remove
 
