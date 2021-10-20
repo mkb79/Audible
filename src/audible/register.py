@@ -123,7 +123,7 @@ def deregister(
     )
 
     resp_json = resp.json()
-    if not resp.status_code == 200:
+    if resp.status_code != 200:
         raise Exception(resp_json)
 
     return resp_json
