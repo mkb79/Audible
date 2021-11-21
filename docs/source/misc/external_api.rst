@@ -442,13 +442,20 @@ GET /1.0/content/%{asin}/metadata
    - quality: [High, Normal, Extreme, Low]
    - drm_type: [Mpeg, PlayReady, Hls, Dash, FairPlay, Widevine, HlsCmaf, Adrm]
    
-
 GET /1.0/annotations/lastpositions
 ----------------------------------
 
 :params:
    - asins: asin (comma-separated), e.g. ?asins=B01LWUJKQ7,B01LWUJKQ7,B01LWUJKQ7
+   
+PUT /1.0/lastpositions/%{asin}
+----------------------------------
 
+:body:
+   - acr: obtained by /1.0/content/(string:asin)/licenserequest
+   - asin:
+   - position_ms:
+   
 GET /1.0/customer/information
 -----------------------------
 
