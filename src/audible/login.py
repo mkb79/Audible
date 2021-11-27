@@ -341,7 +341,8 @@ def login(
     session = httpx.Client(
         base_url=base_url,
         headers=default_headers,
-        cookies=init_cookies
+        cookies=init_cookies,
+        follow_redirects=True
     )
     code_verifier = create_code_verifier()
 
@@ -366,7 +367,7 @@ def login(
 
     method, url = get_next_action_from_soup(oauth_soup, {"name": "signIn"})
 
-    login_resp = session.request(method, url, data=login_inputs)
+    login_resp = session.request(method, url, data=login_inputs, follow_redirects=True)
     login_soup = get_soup(login_resp)
 
     # check for captcha
@@ -387,7 +388,7 @@ def login(
 
         method, url = get_next_action_from_soup(login_soup)
 
-        login_resp = session.request(method, url, data=inputs)
+        login_resp = session.request(method, url, data=inputs, follow_redirects=True)
         login_soup = get_soup(login_resp)
 
     # check for choice mfa
@@ -454,10 +455,15 @@ def login(
         else:
             default_approval_alert_callback()
 
-        url = login_soup.find(id="resend-approval-link")["href"]
+        # url = login_soup.find(id="resend-approval-link")["href"]
+        url = login_resp.url
 
-        login_resp = session.get(url)
+        login_resp = session.get(url, follow_redirects=True)
         login_soup = get_soup(login_resp)
+        while login_soup.find("span", {"class": "transaction-approval-word-break"}): # a-size-base-plus transaction-approval-word-break a-text-bold
+            login_resp = session.get(url, follow_redirects=True)
+            login_soup = get_soup(login_resp)
+            print("still waiting for redirect")
 
     session.close()
 
