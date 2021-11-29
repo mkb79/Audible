@@ -122,7 +122,11 @@ def get_inputs_from_soup(
 def get_next_action_from_soup(
         soup: BeautifulSoup, search_field: Optional[Dict[str, str]] = None
 ) -> Tuple[str, str]:
-    form = soup.find("form", search_field) or soup.find("form")
+    form = None
+    if search_field is not None:
+        form = soup.find("form", search_field)
+    else:
+        form = soup.find("form")
     method = form["method"]
     url = form["action"]
 
