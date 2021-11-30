@@ -101,13 +101,19 @@ def get_soup(resp, log_errors=True):
     return soup
 
 
-def get_inputs_from_soup(
+def get_form_data(
         soup: BeautifulSoup,
+        default_url: httpx.URL,
         search_field: Optional[Dict[str, str]] = None) -> Dict[str, str]:
-    """Extracts hidden form input fields from a Amazon login page."""
+    """Extracts hidden form input fields, next request method and url from
+    a Amazon login page."""
 
-    search_field = search_field or {"name": "signIn"}
+    if search_field is None:
+        search_field = {"name": "signIn"}
+
     form = soup.find("form", search_field) or soup.find("form")
+    method = form.get("method", "GET")
+    url = form.get("action", default_url)
     inputs = {}
     for field in form.find_all("input"):
         try:
@@ -116,17 +122,7 @@ def get_inputs_from_soup(
                 inputs[field["name"]] = field["value"]
         except BaseException:
             pass
-    return inputs
-
-
-def get_next_action_from_soup(
-        soup: BeautifulSoup, search_field: Optional[Dict[str, str]] = None
-) -> Tuple[str, str]:
-    form = soup.find("form", search_field) or soup.find("form")
-    method = form["method"]
-    url = form["action"]
-
-    return method, url
+    return method, url, inputs
     
 
 def create_code_verifier(length: int = 32) -> bytes:
@@ -358,16 +354,18 @@ def login(
     oauth_resp = session.get(oauth_url)
     oauth_soup = get_soup(oauth_resp)
 
-    login_inputs = get_inputs_from_soup(oauth_soup)
+    method, url, login_inputs = get_form_data(
+        soup=oauth_soup,
+        default_url=oauth_resp.url,
+        search_field={"name": "signIn"}
+    )
     login_inputs["email"] = username
     login_inputs["password"] = password
 
     metadata = meta_audible_app(USER_AGENT, base_url)
     login_inputs["metadata1"] = encrypt_metadata(metadata)
 
-    method, url = get_next_action_from_soup(oauth_soup, {"name": "signIn"})
-
-    login_resp = session.request(method, url, data=login_inputs, follow_redirects=True)
+    login_resp = session.request(method, url, data=login_inputs)
     login_soup = get_soup(login_resp)
 
     # check for captcha
@@ -378,7 +376,10 @@ def login(
         else:
             guess = default_captcha_callback(captcha_url)
 
-        inputs = get_inputs_from_soup(login_soup)
+        method, url, inputs = get_form_data(
+            soup=login_soup,
+            default_url=login_resp.url
+        )
         inputs["guess"] = guess
         inputs["use_image_captcha"] = "true"
         inputs["use_audio_captcha"] = "false"
@@ -386,15 +387,16 @@ def login(
         inputs["email"] = username
         inputs["password"] = password
 
-        method, url = get_next_action_from_soup(login_soup)
-
-        login_resp = session.request(method, url, data=inputs, follow_redirects=True)
+        login_resp = session.request(method, url, data=inputs)
         login_soup = get_soup(login_resp)
 
     # check for choice mfa
     # https://www.amazon.de/ap/mfa/new-otp
     while check_for_choice_mfa(login_soup):
-        inputs = get_inputs_from_soup(login_soup)
+        method, url, inputs = get_form_data(
+            soup=login_soup,
+            default_url=login_resp.url
+        )
         for node in login_soup.select(
             "div[data-a-input-name=otpDeviceContext]"
         ):
@@ -402,8 +404,6 @@ def login(
             if "auth-TOTP" in node["class"]:
                 inp_node = node.find("input")
                 inputs[inp_node["name"]] = inp_node["value"]
-
-        method, url = get_next_action_from_soup(login_soup)
 
         login_resp = session.request(method, url, data=inputs)
         login_soup = get_soup(login_resp)
@@ -415,12 +415,13 @@ def login(
         else:
             otp_code = default_otp_callback()
 
-        inputs = get_inputs_from_soup(login_soup)
+        method, url, inputs = get_form_data(
+            soup=login_soup,
+            default_url=login_resp.url
+        )
         inputs["otpCode"] = otp_code
         inputs["mfaSubmit"] = "Submit"
         inputs["rememberDevice"] = "false"
-
-        method, url = get_next_action_from_soup(login_soup)
 
         login_resp = session.request(method, url, data=inputs)
         login_soup = get_soup(login_resp)
@@ -432,18 +433,20 @@ def login(
         else:
             cvf_code = default_cvf_callback()
 
-        inputs = get_inputs_from_soup(login_soup)
-
-        method, url = get_next_action_from_soup(login_soup)
+        method, url, inputs = get_form_data(
+            soup=login_soup,
+            default_url=login_resp.url
+        )
 
         login_resp = session.request(method, url, data=inputs)
         login_soup = get_soup(login_resp)
 
-        inputs = get_inputs_from_soup(login_soup)
+        method, url, inputs = get_form_data(
+            soup=login_soup,
+            default_url=login_resp.url
+        )
         inputs["action"] = "code"
         inputs["code"] = cvf_code
-
-        method, url = get_next_action_from_soup(login_soup)
 
         login_resp = session.request(method, url, data=inputs)
         login_soup = get_soup(login_resp)
@@ -455,13 +458,15 @@ def login(
         else:
             default_approval_alert_callback()
 
-        # url = login_soup.find(id="resend-approval-link")["href"]
         url = login_resp.url
 
-        login_resp = session.get(url, follow_redirects=True)
+        login_resp = session.get(url)
         login_soup = get_soup(login_resp)
-        while login_soup.find("span", {"class": "transaction-approval-word-break"}): # a-size-base-plus transaction-approval-word-break a-text-bold
-            login_resp = session.get(url, follow_redirects=True)
+
+        while login_soup.find(
+                "span", {"class": "transaction-approval-word-break"}
+        ):  # a-size-base-plus transaction-approval-word-break a-text-bold
+            login_resp = session.get(url)
             login_soup = get_soup(login_resp)
             print("still waiting for redirect")
 
@@ -539,4 +544,3 @@ def external_login(
         "domain": domain,
         "serial": serial
     }
-
