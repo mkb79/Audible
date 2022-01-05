@@ -79,7 +79,16 @@ def extract_activation_bytes(data: bytes) -> str:
     fmt = "70s1x" * 8
     data = b''.join(struct.unpack(fmt, data))
 
-    return "{:x}".format(*struct.unpack("<I", data[:4]))
+    # the extracted activation bytes
+    ab = "{:x}".format(*struct.unpack("<I", data[:4]))
+
+    # check if length of activation bytes are less than 8
+    # if so, then append 0 in front to reach 8
+    if len(ab) < 8:
+        pad = (8 - len(ab)) * '0'
+        ab = pad + ab
+
+    return ab
 
 
 def fetch_activation(player_token: str) -> bytes:
