@@ -9,6 +9,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ### Bugfix
 
 - make sure activation bytes has 8 bytes, otherwise append '0' in front until 8 bytes are reached
+- make sure metadata1 has 8 bytes, otherwise append '0' in front until 8 bytes are reached
 
 ## [0.6.0] - 2021-10-21
 

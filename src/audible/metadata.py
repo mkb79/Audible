@@ -7,8 +7,8 @@ from datetime import datetime
 from typing import List, Tuple, Union
 
 
-# constants used for encrypt/decrypt metadata
-CONSTANTS = [1888420705, 2576816180, 2347232058, 874813317]
+# key used for encrypt/decrypt metadata1
+METADATA_KEY: bytes = b'a\x03\x8fp4\x18\x97\x99:\xeb\xe7\x8b\x85\x97$4'
 
 
 def raw_xxtea(v: List, n: int, k: Union[List, Tuple]) -> int:
@@ -73,7 +73,13 @@ def _longs_to_bytes(data: List[int]) -> bytes:
 
 def _generate_hex_checksum(data: str) -> str:
     checksum = binascii.crc32(data.encode()) % 2 ** 32
-    return format(checksum, "X")
+    checksum = format(checksum, "X")
+
+    if len(checksum) < 8:
+        pad = (8 - len(checksum)) * '0'
+        checksum = pad + checksum
+
+    return checksum
 
 
 class XXTEAException(Exception):
@@ -122,7 +128,7 @@ class XXTEA:
         return _longs_to_bytes(idata).rstrip(b"\0")
 
 
-metadata_crypter = XXTEA(_longs_to_bytes(CONSTANTS))
+metadata_crypter = XXTEA(METADATA_KEY)
 
 
 def encrypt_metadata(metadata: str) -> str:
@@ -343,4 +349,3 @@ def meta_audible_app(user_agent: str, oauth_url: str) -> str:
         ]
     }
     return json.dumps(meta_dict, separators=(',', ':'))
-
