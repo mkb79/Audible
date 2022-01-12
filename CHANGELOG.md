@@ -10,6 +10,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 - make sure activation bytes has 8 bytes, otherwise append '0' in front until 8 bytes are reached
 - make sure metadata1 has 8 bytes, otherwise append '0' in front until 8 bytes are reached
+- If installed, use playwright to login with external browser. Please 
+  [read here](https://playwright.dev/python/docs/intro) how to install playwright.
+  Then use `audible.Authenticator.from_login_external(COUNTRY_CODE)` for login.
 
 ## [0.6.0] - 2021-10-21
 

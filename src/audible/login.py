@@ -62,6 +62,41 @@ def default_approval_alert_callback() -> None:
 def default_login_url_callback(url: str) -> str:
     """Helper function for login with external browsers."""
 
+    try:
+        from playwright.sync_api import sync_playwright
+        use_playwright = True
+    except ImportError:
+        use_playwright = False
+
+    if use_playwright:
+        with sync_playwright() as p:
+            iphone = p.devices["iPhone 12 Pro"]
+            browser = p.webkit.launch(headless=False)
+            context = browser.new_context(
+                **iphone
+            )
+            cookies = []
+            for name, value in build_init_cookies().items():
+                cookies.append(
+                    {
+                        "name": name,
+                        "value": value,
+                        "url": url
+                    }
+                )
+            context.add_cookies(cookies)
+            page = browser.new_page()
+            page.goto(url)
+
+            while True:
+                page.wait_for_timeout(600)
+                if "/ap/maplanding" in page.url:
+                    response_url = page.url
+                    break
+
+            browser.close()
+        return response_url
+
     print("Please copy the following url and insert it in a webbrowser of "
           "your choice:")
     print("\n" + url + "\n")
@@ -123,7 +158,7 @@ def get_next_action_from_soup(
         soup: BeautifulSoup, search_field: Optional[Dict[str, str]] = None
 ) -> Tuple[str, str]:
     form = soup.find("form", search_field) or soup.find("form")
-    method = form["method"]
+    method = form.get("method", "GET")
     url = form["action"]
 
     return method, url
@@ -533,4 +568,3 @@ def external_login(
         "domain": domain,
         "serial": serial
     }
-
