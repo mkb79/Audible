@@ -491,10 +491,18 @@ def login(
         else:
             default_approval_alert_callback()
 
-        url = login_soup.find(id="resend-approval-link")["href"]
+        # url = login_soup.find(id="resend-approval-link")["href"]
+        url = login_resp.url
 
         login_resp = session.get(url)
         login_soup = get_soup(login_resp)
+
+        while login_soup.find(
+                 "span", {"class": "transaction-approval-word-break"}
+         ):  # a-size-base-plus transaction-approval-word-break a-text-bold
+             login_resp = session.get(url)
+             login_soup = get_soup(login_resp)
+             logger.info("still waiting for redirect")
 
     session.close()
 
