@@ -433,7 +433,7 @@ def login(
         inputs["email"] = username
         inputs["password"] = password
 
-        method, url = get_next_action_from_soup(login_soup)
+        method, url = get_next_action_from_soup(login_soup, {"name": "signIn"})
 
         login_resp = session.request(method, url, data=inputs)
         login_soup = get_soup(login_resp)
