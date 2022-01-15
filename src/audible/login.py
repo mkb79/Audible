@@ -164,6 +164,8 @@ def get_next_action_from_soup(
     for f in forms_test:
         action = f.get("action")
         method = f.get("method")
+        name = f.get("name")
+        print(f"name {name}")
         print(f"action {action}")
         print(f"method {method}")
         print()
