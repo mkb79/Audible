@@ -157,19 +157,6 @@ def get_inputs_from_soup(
 def get_next_action_from_soup(
         soup: BeautifulSoup, search_field: Optional[Dict[str, str]] = None
 ) -> Tuple[str, str]:
-    # testing forms
-    forms_test = soup.find_all("form")
-    num_forms = len(forms_test)
-    print(f"Found {num_forms} on page.")
-    for f in forms_test:
-        action = f.get("action")
-        method = f.get("method")
-        name = f.get("name")
-        print(f"name {name}")
-        print(f"action {action}")
-        print(f"method {method}")
-        print()
-
     search_field = search_field or {"name": "signIn"}
     form = soup.find("form", search_field) or soup.find("form")
     method = form.get("method", "GET")
