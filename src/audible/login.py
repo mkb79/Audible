@@ -170,6 +170,7 @@ def get_next_action_from_soup(
         print(f"method {method}")
         print()
 
+    search_field = search_field or {"name": "signIn"}
     form = soup.find("form", search_field) or soup.find("form")
     method = form.get("method", "GET")
     url = form["action"]
@@ -389,7 +390,8 @@ def login(
     session = httpx.Client(
         base_url=base_url,
         headers=default_headers,
-        cookies=init_cookies
+        cookies=init_cookies,
+        follow_redirects=True
     )
     code_verifier = create_code_verifier()
 
