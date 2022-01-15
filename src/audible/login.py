@@ -157,6 +157,17 @@ def get_inputs_from_soup(
 def get_next_action_from_soup(
         soup: BeautifulSoup, search_field: Optional[Dict[str, str]] = None
 ) -> Tuple[str, str]:
+    # testing forms
+    forms_test = soup.find_all("form")
+    num_forms = len(forms_test)
+    print(f"Found {num_forms} on page.")
+    for f in forms_test:
+        action = f.get("action")
+        method = f.get("method")
+        print(f"action {action}")
+        print(f"method {method}")
+        print()
+
     form = soup.find("form", search_field) or soup.find("form")
     method = form.get("method", "GET")
     url = form["action"]
