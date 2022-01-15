@@ -157,6 +157,7 @@ def get_inputs_from_soup(
 def get_next_action_from_soup(
         soup: BeautifulSoup, search_field: Optional[Dict[str, str]] = None
 ) -> Tuple[str, str]:
+    search_field = search_field or {"name": "signIn"}
     form = soup.find("form", search_field) or soup.find("form")
     method = form.get("method", "GET")
     url = form["action"]
@@ -376,7 +377,8 @@ def login(
     session = httpx.Client(
         base_url=base_url,
         headers=default_headers,
-        cookies=init_cookies
+        cookies=init_cookies,
+        follow_redirects=True
     )
     code_verifier = create_code_verifier()
 
@@ -420,7 +422,7 @@ def login(
         inputs["email"] = username
         inputs["password"] = password
 
-        method, url = get_next_action_from_soup(login_soup)
+        method, url = get_next_action_from_soup(login_soup, {"name": "signIn"})
 
         login_resp = session.request(method, url, data=inputs)
         login_soup = get_soup(login_resp)
@@ -489,10 +491,18 @@ def login(
         else:
             default_approval_alert_callback()
 
-        url = login_soup.find(id="resend-approval-link")["href"]
+        # url = login_soup.find(id="resend-approval-link")["href"]
+        url = login_resp.url
 
         login_resp = session.get(url)
         login_soup = get_soup(login_resp)
+
+        while login_soup.find(
+                 "span", {"class": "transaction-approval-word-break"}
+         ):  # a-size-base-plus transaction-approval-word-break a-text-bold
+             login_resp = session.get(url)
+             login_soup = get_soup(login_resp)
+             logger.info("still waiting for redirect")
 
     session.close()
 
