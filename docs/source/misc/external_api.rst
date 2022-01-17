@@ -71,9 +71,9 @@ API Endpoints
                                    product_plans, rating, sample, sku, series,
                                    reviews, ws4v, origin, relationships,
                                    review_attrs, categories, badge_types,
-                                   category_ladders, claim_code_url, is_downloaded,
+                                   category_ladders, claim_code_url, in_wishlist, is_archived, is_downloaded,
                                    is_finished, is_playable, is_removable,
-                                   is_returnable, is_visible, order_details,
+                                   is_returnable, is_visible, listening_status, order_details,
                                    origin_asin, pdf_url, percent_complete,
                                    provided_review]
    :query string image_sizes: [1215,408,360,882,315,570,252,558,900,500]
@@ -82,6 +82,8 @@ API Endpoints
    :query string status: [Active, Revoked] ('Active' is the default, 'Revoked'
                          returns audiobooks the user has returned for a refund.)
    :query string parent_asin: asin
+   :query string include_pending: [true, false]
+   :query string state_token: 
 
 .. http:get:: /1.0/library/(string:asin)
 
