@@ -56,8 +56,6 @@ if __name__ == "__main__":
         "PASSWORD",
         locale="us"
     )
-    loop = asyncio.get_event_loop()
-    loop.run_until_complete(main(auth))
 
     # store credentials to file
     auth.to_file(
@@ -65,9 +63,6 @@ if __name__ == "__main__":
         encryption="json",
         password="PASSWORD"
     )
-
-    # register device
-    auth.register_device()
 
     # save again
     auth.to_file()
@@ -82,3 +77,4 @@ if __name__ == "__main__":
 
     # deregister device
     auth.deregister_device()
+

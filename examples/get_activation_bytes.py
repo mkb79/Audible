@@ -14,8 +14,7 @@ auth = Authenticator.from_file(
 auth = Authenticator.from_login(
     username="USERNAME",
     password="PASSWORD",
-    locale="YOUR_COUNTRY_CODE",
-    register=False
+    locale="YOUR_COUNTRY_CODE"
 )
 
 
