@@ -258,7 +258,7 @@ GET /1.0/wishlist
 
 :params:
    - num_results: \\d+ (max: 50)
-   - page: \\d+
+   - page: \\d+ (wishlist start at page 0)
    - response_groups: [contributors, media, price, product_attrs, product_desc, product_extended_attrs, product_plan_details, product_plans, rating, sample, sku, customer_rights, relationships]
    - sort_by: [-Author, -DateAdded, -Price, -Rating, -Title, Author, DateAdded, Price, Rating, Title]
 
