@@ -254,13 +254,51 @@ class Authenticator(httpx.Auth):
             setattr(self, attr, value)
 
     @classmethod
+    def from_dict(
+            cls,
+            data: Dict,
+            locale: Optional[Union[str, "Locale"]] = None
+    ) -> "Authenticator":
+        """Instantiate an Authenticator from authentication file.
+
+        .. versionadded:: v0.7.1
+
+        Args:
+            data: A dictonary with the authentication data
+            locale: The country code of the Audible marketplace to interact
+                with. If ``None`` the country code from file is used.
+
+
+        Returns:
+            A new Authenticator instance.
+        """
+        auth = cls()
+
+        locale_code = data.pop("locale_code", None)
+        locale = locale or locale_code
+        auth.locale = locale
+
+        if "login_cookies" in data:
+            auth.website_cookies = data.pop("login_cookies")
+
+        auth._update_attrs(**data)
+
+        logger.info(
+            (f"load data from dictionary for locale "
+             f"{auth.locale.country_code}")
+        )
+
+        return auth
+
+    @classmethod
     def from_file(
             cls,
             filename: Union[str, "pathlib.Path"],
             password: Optional[str] = None,
             locale: Optional[Union[str, "Locale"]] = None,
             encryption: Optional[Union[bool, str]] = None,
-            **kwargs) -> "Authenticator":
+            **kwargs
+    ) -> "Authenticator":
         """Instantiate an Authenticator from authentication file.
 
         .. versionadded:: v0.5.0
@@ -309,9 +347,8 @@ class Authenticator(httpx.Auth):
 
         # login cookies where renamed to website cookies
         # old names must be adjusted
-        login_cookies = json_data.pop("login_cookies", None)
-        if login_cookies:
-            json_data["website_cookies"] = login_cookies
+        if "login_cookies" in json_data:
+            auth.website_cookies = json_data.pop("login_cookies")
 
         auth._update_attrs(**json_data)
 
@@ -518,6 +555,26 @@ class Authenticator(httpx.Auth):
 
         return available_modes
 
+    def to_dict(self) -> Dict:
+        """Returns authentication data as dict.
+        
+        .. versionadded:: 0.7.1
+        """
+        data = {
+            "website_cookies": self.website_cookies,
+            "adp_token": self.adp_token,
+            "access_token": self.access_token,
+            "refresh_token": self.refresh_token,
+            "device_private_key": self.device_private_key,
+            "store_authentication_cookie": self.store_authentication_cookie,
+            "device_info": self.device_info,
+            "customer_info": self.customer_info,
+            "expires": self.expires,
+            "locale_code": self.locale.country_code,
+            "activation_bytes": self.activation_bytes
+        }
+        return data
+
     def to_file(
             self,
             filename: Union["pathlib.Path", str] = None,
@@ -546,23 +603,11 @@ class Authenticator(httpx.Auth):
         else:
             encryption = self.encryption or False
 
-        body = {
-            "website_cookies": self.website_cookies,
-            "adp_token": self.adp_token,
-            "access_token": self.access_token,
-            "refresh_token": self.refresh_token,
-            "device_private_key": self.device_private_key,
-            "store_authentication_cookie": self.store_authentication_cookie,
-            "device_info": self.device_info,
-            "customer_info": self.customer_info,
-            "expires": self.expires,
-            "locale_code": self.locale.country_code,
-            "activation_bytes": self.activation_bytes
-        }
-        json_body = json.dumps(body, indent=indent)
+        data = self.to_dict()
+        json_data = json.dumps(data, indent=indent)
 
         if encryption is False:
-            target_file.write_text(json_body)
+            target_file.write_text(json_data)
             crypter = None
         else:
             if password:
@@ -575,7 +620,7 @@ class Authenticator(httpx.Auth):
                 raise ValueError("No password provided")
 
             crypter.to_file(
-                json_body,
+                json_data,
                 filename=target_file,
                 encryption=encryption,
                 indent=indent
