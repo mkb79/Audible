@@ -74,7 +74,7 @@ API Endpoints
                                    category_ladders, claim_code_url, in_wishlist, is_archived, is_downloaded,
                                    is_finished, is_playable, is_removable,
                                    is_returnable, is_visible, listening_status, order_details,
-                                   origin_asin, pdf_url, percent_complete,
+                                   origin_asin, pdf_url, percent_complete, periodicals,
                                    provided_review]
    :query string image_sizes: [1215,408,360,882,315,570,252,558,900,500]
    :query string sort_by: [-Author, -Length, -Narrator, -PurchaseDate, -Title,
@@ -97,7 +97,7 @@ API Endpoints
                                    badge_types, category_ladders, claim_code_url,
                                    is_downloaded, is_finished, is_returnable,
                                    origin_asin, pdf_url, percent_complete,
-                                   provided_review]
+                                   periodicals, provided_review]
 
 .. http:post:: /1.0/library/item
 
