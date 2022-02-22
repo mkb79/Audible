@@ -66,7 +66,7 @@ API Endpoints
    :query string title: a title
    :query string author: a author
    :query string response_groups: [contributors, customer_rights, media, price,
-                                   product_attrs, product_desc,
+                                   product_attrs, product_desc, product_details,
                                    product_extended_attrs, product_plan_details,
                                    product_plans, rating, sample, sku, series,
                                    reviews, ws4v, origin, relationships,
@@ -90,7 +90,7 @@ API Endpoints
    :param asin: The asin of the book
    :type asin: string
    :query string response_groups: [contributors, media, price, product_attrs,
-                                   product_desc, product_extended_attrs,
+                                   product_desc, product_details, product_extended_attrs,
                                    product_plan_details, product_plans, rating,
                                    sample, sku, series, reviews, ws4v, origin,
                                    relationships, review_attrs, categories,
