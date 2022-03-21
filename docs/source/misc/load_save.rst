@@ -18,6 +18,15 @@ And can then be reused later like so::
    The provided `FILENAME` is set as default when loading from or save to file.
    Simply run ``auth.to_file()`` to overwrite the previous loaded file.
 
+.. versionadded:: v0.7.1
+
+   The :meth:`audible.Authenticator.to_dict` and :meth:`audible.Authenticator.from_dict` methods.
+
+With :meth:`audible.Authenticator.to_dict` you can get the authentication data as a 
+dictionary. This enables you to implement your own save/load methods. Simply
+use the :meth:`audible.Authenticator.from_dict` classmethod to load the data from 
+the dictionary.
+
 Encrypted Load/Save
 ===================
 
@@ -126,4 +135,3 @@ unencrypted. If the `Authenticator` can't load your data, you can try::
        decrypted_file=FILENAME,
        password=PASSWORD_FOR_ENCRYPTED_FILE
    )
-
