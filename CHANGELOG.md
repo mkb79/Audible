@@ -8,7 +8,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ### Added
 
-- `Authenticator.from_dict`to instantiate an `Authenticator`from dict and `Authenticator.to_dict`to get authentication data as dict
+- `Authenticator.from_dict` to instantiate an `Authenticator` from dict and `Authenticator.to_dict` to get authentication data as dict
 
 ## [0.7.0] - 2021-10-25
 
