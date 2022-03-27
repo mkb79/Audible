@@ -66,7 +66,7 @@ def register(
     if with_username:
         reg_domain = f"audible.{domain}"
 
-    resp = httpx.post(f"https://{reg_domain}/auth/register", json=body)
+    resp = httpx.post(f"https://api.{reg_domain}/auth/register", json=body)
 
     resp_json = resp.json()
     if resp.status_code != 200:
