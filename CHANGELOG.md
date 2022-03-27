@@ -8,6 +8,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 -
 
+## [0.7.2] - 2022-03-27
+
+### Bugfix
+
+- fix a bug in registration url 
+
 ## [0.7.1] - 2022-03-27
 
 ### Added
