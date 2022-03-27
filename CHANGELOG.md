@@ -6,9 +6,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## Unreleased
 
+-
+
+## [0.7.1] - 2022-03-27
+
 ### Added
 
 - `Authenticator.from_dict` to instantiate an `Authenticator` from dict and `Authenticator.to_dict` to get authentication data as dict
+
+### Bugfix
+
+- register a new device with `with_username=True` results in a server error due to wrong registration domain
 
 ## [0.7.0] - 2021-10-25
 
