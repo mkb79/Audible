@@ -416,7 +416,10 @@ class Authenticator(httpx.Auth):
             approval_callback=approval_callback
         )
         logger.info(f"logged in to Audible as {username}")
-        register_device = register_(**login_device)
+        register_device = register_(
+            with_username=with_username,
+            **login_device
+        )
 
         auth._update_attrs(**register_device)
         logger.info("registered Audible device")
@@ -465,7 +468,10 @@ class Authenticator(httpx.Auth):
         )
         logger.info("logged in to Audible.")
 
-        register_device = register_(**login_device)
+        register_device = register_(
+            with_username=with_username,
+            **login_device
+        )
 
         auth._update_attrs(**register_device)
         logger.info("registered Audible device")
@@ -722,4 +728,3 @@ class Authenticator(httpx.Auth):
     @property
     def access_token_expired(self) -> bool:
         return datetime.fromtimestamp(self.expires) <= datetime.utcnow()
-

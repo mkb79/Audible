@@ -10,7 +10,9 @@ def register(
         authorization_code: str,
         code_verifier: bytes,
         domain: str,
-        serial: str = None) -> Dict[str, Any]:
+        serial: str = None,
+        with_username: bool = False
+) -> Dict[str, Any]:
     """Registers a dummy Audible device. 
 
     Args:
@@ -18,9 +20,13 @@ def register(
         code_verifier: The verifier code from authorization
         domain: The top level domain of the requested Amazon server (e.g. com).
         serial: The device serial
+        with_username: If ``True`` uses `audible` domain instead of `amazon`.
     
     Returns:
         Additional authentication data needed for access Audible API.
+
+    .. versionadded:: v0.7.1
+           The with_username argument
     """
 
     body = {
@@ -56,7 +62,11 @@ def register(
         "requested_extensions": ["device_info", "customer_info"]
     }
 
-    resp = httpx.post(f"https://api.amazon.{domain}/auth/register", json=body)
+    reg_domain = f"amazon.{domain}"
+    if with_username:
+        reg_domain = f"audible.{domain}"
+
+    resp = httpx.post(f"https://{reg_domain}/auth/register", json=body)
 
     resp_json = resp.json()
     if resp.status_code != 200:
@@ -127,4 +137,3 @@ def deregister(
         raise Exception(resp_json)
 
     return resp_json
-
