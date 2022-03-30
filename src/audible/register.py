@@ -62,11 +62,12 @@ def register(
         "requested_extensions": ["device_info", "customer_info"]
     }
 
-    reg_domain = f"amazon.{domain}"
-    if with_username:
-        reg_domain = f"audible.{domain}"
+    target_domain = "audible" if with_username else "amazon"
 
-    resp = httpx.post(f"https://api.{reg_domain}/auth/register", json=body)
+    resp = httpx.post(
+        f"https://api.{target_domain}.{domain}/auth/register",
+        json=body
+    )
 
     resp_json = resp.json()
     if resp.status_code != 200:
@@ -105,7 +106,10 @@ def register(
 
 
 def deregister(
-        access_token: str, domain: str, deregister_all: bool = False
+        access_token: str,
+        domain: str,
+        deregister_all: bool = False,
+        with_username: bool = False
 ) -> Dict[str, Any]:
     """Deregister a previous registered Audible device.
     
@@ -118,16 +122,22 @@ def deregister(
             which you want to deregister.
         domain: The top level domain of the requested Amazon server (e.g. com).
         deregister_all: If ``True``, deregister all Audible devices on Amazon.
+        with_username: If ``True`` uses `audible` domain instead of `amazon`.
 
     Returns:
         The response for the deregister request. Contains errors, if some occurs.
+
+    .. versionadded:: v0.8
+           The with_username argument
     """
 
     body = {"deregister_all_existing_accounts": deregister_all}
     headers = {"Authorization": f"Bearer {access_token}"}
 
+    target_domain = "audible" if with_username else "amazon"
+
     resp = httpx.post(
-        f"https://api.amazon.{domain}/auth/deregister",
+        f"https://api.{target_domain}.{domain}/auth/deregister",
         json=body,
         headers=headers
     )

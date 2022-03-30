@@ -25,7 +25,11 @@ if TYPE_CHECKING:
 logger = logging.getLogger("audible.auth")
 
 
-def refresh_access_token(refresh_token: str, domain: str) -> Dict[str, Any]:
+def refresh_access_token(
+        refresh_token: str,
+        domain: str,
+        with_username: bool = False
+) -> Dict[str, Any]:
     """Refreshes an access token.
 
     Args:    
@@ -33,12 +37,16 @@ def refresh_access_token(refresh_token: str, domain: str) -> Dict[str, Any]:
             registration.
         domain: The top level domain of the requested Amazon server
             (e.g. com).
+        with_username: If ``True`` uses `audible` domain instead of `amazon`.
 
     Returns:
         A dict with the new access token and expiration timestamp.
 
     Note:    
         The new access token is valid for 60 minutes.
+
+    .. versionadded:: v0.8
+           The with_username argument
     """
 
     body = {
@@ -49,7 +57,12 @@ def refresh_access_token(refresh_token: str, domain: str) -> Dict[str, Any]:
         "source_token_type": "refresh_token"
     }
 
-    resp = httpx.post(f"https://api.amazon.{domain}/auth/token", data=body)
+    target_domain = "audible" if with_username else "amazon"
+
+    resp = httpx.post(
+        f"https://api.{target_domain}.{domain}/auth/token",
+        data=body
+    )
     resp.raise_for_status()
     resp_dict = resp.json()
 
@@ -61,7 +74,10 @@ def refresh_access_token(refresh_token: str, domain: str) -> Dict[str, Any]:
 
 
 def refresh_website_cookies(
-        refresh_token: str, domain: str, cookies_domain: str
+        refresh_token: str,
+        domain: str,
+        cookies_domain: str,
+        with_username: bool = False
 ) -> Dict[str, str]:
     """Fetches website cookies for a specific domain.
 
@@ -72,13 +88,19 @@ def refresh_website_cookies(
             (e.g. com, de, fr).
         cookies_domain: The top level domain scope for the cookies
             (e.g. com, de, fr).
+        with_username: If ``True`` uses `audible` domain instead of `amazon`.
     
     Returns:
         The requested cookies for the Amazon and Audible website for the given
         `cookies_domain` scope.
+    
+    .. versionadded:: v0.8
+           The with_username argument
     """
 
-    url = f"https://www.amazon.{domain}/ap/exchangetoken"
+    target_domain = "audible" if with_username else "amazon"
+
+    url = f"https://www.{target_domain}.{domain}/ap/exchangetoken/cookies"
 
     body = {
         "app_name": "Audible",
@@ -86,7 +108,7 @@ def refresh_website_cookies(
         "source_token": refresh_token,
         "requested_token_type": "auth_cookies",
         "source_token_type": "refresh_token",
-        "domain": f".amazon.{cookies_domain}"
+        "domain": f".{target_domain}.{cookies_domain}"
     }
 
     resp = httpx.post(url, data=body)
@@ -207,6 +229,7 @@ class Authenticator(httpx.Auth):
         refresh_token (:obj:`str`, :obj:`None`):
         store_authentication_cookie (:obj:`dict`, :obj:`None`):
         website_cookies (:obj:`dict`, :obj:`None`):
+        with_username (:obj:`bool`, :obj:`None`):
     """
 
     access_token: Optional[str] = None
@@ -223,6 +246,7 @@ class Authenticator(httpx.Auth):
     refresh_token: Optional[str] = None
     store_authentication_cookie: Optional[Dict] = None
     website_cookies: Optional[Dict] = None
+    with_username: Optional[bool] = None
     requires_request_body: bool = True
     _forbid_new_attrs: bool = True
     _apply_test_convert: bool = True
@@ -421,7 +445,9 @@ class Authenticator(httpx.Auth):
             **login_device
         )
 
-        auth._update_attrs(**register_device)
+        auth._update_attrs(
+            with_username=with_username,
+            **register_device)
         logger.info("registered Audible device")
 
         return auth
@@ -473,7 +499,10 @@ class Authenticator(httpx.Auth):
             **login_device
         )
 
-        auth._update_attrs(**register_device)
+        auth._update_attrs(
+            with_username=with_username,
+            **register_device
+        )
         logger.info("registered Audible device")
 
         return auth
@@ -565,6 +594,9 @@ class Authenticator(httpx.Auth):
         """Returns authentication data as dict.
         
         .. versionadded:: 0.7.1
+
+        .. versionadded:: v0.8
+           The returned dict now contains the `with_username` attribute
         """
         data = {
             "website_cookies": self.website_cookies,
@@ -577,6 +609,7 @@ class Authenticator(httpx.Auth):
             "customer_info": self.customer_info,
             "expires": self.expires,
             "locale_code": self.locale.country_code,
+            "with_username": self.with_username,
             "activation_bytes": self.activation_bytes
         }
         return data
@@ -592,8 +625,10 @@ class Authenticator(httpx.Auth):
         """Save authentication data to file.
         
         .. versionadded:: 0.5.1
-        
            Save activation bytes to auth file
+
+        .. versionadded:: v0.8
+           The saved file now contains the `with_username` attribute
        """
 
         if not (filename or self.filename):
@@ -642,12 +677,15 @@ class Authenticator(httpx.Auth):
         logger.info(f"set filename {target_file} as default")
 
     def deregister_device(
-            self, deregister_all: bool = False) -> Dict[str, Any]:
+            self,
+            deregister_all: bool = False
+    ) -> Dict[str, Any]:
         self.refresh_access_token()
         return deregister_(
             access_token=self.access_token,
             deregister_all=deregister_all,
-            domain=self.locale.domain
+            domain=self.locale.domain,
+            with_username=self.with_username
         )
 
     def refresh_access_token(self, force: bool = False) -> None:
@@ -658,7 +696,8 @@ class Authenticator(httpx.Auth):
                 raise NoRefreshToken(message)
             refresh_data = refresh_access_token(
                 refresh_token=self.refresh_token,
-                domain=self.locale.domain
+                domain=self.locale.domain,
+                with_username=self.with_username
             )
 
             self._update_attrs(**refresh_data)
@@ -672,7 +711,11 @@ class Authenticator(httpx.Auth):
         cookies_domain = test_convert("locale", country_code).domain
 
         self.website_cookies = refresh_website_cookies(
-            self.refresh_token, self.locale.domain, cookies_domain)
+            self.refresh_token,
+            self.locale.domain,
+            cookies_domain,
+            self.with_username
+        )
 
     def get_activation_bytes(
             self,
