@@ -214,6 +214,18 @@ class Authenticator(httpx.Auth):
         A new class instance have to be instantiate with
         :meth:`Authenticator.from_login` or :meth:`Authenticator.from_file`.
 
+    .. versionadded:: v0.8
+           The with_username attribute.
+
+    Note:
+        Auth data saved with v0.8 or later 
+        can not be loaded with versions less than v0.8!
+        If an auth file for an pre-Amazon account (with_username=True) was 
+        created with v0.7.1 or v0.7.2 set `auth.with_username` to `True` and 
+        save the data again. After this deregistration, refreshing access 
+        tokens and requesting cookies for another domain will work for 
+        pre-Amazon accounts.
+
     Attributes:
         access_token (:obj:`str`, :obj:`None`):
         activation_bytes (:obj:`str`, :obj:`None`):
@@ -305,6 +317,8 @@ class Authenticator(httpx.Auth):
         if "login_cookies" in data:
             auth.website_cookies = data.pop("login_cookies")
 
+        data.setdefault("with_username", False)
+
         auth._update_attrs(**data)
 
         logger.info(
@@ -373,6 +387,8 @@ class Authenticator(httpx.Auth):
         # old names must be adjusted
         if "login_cookies" in json_data:
             auth.website_cookies = json_data.pop("login_cookies")
+
+        json_data.setdefault("with_username", False)
 
         auth._update_attrs(**json_data)
 
