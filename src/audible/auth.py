@@ -258,7 +258,7 @@ class Authenticator(httpx.Auth):
     refresh_token: Optional[str] = None
     store_authentication_cookie: Optional[Dict] = None
     website_cookies: Optional[Dict] = None
-    with_username: Optional[bool] = None
+    with_username: Optional[bool] = False
     requires_request_body: bool = True
     _forbid_new_attrs: bool = True
     _apply_test_convert: bool = True
@@ -316,8 +316,6 @@ class Authenticator(httpx.Auth):
 
         if "login_cookies" in data:
             auth.website_cookies = data.pop("login_cookies")
-
-        data.setdefault("with_username", False)
 
         auth._update_attrs(**data)
 
@@ -387,8 +385,6 @@ class Authenticator(httpx.Auth):
         # old names must be adjusted
         if "login_cookies" in json_data:
             auth.website_cookies = json_data.pop("login_cookies")
-
-        json_data.setdefault("with_username", False)
 
         auth._update_attrs(**json_data)
 
