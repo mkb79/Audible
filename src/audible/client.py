@@ -1,7 +1,7 @@
 import inspect
 import json
 import logging
-from typing import Dict, Optional, Union
+from typing import Any, Callable, Dict, Optional, Union
 
 import httpx
 from httpx import URL
@@ -20,6 +20,31 @@ logger = logging.getLogger("audible.client")
 httpx_client_request_args = list(
     inspect.signature(httpx.Client.request).parameters.keys()
 )
+
+
+def default_response_callback(resp: httpx.Response) -> Union[Dict, str]:
+    raise_for_status(resp)
+    return convert_response_content(resp)
+
+
+def raise_for_status(resp: httpx.Response) -> None:
+    try:
+        resp.raise_for_status()
+    except httpx.HTTPStatusError as e:
+        code = resp.status_code
+        data = convert_response_content(resp)
+        if code == 400:
+            raise BadRequest(resp, data) from None
+        elif code in (401, 403):  # Unauthorized request - Invalid credentials
+            raise Unauthorized(resp, data) from None
+        elif code == 404:  # not found
+            raise NotFoundError(resp, data) from None
+        elif code == 429:
+            raise RatelimitError(resp, data) from None
+        elif code == 503:  # Maintainence
+            raise ServerError(resp, data) from None
+        else:
+            raise UnexpectedError(resp, data) from e
 
 
 def convert_response_content(resp: httpx.Response) -> Union[Dict, str]:
@@ -41,6 +66,8 @@ class Client:
             country_code: Optional[str] = None,
             headers: Optional[HeaderTypes] = None,
             timeout: int = 10,
+            response_callback: Optional[
+                Callable[[httpx.Response], Any]] = None,
             **session_kwargs
     ):
         locale = Locale(country_code.lower()) if country_code else auth.locale
@@ -60,6 +87,10 @@ class Client:
             auth=auth,
             **session_kwargs
         )
+
+        if response_callback is None:
+            response_callback = default_response_callback
+        self._response_callback = response_callback
 
     def __enter__(self):
         return self
@@ -108,26 +139,6 @@ class Client:
         user_profile = self.get_user_profile()
         return user_profile["name"]
 
-    def _raise_for_status_error(self, resp: httpx.Response):
-        code = resp.status_code
-
-        data = convert_response_content(resp)
-
-        if 300 > code >= 200:  # Request was successful
-            return
-        elif code == 400:
-            raise BadRequest(resp, data)
-        elif code in (401, 403):  # Unauthorized request - Invalid credentials
-            raise Unauthorized(resp, data)
-        elif code == 404:  # not found
-            raise NotFoundError(resp, data)
-        elif code == 429:
-            raise RatelimitError(resp, data)
-        elif code == 503:  # Maintainence
-            raise ServerError(resp, data)
-        else:
-            raise UnexpectedError(resp, data)
-
     def _prepare_api_path(self, path: str) -> httpx.URL:
         if path.startswith("/"):
             path = path[1:]
@@ -140,8 +151,18 @@ class Client:
         path = "/" + path
         return self._api_url.copy_with(path=path)
 
-    def _request(self, method: str, path: str, **kwargs) -> Union[Dict, str]:
+    def _request(
+            self,
+            method: str,
+            path: str,
+            response_callback: Optional[
+                Callable[[httpx.Response], Any]] = None,
+            **kwargs
+    ) -> Any:
         url = self._prepare_api_path(path)
+
+        if response_callback is None:
+            response_callback = self._response_callback
 
         try:
             resp = self.session.request(method, url, **kwargs)
@@ -155,9 +176,7 @@ class Client:
                 )
             )
 
-            resp.raise_for_status()
-
-            return convert_response_content(resp)
+            return response_callback(resp)
 
         except (
             httpx.ConnectTimeout, httpx.ReadTimeout, httpx.WriteTimeout,
@@ -168,9 +187,6 @@ class Client:
             raise NetworkError
         except httpx.RequestError as exc:
             raise RequestError(exc)
-        except httpx.HTTPStatusError as exc:
-            self._raise_for_status_error(exc.response)
-
         finally:
             try:
                 resp.close()
@@ -194,6 +210,7 @@ class Client:
         Args:
             method: The http request method.
             url: The url to make requests to.
+            stream: If `True`, streams the response
             apply_auth_flow: If `True`, the :meth:`Authenticator.auth_flow`
                 will be applied to the request.
             apply_cookies: If `True`, website cookies from
@@ -215,28 +232,77 @@ class Client:
         r = self.session.stream if stream else self.session.request
         return r(method, url, cookies=cookies, auth=auth, **kwargs)
 
-    def _prepare_params(self, kwargs: Dict) -> None:
+    @staticmethod
+    def _prepare_params(kwargs: Dict) -> None:
         params = kwargs.pop("params", {})
         for key in list(kwargs.keys()):
             if key not in httpx_client_request_args:
                 params[key] = kwargs.pop(key)
         kwargs["params"] = params
 
-    def get(self, path: str, **kwargs) -> Union[Dict, str]:
+    def get(
+            self,
+            path: str,
+            response_callback: Optional[
+                Callable[[httpx.Response], Any]] = None,
+            **kwargs
+    ) -> Any:
         self._prepare_params(kwargs)
-        return self._request("GET", path, **kwargs)
+        return self._request(
+            method="GET",
+            path=path,
+            response_callback=response_callback,
+            **kwargs
+        )
 
-    def post(self, path: str, body: Dict, **kwargs) -> Union[Dict, str]:
+    def post(
+            self,
+            path: str,
+            body: Dict,
+            response_callback: Optional[
+                Callable[[httpx.Response], Any]] = None,
+            **kwargs
+    ) -> Any:
         self._prepare_params(kwargs)
-        return self._request("POST", path, json=body, **kwargs)
+        return self._request(
+            method="POST",
+            path=path,
+            response_callback=response_callback,
+            json=body,
+            **kwargs
+        )
 
-    def delete(self, path: str, **kwargs) -> Union[Dict, str]:
+    def delete(
+            self,
+            path: str,
+            response_callback: Optional[
+                Callable[[httpx.Response], Any]] = None,
+            **kwargs
+    ) -> Any:
         self._prepare_params(**kwargs)
-        return self._request("DELETE", path, **kwargs)
+        return self._request(
+            method="DELETE",
+            path=path,
+            response_callback=response_callback,
+            **kwargs
+        )
 
-    def put(self, path: str, body: Dict, **kwargs) -> Union[Dict, str]:
+    def put(
+            self,
+            path: str,
+            body: Dict,
+            response_callback: Optional[
+                Callable[[httpx.Response], Any]] = None,
+            **kwargs
+    ) -> Any:
         self._prepare_params(kwargs)
-        return self._request("PUT", path, json=body, **kwargs)
+        return self._request(
+            method="PUT",
+            path=path,
+            response_callback=response_callback,
+            json=body,
+            **kwargs
+        )
 
 
 class AsyncClient(Client):
@@ -255,8 +321,16 @@ class AsyncClient(Client):
         await self.session.aclose()
 
     async def _request(
-            self, method: str, path: str, **kwargs) -> Union[Dict, str]:
+            self,
+            method: str,
+            path: str,
+            response_callback: Optional[
+                Callable[[httpx.Response], Any]] = None,
+            **kwargs) -> Union[Dict, str]:
         url = self._prepare_api_path(path)
+
+        if response_callback is None:
+            response_callback = self._response_callback
 
         try:
             resp = await self.session.request(method, url, **kwargs)
@@ -270,9 +344,7 @@ class AsyncClient(Client):
                 )
             )
 
-            resp.raise_for_status()
-
-            return convert_response_content(resp)
+            return response_callback(resp)
 
         except (
             httpx.ConnectTimeout, httpx.ReadTimeout, httpx.WriteTimeout,
@@ -283,9 +355,6 @@ class AsyncClient(Client):
             raise NetworkError
         except httpx.RequestError as exc:
             raise RequestError(exc)
-        except httpx.HTTPStatusError as exc:
-            self._raise_for_status_error(exc.response)
-
         finally:
             try:
                 await resp.aclose()

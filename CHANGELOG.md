@@ -12,6 +12,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 - full support of pre-Amazon accounts (e.g. refresh access token, deregister device)
 - `Client` and `AsynClient` now accepts session kwargs which are bypassed to the underlying httpx Client
+- a `respone_callback` can now be set to `Client` and `AsyncClient` class to allow custom preparation of response output
 
 ### Changed
 
