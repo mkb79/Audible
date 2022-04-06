@@ -1,9 +1,11 @@
+import inspect
 import json
 import logging
-from typing import Dict, Optional, Tuple, Union
+from typing import Dict, Optional, Union
 
 import httpx
 from httpx import URL
+from httpx._types import HeaderTypes
 
 from .auth import Authenticator
 from .exceptions import (
@@ -14,6 +16,10 @@ from .localization import LOCALE_TEMPLATES, Locale
 
 
 logger = logging.getLogger("audible.client")
+
+httpx_client_request_args = list(
+    inspect.signature(httpx.Client.request).parameters.keys()
+)
 
 
 def convert_response_content(resp: httpx.Response) -> Union[Dict, str]:
@@ -33,18 +39,26 @@ class Client:
             self,
             auth: Authenticator,
             country_code: Optional[str] = None,
-            timeout: int = 10):
+            headers: Optional[HeaderTypes] = None,
+            timeout: int = 10,
+            **session_kwargs
+    ):
         locale = Locale(country_code.lower()) if country_code else auth.locale
         self._api_url = httpx.URL(self._API_URL_TEMP + locale.domain)
-        headers = {
+
+        default_headers = {
             "Accept": "application/json",
             "Accept-Charset": "utf-8",
             "Content-Type": "application/json"
         }
+        if headers is not None:
+            default_headers.update(headers)
+
         self.session = self._SESSION(
-            headers=headers,
+            headers=default_headers,
             timeout=timeout,
-            auth=auth
+            auth=auth,
+            **session_kwargs
         )
 
     def __enter__(self):
@@ -114,7 +128,7 @@ class Client:
         else:
             raise UnexpectedError(resp, data)
 
-    def _prepare_api_path(self, path: str) -> str:
+    def _prepare_api_path(self, path: str) -> httpx.URL:
         if path.startswith("/"):
             path = path[1:]
 
@@ -201,34 +215,28 @@ class Client:
         r = self.session.stream if stream else self.session.request
         return r(method, url, cookies=cookies, auth=auth, **kwargs)
 
-    def _split_kwargs(self, **kwargs) -> Tuple:
-        protected_kwargs = [
-            "method", "url", "params", "data", "json", "headers", "cookies",
-            "files", "auth", "timeout", "allow_redirects", "proxies", "verify",
-            "stream", "cert"
-        ]
+    def _prepare_params(self, kwargs: Dict) -> None:
         params = kwargs.pop("params", {})
         for key in list(kwargs.keys()):
-            if key not in protected_kwargs:
+            if key not in httpx_client_request_args:
                 params[key] = kwargs.pop(key)
-
-        return params, kwargs
+        kwargs["params"] = params
 
     def get(self, path: str, **kwargs) -> Union[Dict, str]:
-        params, kwargs = self._split_kwargs(**kwargs)
-        return self._request("GET", path, params=params, **kwargs)
+        self._prepare_params(kwargs)
+        return self._request("GET", path, **kwargs)
 
     def post(self, path: str, body: Dict, **kwargs) -> Union[Dict, str]:
-        params, kwargs = self._split_kwargs(**kwargs)
-        return self._request("POST", path, params=params, json=body, **kwargs)
+        self._prepare_params(kwargs)
+        return self._request("POST", path, json=body, **kwargs)
 
     def delete(self, path: str, **kwargs) -> Union[Dict, str]:
-        params, kwargs = self._split_kwargs(**kwargs)
-        return self._request("DELETE", path, params=params, **kwargs)
+        self._prepare_params(**kwargs)
+        return self._request("DELETE", path, **kwargs)
 
     def put(self, path: str, body: Dict, **kwargs) -> Union[Dict, str]:
-        params, kwargs = self._split_kwargs(**kwargs)
-        return self._request("PUT", path, params=params, json=body, **kwargs)
+        self._prepare_params(kwargs)
+        return self._request("PUT", path, json=body, **kwargs)
 
 
 class AsyncClient(Client):
@@ -283,4 +291,3 @@ class AsyncClient(Client):
                 await resp.aclose()
             except UnboundLocalError:
                 pass
-
