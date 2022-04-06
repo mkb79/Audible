@@ -16,7 +16,7 @@ if TYPE_CHECKING:
 def get_player_id() -> str:
     """Build a software player Id."""
 
-    player_id = base64.encodebytes(hashlib.sha1(b"").digest()).rstrip()
+    player_id = base64.encodebytes(hashlib.sha1(b"").digest()).rstrip()  # noqa
     return player_id.decode("ascii")
 
 
@@ -168,7 +168,9 @@ def get_activation_bytes(
     else:
         raise AuthFlowError("No valid auth mode to fetch activation bytes.")
 
-    pathlib.Path(filename).write_bytes(activation) if filename else ""
+    if filename:
+        pathlib.Path(filename).write_bytes(activation)
+
     if extract:
         activation = extract_activation_bytes(activation)
 
