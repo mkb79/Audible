@@ -8,6 +8,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 -
 
+### Added
+
+- full support of pre-Amazon accounts (e.g. refresh access token, deregister device)
+- `Client` and `AsynClient` now accepts session kwargs which are bypassed to the underlying httpx Client
+
+### Changed
+
+- rename (and rework) `Client._split_kwargs` to `Client._prepare_params`
+
 ## [0.7.2] - 2022-03-27
 
 ### Bugfix
