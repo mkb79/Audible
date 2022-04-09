@@ -103,298 +103,259 @@ API Endpoints
 
    :<json string asin: The asin of the book
 
-POST(?) /1.0/library/item
--------------------------
+.. http:post:: /1.0/library/item
 
-:body:
-   - asin
+   :<json asin:
 
-POST(?) /1.0/library/item/%s/%s
--------------------------------
+.. http:post:: /1.0/library/item/(param1)/(param2)
 
-:body:
-   -
+   :param param1:
+   :param param2:
 
-POST(?) /1.0/library/collections/%s/channels/%s
------------------------------------------------
+   :<json unknown:
 
-:body:
-   - customer_id:
-   - marketplace:
+.. http:post:: /1.0/library/collections/(param1)/channels/(param2)
 
-POST(?) /1.0/library/collections/%s/products/%s
------------------------------------------------
+   :param param1:
+   :param param2:
 
-:body:
-   - channel_id:
+   :<json customer_id:
+   :<json marketplace:
 
-GET /1.0/library/collections
-----------------------------
+.. http:post:: /1.0/library/collections/(param1)/products/(param2)
 
-:params:
-   - customer_id:
-   - marketplace:
+   :param param1:
+   :param param2:
 
-POST(?) /1.0/library/collections
---------------------------------
+   :<json channel_id:
 
-:body:
-   - collection_type:
+.. http:get:: /1.0/library/collections
 
-GET /1.0/library/collections/%s
--------------------------------
+   :query customer_id:
+   :query marketplace:
 
-:params:
-   - customer_id:
-   - marketplace:
-   - page_size:
-   - continuation_token:
+.. http:post:: /1.0/library/collections
 
-GET /1.0/library/collections/%s/products
-----------------------------------------
+   :<json collection_type:
 
-:params:
-   - customer_id:
-   - marketplace:
-   - page_size:
-   - continuation_token:
-   - image_sizes:
+.. http:get:: /1.0/library/collections/(param1)
 
-GET /1.0/collections
---------------------
+   :param param1:
+   :query customer_id:
+   :query marketplace:
+   :query page_size:
+   :query continuation_token:
 
-:params:
+.. http:get:: /1.0/library/collections/(param1)/products
 
-POST /1.0/collections
----------------------
+   :param param1:
+   :query customer_id:
+   :query marketplace:
+   :query page_size:
+   :query continuation_token:
+   :query image_sizes:
 
-Create a new collection
+.. http:get:: /1.0/collections
 
-:body:
-   - name: 
-   - asins: []
-   - description
+.. http:post:: /1.0/collections
 
-:returns:
-   - collection_id
-   - creation_date
-   - customer_id
-   - marketplace
+   Create a new collection
 
-GET /1.0/collections/%{collection_id}
--------------------------------------
+   :<json name:
+   :<json asins: []
+   :<json description:
 
-:params:
+   :>json collection_id:
+   :>json creation_date:
+   :>json customer_id:
+   :>json marketplace:
 
-PUT /1.0/collections/%{collection_id}
--------------------------------------
+.. http:get:: /1.0/collections/(collection_id)
 
-Modify a collection
+   :param collection_id:
 
-:body:
-   - state_token
-   - collection_id: %{collection_id}
-   - name
-   - description
+.. http:put:: /1.0/collections/(collection_id)
 
-:returns:
-   - state_token
-   - collection_id: %{collection_id}
-   - name
-   - description
+   Modify a collection
 
-GET /1.0/collections/%{collection_id}/items
--------------------------------------------
+   :param collection_id:
 
-:params:
-   - response_groups: [always-returned]
+   :<json state_token:
+   :<json collection_id:
+   :<json name:
+   :<json description:
 
-POST /1.0/collections/%{collection_id}/items
---------------------------------------------
+   :>json state_token:
+   :>json collection_id:
+   :>json name:
+   :>json description:
 
-Add item(s) to a collection
+.. http:get:: /1.0/collections/(collection_id)/items
 
-:body:
-   - collection_id: %{collection_id}
-   - asins: []
+   :param collection_id:
+   :query response_groups: [always-returned]
 
-:returns:
-   - description
-   - name
-   - num_items_added: int
-   - state_token
+.. http:post:: /1.0/collections/(collection_id)/items
 
-GET /1.0/orders
----------------
+   Add item(s) to a collection
 
- :params:
-    - unknown
+   :param collection_id:
+   :<json collection_id:
+   :<json asins: []
 
- Returns order history from at least the past 6 months. Supports pagination.
+   :>json description:
+   :>json name:
+   :>json int num_items_added:
+   :>json state_token:
 
-POST /1.0/orders
-----------------
+.. http:get:: /1.0/orders
 
-:body:
-   - asin: String
-   - audiblecreditapplied: String
+   Returns order history from at least the past 6 months. Supports pagination.
 
-Example request body:
+   :query unknown:
 
-.. code-block:: json
+.. http:post:: /1.0/orders
 
-   {
-     "asin": "B002V1CB2Q",
-     "audiblecreditapplied": "false"
-   }
+   :<json string asin:
+   :<json boolean audiblecreditapplied: will specify whether to use available credits or default payment method.
 
-- audiblecreditapplied: [true, false]
+   **Example request body**
 
-`audiblecreditapplied` will specify whether to use available credits 
-or default payment method.
+   .. code-block:: json
 
-GET /1.0/wishlist
------------------
+      {
+        "asin": "B002V1CB2Q",
+        "audiblecreditapplied": "false"
+      }
 
-:params:
-   - num_results: \\d+ (max: 50)
-   - page: \\d+ (wishlist start at page 0)
-   - response_groups: [contributors, media, price, product_attrs, product_desc, product_extended_attrs, product_plan_details, product_plans, rating, sample, sku, customer_rights, relationships]
-   - sort_by: [-Author, -DateAdded, -Price, -Rating, -Title, Author, DateAdded, Price, Rating, Title]
+.. http:get:: /1.0/wishlist
 
-POST /1.0/wishlist
-------------------
+   :query int num_results: (max: 50)
+   :query int page: (wishlist start at page 0)
+   :query response_groups: [contributors, media, price, product_attrs, product_desc, product_extended_attrs, product_plan_details, product_plans, rating, sample, sku, customer_rights, relationships]
+   :query sort_by: [-Author, -DateAdded, -Price, -Rating, -Title, Author, DateAdded, Price, Rating, Title]
 
-:body:
-   - asin: String
+.. http:post:: /1.0/wishlist
+
+   :<json string asin: The asin of the book to remove
+   :statuscode 201: Returns the `Location` to the resource.
+
+   **Example request body**
+
+   .. code-block:: json
 
-Example request body:
-
-.. code-block:: json
-
-   {
-     "asin": "B002V02KPU"
-   }
-
-Returns 201 and a `Location` to the resource.
-
-DELETE /1.0/wishlist/%{asin}
-----------------------------
-
-Returns 204 and removes the item from the wishlist using the given `asin`.
-
-GET /1.0/badges/progress
-------------------------
-
-:params:
-   - locale: en_US
-   - response_groups: brag_message
-   - store: [AudibleForInstitutions, Audible, AmazonEnglish, Rodizio]
-
-GET /1.0/badges/metadata
-------------------------
-
-:params:
-   - locale: en_US
-   - response_groups: all_levels_metadata
-
-GET /1.0/account/information
-----------------------------
-
-:params:
-   - response_groups: [delinquency_status, customer_benefits, subscription_details_payment_instrument, plan_summary, subscription_details]
-   - source: [Enterprise, RodizioFreeBasic, AyceRomance, AllYouCanEat, AmazonEnglish, ComplimentaryOriginalMemberBenefit, Radio, SpecialBenefit, Rodizio]
-
-GET /1.0/catalog/categories
----------------------------
-
-:params:
-   - response_groups: [category_metadata, products]
-   - products_plan = [Enterprise, RodizioFreeBasic, AyceRomance, AllYouCanEat, US Minerva, Universal, AmazonEnglish, ComplimentaryOriginalMemberBenefit, Radio, SpecialBenefit, Rodizio]
-   - products_in_plan_timestamp:
-   - products_num_results:
-   - runtime_length_min:
-   - content_level:
-   - content_type:
-   - categories_num_levels: \\d+ (greater than or equal to 1)
-   - ids: \\d+(,\\d+)\*
-   - root: [InstitutionsHpMarketing, ChannelsConfigurator, AEReadster, ShortsPrime, ExploreBy, RodizioBuckets, EditorsPicks, ClientContent, RodizioGenres, AmazonEnglishProducts, ShortsSandbox, Genres, Curated, ShortsIntroOutroRemoval, Shorts, RodizioEpisodesAndSeries, ShortsCurated]
-
-GET /1.0/catalog/categories/%{category_id}
-------------------------------------------
-
-:params:
-   - image_dpi: \\d+
-   - image_sizes:
-   - image_variants:
-   - products_in_plan_timestamp:
-   - products_not_in_plan_timestamp:
-   - products_num_results: \\d+
-   - products_plan: [Enterprise, RodizioFreeBasic, AyceRomance, AllYouCanEat, AmazonEnglish, ComplimentaryOriginalMemberBenefit, Radio, SpecialBenefit, Rodizio]
-   - products_sort_by: [-ReleaseDate, ContentLevel, -Title, AmazonEnglish, AvgRating, BestSellers, -RuntimeLength, ReleaseDate, ProductSiteLaunchDate, -ContentLevel, Title, Relevance, RuntimeLength]
-   - reviews_num_results: \\d+
-   - reviews_sort_by: [MostHelpful, MostRecent]
-
-GET /1.0/catalog/products/%{asin}
----------------------------------
-
-:params:
-   - image_dpi:
-   - image_sizes:
-   - response_groups: [contributors, media, product_attrs, product_desc, product_extended_attrs, product_plan_details, product_plans, rating, review_attrs, reviews, sample, sku]
-   - reviews_num_results: \\d+ (max: 10)
-   - reviews_sort_by: [MostHelpful, MostRecent]
-   - asins
-
-GET /1.0/catalog/products/%{asin}/reviews
------------------------------------------
-
-:params:
-   - sort_by: [MostHelpful, MostRecent]
-   - num_results: \\d+ (max: 50)
-   - page: \\d+
-
-GET /1.0/catalog/products
--------------------------
-
-:params:
-   - author:
-   - browse_type:
-   - category_id: \\d+(,\\d+)\*
-   - disjunctive_category_ids:
-   - image_dpi: \\d+
-   - image_sizes:
-   - in_plan_timestamp:
-   - keywords:
-   - narrator:
-   - not_in_plan_timestamp:
-   - num_most_recent:
-   - num_results: \\d+ (max: 50)
-   - page: \\d+
-   - plan: [Enterprise, RodizioFreeBasic, AyceRomance, AllYouCanEat, AmazonEnglish, ComplimentaryOriginalMemberBenefit, Radio, SpecialBenefit, Rodizio]
-   - products_since_timestamp:
-   - products_sort_by: [-ReleaseDate, ContentLevel, -Title, AmazonEnglish, AvgRating, BestSellers, -RuntimeLength, ReleaseDate, ProductSiteLaunchDate, -ContentLevel, Title, Relevance, RuntimeLength]
-   - publisher:
-   - response_groups: [contributors, media, price, product_attrs, product_desc, product_extended_attrs, product_plan_details, product_plans, rating, review_attrs, reviews, sample, series, sku]
-   - reviews_num_results: \\d+ (max: 10)
-   - reviews_sort_by: [MostHelpful, MostRecent]
-   - title:
-
-GET /1.0/catalog/products/%{asin}/sims
---------------------------------------
-
-:params:
-   - category_image_variants:
-   - image_dpi::param:- image_sizes:
-   - in_plan_timestamp:
-   - language:
-   - not_in_plan_timestamp:
-   - num_results: \\d+ (max: 50)
-   - plan: [Enterprise, RodizioFreeBasic, AyceRomance, AllYouCanEat, AmazonEnglish, ComplimentaryOriginalMemberBenefit, Radio, SpecialBenefit, Rodizio]
-   - response_groups: [contributors, media, price, product_attrs, product_desc, product_extended_attrs, product_plans, rating, review_attrs, reviews, sample, sku]
-   - reviews_num_results: \\d+ (max: 10)
-   - reviews_sort_by: [MostHelpful, MostRecent]
-   - similarity_type: [InTheSameSeries, ByTheSameNarrator, RawSimilarities, ByTheSameAuthor, NextInSameSeries]
+      {
+        "asin": "B002V02KPU"
+      }
+
+.. http:delete:: /1.0/wishlist/(string:asin)
+
+   :param asin: The asin of the book
+   :type asin: string
+   :statuscode 204: Removes the item from the wishlist using the given `asin`.
+
+.. http:get:: /1.0/badges/progress
+
+   :query locale: en_US
+   :query response_groups: brag_message
+   :query store: [AudibleForInstitutions, Audible, AmazonEnglish, Rodizio]
+
+.. http:get:: /1.0/badges/metadata
+
+   :query locale: en_US
+   :query response_groups: all_levels_metadata
+
+.. http:get:: /1.0/account/information
+
+   :query response_groups: [delinquency_status, customer_benefits, subscription_details_payment_instrument, plan_summary, subscription_details]
+   :query source: [Enterprise, RodizioFreeBasic, AyceRomance, AllYouCanEat, AmazonEnglish, ComplimentaryOriginalMemberBenefit, Radio, SpecialBenefit, Rodizio]
+
+.. http:get:: /1.0/catalog/categories
+
+   :query response_groups: [category_metadata, products]
+   :query products_plan: [Enterprise, RodizioFreeBasic, AyceRomance, AllYouCanEat, US Minerva, Universal, AmazonEnglish, ComplimentaryOriginalMemberBenefit, Radio, SpecialBenefit, Rodizio]
+   :query products_in_plan_timestamp:
+   :query products_num_results:
+   :query runtime_length_min:
+   :query content_level:
+   :query content_type:
+   :query int categories_num_levels: (greater than or equal to 1)
+   :query ids: \\d+(,\\d+)\*
+   :query root: [InstitutionsHpMarketing, ChannelsConfigurator, AEReadster, ShortsPrime, ExploreBy, RodizioBuckets, EditorsPicks, ClientContent, RodizioGenres, AmazonEnglishProducts, ShortsSandbox, Genres, Curated, ShortsIntroOutroRemoval, Shorts, RodizioEpisodesAndSeries, ShortsCurated]
+
+.. http:get:: /1.0/catalog/categories/(category_id)
+
+   :param category_id:
+   :query int image_dpi:
+   :query image_sizes:
+   :query image_variants:
+   :query products_in_plan_timestamp:
+   :quers products_not_in_plan_timestamp:
+   :query int products_num_results:
+   :query products_plan: [Enterprise, RodizioFreeBasic, AyceRomance, AllYouCanEat, AmazonEnglish, ComplimentaryOriginalMemberBenefit, Radio, SpecialBenefit, Rodizio]
+   :query products_sort_by: [-ReleaseDate, ContentLevel, -Title, AmazonEnglish, AvgRating, BestSellers, -RuntimeLength, ReleaseDate, ProductSiteLaunchDate, -ContentLevel, Title, Relevance, RuntimeLength]
+   :query int reviews_num_results:
+   :query reviews_sort_by: [MostHelpful, MostRecent]
+
+.. http:get:: /1.0/catalog/products/(string:asin)
+
+   :param asin: The asin of the book
+   :type asin: string
+   :query image_dpi:
+   :query image_sizes:
+   :query response_groups: [contributors, media, product_attrs, product_desc, product_extended_attrs, product_plan_details, product_plans, rating, review_attrs, reviews, sample, sku]
+   :query reviews_num_results: \\d+ (max: 10)
+   :query reviews_sort_by: [MostHelpful, MostRecent]
+   :query asins:
+
+.. http:get:: /1.0/catalog/products/(string:asin)/reviews
+
+   :param asin: The asin of the book
+   :type asin: string
+   :query sort_by: [MostHelpful, MostRecent]
+   :query int num_results: (max: 50)
+   :query int page:
+
+.. http:get:: /1.0/catalog/products
+
+   :query author:
+   :query browse_type:
+   :query int category_id: \\d+(,\\d+)\*
+   :query disjunctive_category_ids:
+   :query int image_dpi:
+   :query image_sizes:
+   :query in_plan_timestamp:
+   :query keywords:
+   :query narrator:
+   :query not_in_plan_timestamp:
+   :query num_most_recent:
+   :query int num_results: (max: 50)
+   :query int page:
+   :query plan: [Enterprise, RodizioFreeBasic, AyceRomance, AllYouCanEat, AmazonEnglish, ComplimentaryOriginalMemberBenefit, Radio, SpecialBenefit, Rodizio]
+   :query products_since_timestamp:
+   :query products_sort_by: [-ReleaseDate, ContentLevel, -Title, AmazonEnglish, AvgRating, BestSellers, -RuntimeLength, ReleaseDate, ProductSiteLaunchDate, -ContentLevel, Title, Relevance, RuntimeLength]
+   :query publisher:
+   :query response_groups: [contributors, media, price, product_attrs, product_desc, product_extended_attrs, product_plan_details, product_plans, rating, review_attrs, reviews, sample, series, sku]
+   :query int reviews_num_results: (max: 10)
+   :query reviews_sort_by: [MostHelpful, MostRecent]
+   :query title:
+
+.. http:get:: /1.0/catalog/products/(string:asin)/sims
+
+   :param asin: The asin of the book
+   :type asin: string
+   :query category_image_variants:
+   :query image_dpi:
+   :query image_sizes:
+   :query in_plan_timestamp:
+   :query language:
+   :query not_in_plan_timestamp:
+   :query int num_results: (max: 50)
+   :query plan: [Enterprise, RodizioFreeBasic, AyceRomance, AllYouCanEat, AmazonEnglish, ComplimentaryOriginalMemberBenefit, Radio, SpecialBenefit, Rodizio]
+   :query response_groups: [contributors, media, price, product_attrs, product_desc, product_extended_attrs, product_plans, rating, review_attrs, reviews, sample, sku]
+   :query int reviews_num_results: (max: 10)
+   :query reviews_sort_by: [MostHelpful, MostRecent]
+   :query similarity_type: [InTheSameSeries, ByTheSameNarrator, RawSimilarities, ByTheSameAuthor, NextInSameSeries]
 
 .. http:post:: /1.0/content/(string:asin)/licenserequest
 
@@ -408,166 +369,143 @@ GET /1.0/catalog/products/%{asin}/sims
    :<json string response_groups: [last_position_heard, pdf_url,
                                    content_reference, chapter_info]
 
-POST /1.0/content/%{asin}/licenserequest
-----------------------------------------
+   **Example request body**
 
-:body:
-   - supported_drm_types: [Mpeg, Adrm]
-   - consumption_type: [Streaming, Offline, Download]
-   - drm_type: [Mpeg, PlayReady, Hls, Dash, FairPlay, Widevine, HlsCmaf, Adrm]
-   - quality: [High, Normal, Extreme, Low]
-   - num_active_offline_licenses: \\d+ (max: 10)
-   - response_groups: [last_position_heard,pdf_url,content_reference,chapter_info]
+   .. code-block:: json
 
-Example request body:
+       {
+           "supported_drm_types" : [
+               "Mpeg",
+               "Adrm"
+           ],
+           "quality" : "High",
+           "consumption_type" : "Download",
+           "response_groups" : "last_position_heard,pdf_url,content_reference,chapter_info"
+       }
 
-.. code-block:: json
+   For a succesful request, returns JSON body with `content_url`.
 
-    {
-        "supported_drm_types" : [
-            "Mpeg",
-            "Adrm"
-        ],
-        "quality" : "High",
-        "consumption_type" : "Download",
-        "response_groups" : "last_position_heard,pdf_url,content_reference,chapter_info"
-    }
+.. http:get:: /1.0/content/(string:asin)/metadata
 
-For a succesful request, returns JSON body with `content_url`.
+   :param asin: the asin of the book
+   :type asin: string
+   :query response_groups: [chapter_info, always-returned, content_reference, content_url]
+   :query acr:
+   :query quality: [High, Normal, Extreme, Low]
+   :query drm_type: [Mpeg, PlayReady, Hls, Dash, FairPlay, Widevine, HlsCmaf, Adrm]
 
-GET /1.0/content/%{asin}/metadata
----------------------------------
+.. http:get:: /1.0/annotations/lastpositions
 
-:params:
-   - response_groups: [chapter_info, always-returned, content_reference, content_url]
-   - acr:
-   - quality: [High, Normal, Extreme, Low]
-   - drm_type: [Mpeg, PlayReady, Hls, Dash, FairPlay, Widevine, HlsCmaf, Adrm]
-   
-GET /1.0/annotations/lastpositions
-----------------------------------
+   :query asins: asin (comma-separated), e.g. ?asins=B01LWUJKQ7,B01LWUJKQ7,B01LWUJKQ7
 
-:params:
-   - asins: asin (comma-separated), e.g. ?asins=B01LWUJKQ7,B01LWUJKQ7,B01LWUJKQ7
-   
-PUT /1.0/lastpositions/%{asin}
-----------------------------------
+.. http:put:: /1.0/lastpositions/(string:asin)
 
-:body:
-   - acr: obtained by /1.0/content/(string:asin)/licenserequest
-   - asin:
-   - position_ms:
-   
-GET /1.0/customer/information
------------------------------
+   :param asin: the asin of the book
+   :type asin: string
+   :<json acr: obtained by :http:post:`/1.0/content/(string:asin)/licenserequest`
+   :<json asin:
+   :<json position_ms:
 
-:params:
-   - response_groups: [migration_details, subscription_details_rodizio, subscription_details_premium, customer_segment, subscription_details_channels]
+.. http:get:: /1.0/customer/information
 
-GET /1.0/customer/status
-------------------------
+   :query response_groups: [migration_details, subscription_details_rodizio, subscription_details_premium, customer_segment, subscription_details_channels]
 
-:params:
-   - response_groups: [benefits_status, member_giving_status, prime_benefits_status, prospect_benefits_status]
+.. http:get:: /1.0/customer/status
 
-GET /1.0/customer/freetrial/eligibility
----------------------------------------
+   :query response_groups: [benefits_status, member_giving_status, prime_benefits_status, prospect_benefits_status]
 
-:params:
-   -
+.. http:get:: /1.0/customer/freetrial/eligibility
 
-GET /1.0/stats/aggregates
--------------------------
+.. http:get:: /1.0/stats/aggregates
 
-:params:
-   - daily_listening_interval_duration: ([012]?[0-9])|(30) (0 to 30, inclusive)
-   - daily_listening_interval_start_date: YYYY-MM-DD (e.g. `2019-06-16`)
-   - locale: en_US
-   - monthly_listening_interval_duration: 0?[0-9]|1[012] (0 to 12, inclusive)
-   - monthly_listening_interval_start_date: YYYY-MM (e.g. `2019-02`)
-   - response_groups: [total_listening_stats]
-   - store: [AudibleForInstitutions, Audible, AmazonEnglish, Rodizio]
+   :query daily_listening_interval_duration: ([012]?[0-9])|(30) (0 to 30, inclusive)
+   :query daily_listening_interval_start_date: YYYY-MM-DD (e.g. `2019-06-16`)
+   :query locale: en_US
+   :query monthly_listening_interval_duration: 0?[0-9]|1[012] (0 to 12, inclusive)
+   :query monthly_listening_interval_start_date: YYYY-MM (e.g. `2019-02`)
+   :query response_groups: [total_listening_stats]
+   :query store: [AudibleForInstitutions, Audible, AmazonEnglish, Rodizio]
 
-GET /1.0/stats/status/finished
-------------------------------
+.. http:get:: /1.0/stats/status/finished
 
-:params:
-   - asin: asin
-   - start_date: [RFC3339](https://tools.ietf.org/html/rfc3339) (e.g. `2000-01-01T00:00:00Z`)
+   :query asin: asin
+   :query start_date: [RFC3339](https://tools.ietf.org/html/rfc3339) (e.g. `2000-01-01T00:00:00Z`)
 
-POST(?) /1.0/stats/status/finished
-----------------------------------
 
-:body:
-   - start_date:
-   - status:
-   - continuation_token:
+.. http:post:: /1.0/stats/status/finished
 
-PUT /1.0/stats/events
----------------------
+   :<json start_date:
+   :<json status:
+   :<json continuation_token:
 
-:body:
-   - stats
+.. http:put:: /1.0/stats/events
 
-Example request body:
+   :<json stats:
 
-.. code-block:: json
+   **Example request body**
 
-    {
-        "stats" : [
-            {
-                "download_start" : {
-                    "country_code" : "de",
-                    "download_host" : "xxxxx.cloudfront.net",
-                    "user_agent" : "Audible, iPhone, 3.35.1 (644), iPhone XS (iPhone11,2), 238 GB, iOS, 14.1, Wifi",
-                    "request_id" : "xxxxxxxxxxxx",
-                    "codec" : "AAX_44_128",
-                    "source" : "audible_iPhone"
-                },
-                "social_network_site" : "Unknown",
-                "event_type" : "DownloadStart",
-                "listening_mode" : "Offline",
-                "local_timezone" : "Europe\/Berlin",
-                "asin_owned" : false,
-                "playing_immersion_reading" : false,
-                "audio_type" : "FullTitle",
-                "event_timestamp" : "2020-10-23T21:29:06.985Z",
-                "asin" : "xxxxxxx",
-                "store" : "Audible",
-                "delivery_type" : "Download"
-            }
-        ]
-    }
+   .. code-block:: json
 
-GET /1.0/pages/%s
------------------
+       {
+           "stats" : [
+               {
+                   "download_start" : {
+                       "country_code" : "de",
+                       "download_host" : "xxxxx.cloudfront.net",
+                       "user_agent" : "Audible, iPhone, 3.35.1 (644), iPhone XS (iPhone11,2), 238 GB, iOS, 14.1, Wifi",
+                       "request_id" : "xxxxxxxxxxxx",
+                       "codec" : "AAX_44_128",
+                       "source" : "audible_iPhone"
+                   },
+                   "social_network_site" : "Unknown",
+                   "event_type" : "DownloadStart",
+                   "listening_mode" : "Offline",
+                   "local_timezone" : "Europe\/Berlin",
+                   "asin_owned" : false,
+                   "playing_immersion_reading" : false,
+                   "audio_type" : "FullTitle",
+                   "event_timestamp" : "2020-10-23T21:29:06.985Z",
+                   "asin" : "xxxxxxx",
+                   "store" : "Audible",
+                   "delivery_type" : "Download"
+               }
+           ]
+       }
 
-%s: ios-app-home
+.. http:get:: /1.0/pages/(string:param1)
 
-:params:
-   - locale: en-US
-   - reviews_num_results:
-   - reviews_sort_by:
-   - response_groups: [media, product_plans, view, product_attrs, contributors, product_desc, sample]
+   :param param1: [ios-app-home]
+   :type param1: string
+   :query int image_dpi: [489]
+   :query local_time: [2022-01-01T12:00:00+01:00]
+   :query locale: en-US
+   :query os: [15.2]
+   :query reviews_num_results:
+   :query reviews_sort_by:
+   :query response_groups: [media, product_plans, view, product_attrs,
+                            contributors, product_desc, sample]
+   :query session_id: [123-1234567-1234567]
+   :query surface: [iOS]
 
-GET /1.0/recommendations
-------------------------
+.. http:get:: /1.0/recommendations
 
-:params:
-   - category_image_variants:
-   - image_dpi:
-   - image_sizes:
-   - in_plan_timestamp:
-   - language:
-   - not_in_plan_timestamp:
-   - num_results: \\d+ (max: 50)
-   - plan: [Enterprise, RodizioFreeBasic, AyceRomance, AllYouCanEat, AmazonEnglish, ComplimentaryOriginalMemberBenefit, Radio, SpecialBenefit, Rodizio]
-   - response_groups: [contributors, media, price, product_attrs, product_desc, product_extended_attrs, product_plan_details, product_plans, rating, sample, sku]
-   - reviews_num_results: \\d+ (max: 10)
-   - reviews_sort_by: [MostHelpful, MostRecent]
+   :query category_image_variants:
+   :query category_image_variants:
+   :query image_dpi:
+   :query image_sizes:
+   :query in_plan_timestamp:
+   :query language:
+   :query not_in_plan_timestamp:
+   :query int num_results: (max: 50)
+   :query plan: [Enterprise, RodizioFreeBasic, AyceRomance, AllYouCanEat,
+                 AmazonEnglish, ComplimentaryOriginalMemberBenefit, Radio,
+                 SpecialBenefit, Rodizio]
+   :query response_groups: [contributors, media, price, product_attrs,
+                            product_desc, product_extended_attrs,
+                            product_plan_details, product_plans, rating, sample, sku]
+   :query int reviews_num_results: (max: 10)
+   :query reviews_sort_by: [MostHelpful, MostRecent]
 
-GET /1.0/user/settings
-----------------------
+.. http:get:: /1.0/user/settings
 
-:params:
-   - setting_name: [captionsEnabled]
+   :query string setting_name: [captionsEnabled]

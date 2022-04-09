@@ -46,7 +46,7 @@ marketplaces and associated country codes be found at :ref:`country_codes`.
 
 .. note::
 
-   Set `with_username=True` to login with your Audible username (for US, UK or
+   Set `with_username=True` to login with a pre-Amazon account (for US, UK or
    DE marketplace only).
 
 .. note::

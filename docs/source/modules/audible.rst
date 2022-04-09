@@ -5,6 +5,11 @@ Modules Documentation
 audible package
 ===============
 
+.. automodule:: audible
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 audible.activation\_bytes module
 --------------------------------
 
