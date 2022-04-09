@@ -55,6 +55,9 @@ API Endpoints
                                 sortPurchDate, DATE_AVAILABLE]
    :query bool sortInAscendingOrder: [true, false]
 
+Library
+-------
+
 .. http:get:: /1.0/library
 
    The audible library of current user
@@ -83,7 +86,8 @@ API Endpoints
                          returns audiobooks the user has returned for a refund.)
    :query string parent_asin: asin
    :query string include_pending: [true, false]
-   :query string state_token: 
+   :query string marketplace: [e.g. AN7V1F1VY261K]
+   :query string state_token:
 
 .. http:get:: /1.0/library/(string:asin)
 
@@ -155,120 +159,11 @@ API Endpoints
    :query continuation_token:
    :query image_sizes:
 
-.. http:get:: /1.0/collections
+Catalog
+-------
 
-.. http:post:: /1.0/collections
-
-   Create a new collection
-
-   :<json name:
-   :<json asins: []
-   :<json description:
-
-   :>json collection_id:
-   :>json creation_date:
-   :>json customer_id:
-   :>json marketplace:
-
-.. http:get:: /1.0/collections/(collection_id)
-
-   :param collection_id:
-
-.. http:put:: /1.0/collections/(collection_id)
-
-   Modify a collection
-
-   :param collection_id:
-
-   :<json state_token:
-   :<json collection_id:
-   :<json name:
-   :<json description:
-
-   :>json state_token:
-   :>json collection_id:
-   :>json name:
-   :>json description:
-
-.. http:get:: /1.0/collections/(collection_id)/items
-
-   :param collection_id:
-   :query response_groups: [always-returned]
-
-.. http:post:: /1.0/collections/(collection_id)/items
-
-   Add item(s) to a collection
-
-   :param collection_id:
-   :<json collection_id:
-   :<json asins: []
-
-   :>json description:
-   :>json name:
-   :>json int num_items_added:
-   :>json state_token:
-
-.. http:get:: /1.0/orders
-
-   Returns order history from at least the past 6 months. Supports pagination.
-
-   :query unknown:
-
-.. http:post:: /1.0/orders
-
-   :<json string asin:
-   :<json boolean audiblecreditapplied: will specify whether to use available credits or default payment method.
-
-   **Example request body**
-
-   .. code-block:: json
-
-      {
-        "asin": "B002V1CB2Q",
-        "audiblecreditapplied": "false"
-      }
-
-.. http:get:: /1.0/wishlist
-
-   :query int num_results: (max: 50)
-   :query int page: (wishlist start at page 0)
-   :query response_groups: [contributors, media, price, product_attrs, product_desc, product_extended_attrs, product_plan_details, product_plans, rating, sample, sku, customer_rights, relationships]
-   :query sort_by: [-Author, -DateAdded, -Price, -Rating, -Title, Author, DateAdded, Price, Rating, Title]
-
-.. http:post:: /1.0/wishlist
-
-   :<json string asin: The asin of the book to remove
-   :statuscode 201: Returns the `Location` to the resource.
-
-   **Example request body**
-
-   .. code-block:: json
-
-      {
-        "asin": "B002V02KPU"
-      }
-
-.. http:delete:: /1.0/wishlist/(string:asin)
-
-   :param asin: The asin of the book
-   :type asin: string
-   :statuscode 204: Removes the item from the wishlist using the given `asin`.
-
-.. http:get:: /1.0/badges/progress
-
-   :query locale: en_US
-   :query response_groups: brag_message
-   :query store: [AudibleForInstitutions, Audible, AmazonEnglish, Rodizio]
-
-.. http:get:: /1.0/badges/metadata
-
-   :query locale: en_US
-   :query response_groups: all_levels_metadata
-
-.. http:get:: /1.0/account/information
-
-   :query response_groups: [delinquency_status, customer_benefits, subscription_details_payment_instrument, plan_summary, subscription_details]
-   :query source: [Enterprise, RodizioFreeBasic, AyceRomance, AllYouCanEat, AmazonEnglish, ComplimentaryOriginalMemberBenefit, Radio, SpecialBenefit, Rodizio]
+Categories
+^^^^^^^^^^
 
 .. http:get:: /1.0/catalog/categories
 
@@ -296,6 +191,9 @@ API Endpoints
    :query products_sort_by: [-ReleaseDate, ContentLevel, -Title, AmazonEnglish, AvgRating, BestSellers, -RuntimeLength, ReleaseDate, ProductSiteLaunchDate, -ContentLevel, Title, Relevance, RuntimeLength]
    :query int reviews_num_results:
    :query reviews_sort_by: [MostHelpful, MostRecent]
+
+Products
+^^^^^^^^
 
 .. http:get:: /1.0/catalog/products/(string:asin)
 
@@ -357,6 +255,135 @@ API Endpoints
    :query reviews_sort_by: [MostHelpful, MostRecent]
    :query similarity_type: [InTheSameSeries, ByTheSameNarrator, RawSimilarities, ByTheSameAuthor, NextInSameSeries]
 
+Collections
+-----------
+
+.. http:get:: /1.0/collections
+
+   :query state_token: [ey...]
+   :query visibility_types: [Private, Discoverable]
+
+.. http:post:: /1.0/collections
+
+   Create a new collection
+
+   :<json name:
+   :<json asins: []
+   :<json description:
+
+   :>json collection_id:
+   :>json creation_date:
+   :>json customer_id:
+   :>json marketplace:
+
+.. http:get:: /1.0/collections/(collection_id)
+
+   :param collection_id:
+
+.. http:put:: /1.0/collections/(collection_id)
+
+   Modify a collection
+
+   :param collection_id:
+
+   :<json state_token:
+   :<json collection_id:
+   :<json name:
+   :<json description:
+
+   :>json state_token:
+   :>json collection_id:
+   :>json name:
+   :>json description:
+
+.. http:get:: /1.0/collections/(collection_id)/items
+
+   :param collection_id: e.g __FAVORITES
+   :query response_groups: [always-returned]
+
+.. http:post:: /1.0/collections/(collection_id)/items
+
+   Add item(s) to a collection
+
+   :param collection_id:
+   :<json collection_id:
+   :<json asins: []
+
+   :>json description:
+   :>json name:
+   :>json int num_items_added:
+   :>json state_token:
+
+Orders
+------
+
+.. http:get:: /1.0/orders
+
+   Returns order history from at least the past 6 months. Supports pagination.
+
+   :query unknown:
+
+.. http:post:: /1.0/orders
+
+   :<json string asin:
+   :<json boolean audiblecreditapplied: will specify whether to use available credits or default payment method.
+
+   **Example request body**
+
+   .. code-block:: json
+
+      {
+        "asin": "B002V1CB2Q",
+        "audiblecreditapplied": "false"
+      }
+
+Wishlist
+--------
+
+.. http:get:: /1.0/wishlist
+
+   :query int num_results: (max: 50)
+   :query int page: (wishlist start at page 0)
+   :query string locale: e.g. de-DE
+   :query response_groups: [contributors, media, price, product_attrs, product_desc, product_extended_attrs, product_plan_details, product_plans, rating, sample, sku, customer_rights, relationships]
+   :query sort_by: [-Author, -DateAdded, -Price, -Rating, -Title, Author, DateAdded, Price, Rating, Title]
+
+.. http:post:: /1.0/wishlist
+
+   :<json string asin: The asin of the book to remove
+   :statuscode 201: Returns the `Location` to the resource.
+
+   **Example request body**
+
+   .. code-block:: json
+
+      {
+        "asin": "B002V02KPU"
+      }
+
+.. http:delete:: /1.0/wishlist/(string:asin)
+
+   :param asin: The asin of the book
+   :type asin: string
+   :statuscode 204: Removes the item from the wishlist using the given `asin`.
+
+.. http:get:: /1.0/badges/progress
+
+   :query locale: en_US
+   :query response_groups: brag_message
+   :query store: [AudibleForInstitutions, Audible, AmazonEnglish, Rodizio]
+
+Badges
+------
+
+.. http:get:: /1.0/badges/metadata
+
+   :query locale: en_US
+   :query response_groups: all_levels_metadata
+
+Content
+-------
+
 .. http:post:: /1.0/content/(string:asin)/licenserequest
 
    :param asin: The asin of the book
@@ -394,17 +421,17 @@ API Endpoints
    :query quality: [High, Normal, Extreme, Low]
    :query drm_type: [Mpeg, PlayReady, Hls, Dash, FairPlay, Widevine, HlsCmaf, Adrm]
 
-.. http:get:: /1.0/annotations/lastpositions
+Account
+-------
 
-   :query asins: asin (comma-separated), e.g. ?asins=B01LWUJKQ7,B01LWUJKQ7,B01LWUJKQ7
+.. http:get:: /1.0/account/information
 
-.. http:put:: /1.0/lastpositions/(string:asin)
+   :query response_groups: [delinquency_status, customer_benefits, customer_segments, subscription_details_payment_instrument, plan_summary, subscription_details, directed_ids]
+   :query source: [Credit, Enterprise, RodizioFreeBasic, AyceRomance, AllYouCanEat, AmazonEnglish, ComplimentaryOriginalMemberBenefit, Radio, SpecialBenefit, Rodizio]
 
-   :param asin: the asin of the book
-   :type asin: string
-   :<json acr: obtained by :http:post:`/1.0/content/(string:asin)/licenserequest`
-   :<json asin:
-   :<json position_ms:
+
+Customer
+--------
 
 .. http:get:: /1.0/customer/information
 
@@ -415,6 +442,9 @@ API Endpoints
    :query response_groups: [benefits_status, member_giving_status, prime_benefits_status, prospect_benefits_status]
 
 .. http:get:: /1.0/customer/freetrial/eligibility
+
+Stats
+-----
 
 .. http:get:: /1.0/stats/aggregates
 
@@ -472,6 +502,21 @@ API Endpoints
            ]
        }
 
+Misc
+-----
+
+.. http:get:: /1.0/annotations/lastpositions
+
+   :query asins: asin (comma-separated), e.g. ?asins=B01LWUJKQ7,B01LWUJKQ7,B01LWUJKQ7
+
+.. http:put:: /1.0/lastpositions/(string:asin)
+
+   :param asin: the asin of the book
+   :type asin: string
+   :<json acr: obtained by :http:post:`/1.0/content/(string:asin)/licenserequest`
+   :<json asin:
+   :<json position_ms:
+
 .. http:get:: /1.0/pages/(string:param1)
 
    :param param1: [ios-app-home]
@@ -509,3 +554,16 @@ API Endpoints
 .. http:get:: /1.0/user/settings
 
    :query string setting_name: [captionsEnabled]
+
+.. http:get:: /1.0/app/upgradestatus
+
+   :query version: [3.68]
+   :query app_id: [A2CZJZGLK2JJVM]
+   :query operating_system: [iOS15.4]
+
+.. http:get:: https://cde-ta-g7g.amazon.com/FionaCDEServiceEngine/sidecar
+
+   Returns the clips, notes and bookmarks of a book
+
+   :query string type: ["AUDI"]
+   :query string key: asin of the book
