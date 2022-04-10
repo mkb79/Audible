@@ -7,7 +7,7 @@ General Information
 
 Audible offers his service on 10 different marketplaces. You can read more about
 marketplaces
-`here <https://audible.custhelp.com/app/answers/detail/a_id/7267/~/what-is-an-audible-marketplace-and-which-is-best-for-me%3F>`_.
+`here <https://help.audible.com/s/article/what-is-an-audible-marketplace-and-which-is-best-for-me?language=en_US>`_.
 
 .. note::
 

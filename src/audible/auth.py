@@ -225,23 +225,6 @@ class Authenticator(httpx.Auth):
         save the data again. After this deregistration, refreshing access 
         tokens and requesting cookies for another domain will work for 
         pre-Amazon accounts.
-
-    Attributes:
-        access_token (:obj:`str`, :obj:`None`):
-        activation_bytes (:obj:`str`, :obj:`None`):
-        adp_token (:obj:`str`, :obj:`None`):
-        crypter (:class:`~audible.aescipher.AESCipher`, :obj:`None`):
-        customer_info (:obj:`dict`, :obj:`None`):
-        device_info (:obj:`dict`, :obj:`None`):
-        device_private_key (:obj:`str`, :obj:`None`):
-        encryption (:obj:`str`, :obj:`bool`, :obj:`None`):
-        expires (:obj:`float`, :obj:`None`):
-        filename (:class:`pathlib.Path`, :obj:`None`):
-        locale (:class:`~audible.localization.Locale`, :obj:`None`):
-        refresh_token (:obj:`str`, :obj:`None`):
-        store_authentication_cookie (:obj:`dict`, :obj:`None`):
-        website_cookies (:obj:`dict`, :obj:`None`):
-        with_username (:obj:`bool`, :obj:`None`):
     """
 
     access_token: Optional[str] = None

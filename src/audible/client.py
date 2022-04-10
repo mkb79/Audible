@@ -214,7 +214,7 @@ class Client:
             apply_auth_flow: If `True`, the :meth:`Authenticator.auth_flow`
                 will be applied to the request.
             apply_cookies: If `True`, website cookies from
-                :attribute:`Authenticator.website_cookies` will be added to 
+                :attr:`Authenticator.website_cookies` will be added to
                 request headers.
 
         Returns:
