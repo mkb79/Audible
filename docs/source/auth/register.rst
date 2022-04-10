@@ -17,6 +17,8 @@ To authorize and register a new device you can do::
        with_username=False,
    )
 
+This will authorize you to your account and register an Audible device.
+
 .. important::
 
    Every device registration will be shown on the Amazon devices list. So only

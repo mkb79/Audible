@@ -97,7 +97,7 @@ def default_login_url_callback(url: str) -> str:
             browser.close()
         return response_url
 
-    print("Please copy the following url and insert it in a webbrowser of "
+    print("Please copy the following url and insert it in a web browser of "
           "your choice:")
     print("\n" + url + "\n")
     print("Now you have to login with your Amazon credentials. After submit "

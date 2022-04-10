@@ -30,7 +30,7 @@ development version::
     cd Audible
     pip install .
 
-Alternatively, install directly from the GitHub repository::
+Alternatively, install it directly from the GitHub repository::
 
     pip install git+https://github.com/mkb79/audible.git
 

@@ -7,16 +7,28 @@ Client classes
 
 Here are some information about the ``Client`` and  the ``AsyncClient`` classes.
 
-Both client classes have the following methods to send requests 
+Instantiate a client
+--------------------
+
+A client needs at least an :class:`audible.Authenticator` at instantiation. The
+following args and kwargs can be passed to the client instantiation:
+
+* country_code (overrides the country code set in :class:`audible.Authenticator`)
+* headers (will be bypassed to the underlying httpx client)
+* timeout (will be bypassed to the underlying httpx client)
+* response_callback (custom response preparation - read more below)
+* all other kwargs (will be bypassed to the underlying httpx client)
+
+Make API requests
+-----------------
+
+Both client classes have the following methods to send requests
 to the external API:
 
 - get
 - post
 - delete
-- patch
-
-Make API requests
------------------
+- put
 
 The external Audible API offers currently two API versions, `0.0` and 
 `1.0`. The Client use the `1.0` by default. So both terms are equal::
@@ -24,7 +36,7 @@ The external Audible API offers currently two API versions, `0.0` and
    resp = client.get("library")
    resp = client.get("1.0/library")
 
-Each query parameter can be written as a separat keyword argument or you can
+Each query parameter can be written as a separate keyword argument or you can
 merge them as a dict to the `params` keyword. So both terms are equal::
 
    resp = client.get("library", response_groups="...", num_results=20)
@@ -51,6 +63,27 @@ and output them as a Python dict.
 .. note::
 
    For all known API endpoints take a look at :ref:`api_endpoints`.
+
+Client responses
+----------------
+
+.. versionadded:: v0.8.0
+
+   The ``response_callback`` kwarg to client __init__, get, post, delete and put methods.
+
+By default requesting the API with the client get, post, delete and put methods
+will call :func:`audible.client.raise_for_status` and try to convert
+the response with :func:`audible.client.convert_response_content` to a Python dict,
+which is finally returned.
+
+If you want to implement your own response preparation, you can do::
+
+   def own_response_callback(resp):
+       return resp
+
+   client = audible.Client(auth=..., response_callback=own_response_callback)
+
+This will return the unprepared response (include headers).
 
 Show/Change Marketplace
 -----------------------

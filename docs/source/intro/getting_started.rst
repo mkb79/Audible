@@ -13,10 +13,10 @@ First Audible device
 ====================
 
 Before you can communicate with the non-publicly Audible Api, you need to
-authorize (login) yourself to Audible with your Audible username or Amazon
-account and register a new "virtual" Audible device. Please make sure to
-select the correct Audible marketplace. An overview about all known Audible
-marketplaces and associated country codes be found at :ref:`country_codes`.
+authorize (login) yourself to Amazon (or Audible) and register a new "virtual"
+Audible device. Please make sure to select the correct Audible marketplace.
+An overview about all known Audible marketplaces and associated country codes
+be found at :ref:`country_codes`.
 
 .. code-block::
 
@@ -30,7 +30,7 @@ marketplaces and associated country codes be found at :ref:`country_codes`.
        with_username=False
    )
    
-   # Save credendtials to file
+   # Save credentials to file
    auth.to_file(FILENAME)
 
 .. important::
@@ -42,11 +42,12 @@ marketplaces and associated country codes be found at :ref:`country_codes`.
 .. note::
 
    If you have activated 2-factor-authentication for your Amazon account, you
-   can append the current OTP to the password.
+   can append the current OTP to your password. This eliminates the need for a
+   new OTP prompt.
 
 .. note::
 
-   Set `with_username=True` to login with your Audible username (for US, UK or
+   Set `with_username=True` to login with your pre-Amazon account (for US, UK or
    DE marketplace only).
 
 .. note::
@@ -76,8 +77,8 @@ your first API call. To fetch and print out all books from your Audible library
 
 .. note::
 
-   The information provided by the API depends on the requested `response_groups`.
-   The response from the example above are very minimized. Please take a look at
+   The information returned by the API depends on the requested `response_groups`.
+   The response for the example above are very minimized. Please take a look at
    :http:get:`/1.0/library` for all known `response_groups` and other parameter
    for the library endpoint.
 
