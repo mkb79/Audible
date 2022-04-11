@@ -46,7 +46,7 @@ setup(
     ],
     install_requires=[
         'beautifulsoup4',
-        "httpx>=0.20.*,<=0.22.*",
+        'httpx>=0.20.0,<0.23.0',
         'pbkdf2',
         'Pillow',
         'pyaes',
