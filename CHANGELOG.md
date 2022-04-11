@@ -11,6 +11,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - full support of pre-Amazon accounts (e.g. refresh access token, deregister device)
 - `Client` and `AsynClient` now accepts session kwargs which are bypassed to the underlying httpx Client
 - a `respone_callback` can now be set to `Client` and `AsyncClient` class to allow custom preparation of response output
+- An absolut url (e.g. https://cde-ta-g7g.amazon.com/FionaCDEServiceEngine/sidecar) can now be passed to a client `get`, `post`, `delete` and `put` method as the `path` arg. So in most cases the client `raw_request` method is not needed anymore.
 
 ### Changed
 
