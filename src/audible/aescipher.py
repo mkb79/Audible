@@ -462,4 +462,3 @@ def decrypt_voucher_from_licenserequest(
         asin=asin,
         voucher=encrypted_voucher
     )
-

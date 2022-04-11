@@ -166,4 +166,3 @@ class Locale:
     @property
     def market_place_id(self) -> str:
         return self._market_place_id
-

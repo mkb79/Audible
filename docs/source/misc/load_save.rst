@@ -80,10 +80,15 @@ The following data will be stored:
 - device_info data
 - customer_info data
 - activation_bytes
+- with_username (``True`` for pre-Amazon accounts else ``False``)
 
 .. versionadded:: 0.5.1
 
    Stores ``activation_bytes`` to file (if they where fetched before).
+
+.. versionadded:: v0.8.0
+
+   The ``with_username`` value
 
 Advanced use of encryption/decryption
 =====================================
@@ -135,3 +140,4 @@ unencrypted. If the `Authenticator` can't load your data, you can try::
        decrypted_file=FILENAME,
        password=PASSWORD_FOR_ENCRYPTED_FILE
    )
+

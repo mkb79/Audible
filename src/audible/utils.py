@@ -150,4 +150,3 @@ class ElapsedTime:
 
     def __call__(self):
         return time.time() - self.start_time
-

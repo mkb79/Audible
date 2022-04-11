@@ -25,7 +25,9 @@ Sign request method
 With the sign request method you gain unrestricted access to the Audible API.
 To use this method, you need the RSA private key and the adp_token from a
 *device registration*. This method is used by the Audible apps for iOS and
-Android too.
+Android too. A device registration is done automatically with
+:meth:`audible.Authenticator.from_login` or
+:meth:`audible.Authenticator.from_login_external`
 
 Request signing is fairly straight-forward and uses a signed SHA256 digest.
 Headers look like::
@@ -37,8 +39,8 @@ Headers look like::
 Bearer method
 -------------
 
-API requests with the bearer method are restricted. Some API call like the
-:http:post:`/1.0/content/(string:asin)/licenserequest` doesn't work. To use
+API requests with the bearer method have some restrictions. Some API call, like
+the :http:post:`/1.0/content/(string:asin)/licenserequest`, doesn't work. To use
 the bearer method you need an access token and a client id. You receive the
 token after a device registration. Which values are valid for the client-id 
 is unknown but 0 does work. An access token expires after 60 minutes. It 

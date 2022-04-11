@@ -80,4 +80,3 @@ class NoRefreshToken(Exception):
 
 class FileEncryptionError(Exception):
     """Raised if something is wrong with file encryption"""
-

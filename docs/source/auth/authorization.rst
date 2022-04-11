@@ -148,7 +148,7 @@ To handle the login with a external browser or program logic you can do the foll
    auth = audible.Authenticator.from_login_external(locale=COUNTRY_CODE)
 
 By default, this code print out the login url for the selected country code. Now you have
-to copy and paste this code into a webbrowser (or a custom program) and authorize yourself. 
+to copy and paste this code into a web browser (or a custom program) and authorize yourself.
 You have to enter your credentials two times (because of missing init cookies). 
 On first time, the password can be a random one.
 On second time, you have to solve a captcha before you can submit the login form with your 
@@ -157,6 +157,11 @@ After authorize successfully you will end in an error page (not found). This is 
 Please copy the url from the address bar from your browser and paste the url to the input 
 field of the python code. This url looks like 
 "https://www.amazon.{domain}/ap/maplanding?...&openid.oa2.authorization_code=..."
+
+.. note::
+   If you have `playwright <https://pypi.org/project/playwright/>`_ installed and
+   use the default ``login_url_callback``, a new browser is opened, where you can
+   authorize to your account,
 
 .. note::
 
