@@ -140,16 +140,17 @@ class Client:
         return user_profile["name"]
 
     def _prepare_api_path(self, path: str) -> httpx.URL:
+        if httpx.URL(path).is_absolute_url:
+            return httpx.URL(path)
+
         if path.startswith("/"):
             path = path[1:]
 
-        if path.startswith(self._API_VERSION) or path.startswith("0.0"):
-            pass
-        else:
+        if not (path.startswith(self._API_VERSION) or path.startswith("0.0")):
             path = "/".join((self._API_VERSION, path))
 
-        path = "/" + path
-        return self._api_url.copy_with(path=path)
+        path = ("/" + path).encode()
+        return self._api_url.copy_with(raw_path=path)
 
     def _request(
             self,
