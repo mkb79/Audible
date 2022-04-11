@@ -42,6 +42,7 @@ version = re.search(f"{'__version__'} = ['\"]([^'\"]+)['\"]", info).group(1)
 # ones.
 
 extensions = [
+    'myst_parser',
     'sphinx.ext.autodoc',
     'sphinx.ext.coverage',
     'sphinx.ext.napoleon',

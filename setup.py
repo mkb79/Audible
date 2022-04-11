@@ -57,7 +57,8 @@ setup(
             'sphinx',
             'sphinx_rtd_theme',
             'sphinxcontrib-httpdomain',
-            'sphinx-autodoc-typehints'
+            'sphinx-autodoc-typehints',
+            'myst-parser'
         ]
     },
     python_requires='>=3.6',
