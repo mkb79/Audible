@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## Unreleased
 
+-
+
+## [0.8.0] - 2022-04-11
+
 ### Added
 
 - full support of pre-Amazon accounts (e.g. refresh access token, deregister device)
