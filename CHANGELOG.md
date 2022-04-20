@@ -8,6 +8,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 -
 
+## [0.8.1] - 2022-04-20
+
+### Bugfix
+
+- fix a bug in `Client.delete` and `AsyncClient.delete` method
+
 ## [0.8.0] - 2022-04-11
 
 ### Added

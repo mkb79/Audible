@@ -280,7 +280,7 @@ class Client:
                 Callable[[httpx.Response], Any]] = None,
             **kwargs
     ) -> Any:
-        self._prepare_params(**kwargs)
+        self._prepare_params(kwargs)
         return self._request(
             method="DELETE",
             path=path,
