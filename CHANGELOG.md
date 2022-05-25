@@ -8,6 +8,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 -
 
+## [0.8.2] - 2022-05-25
+
+### Changed
+
+- Allow httpx v0.23.x to fix a bug in httpx
+
 ## [0.8.1] - 2022-04-20
 
 ### Bugfix
