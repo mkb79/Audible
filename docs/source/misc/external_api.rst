@@ -201,7 +201,7 @@ Products
    :type asin: string
    :query image_dpi:
    :query image_sizes:
-   :query response_groups: [contributors, media, product_attrs, product_desc, product_extended_attrs, product_plan_details, product_plans, rating, review_attrs, reviews, sample, sku]
+   :query response_groups: [contributors, media, price, product_attrs, product_desc, product_extended_attrs, product_plan_details, product_plans, rating, sample, sku, series, reviews, relationships, review_attrs, category_ladders, claim_code_url, pdf_url, provided_review]
    :query reviews_num_results: \\d+ (max: 10)
    :query reviews_sort_by: [MostHelpful, MostRecent]
    :query asins:
