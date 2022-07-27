@@ -3,6 +3,7 @@ from typing import Any, Dict
 
 import httpx
 
+from . import json
 from .login import build_client_id
 
 
@@ -69,7 +70,7 @@ def register(
         json=body
     )
 
-    resp_json = resp.json()
+    resp_json = json.response_to_json(resp)
     if resp.status_code != 200:
         raise Exception(resp_json)
 
@@ -142,7 +143,7 @@ def deregister(
         headers=headers
     )
 
-    resp_json = resp.json()
+    resp_json = json.response_to_json(resp)
     if resp.status_code != 200:
         raise Exception(resp_json)
 

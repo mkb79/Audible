@@ -1,10 +1,11 @@
 import base64
 import binascii
-import json
 import math
 import struct
 from datetime import datetime
 from typing import List, Tuple, Union
+
+from . import json
 
 
 # key used for encrypt/decrypt metadata1

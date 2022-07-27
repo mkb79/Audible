@@ -59,6 +59,10 @@ setup(
             'sphinxcontrib-httpdomain',
             'sphinx-autodoc-typehints',
             'myst-parser'
+        ],
+        'speedup': [
+            'ujson',
+            'pycryptodomex'
         ]
     },
     python_requires='>=3.6',

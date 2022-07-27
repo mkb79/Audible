@@ -1,7 +1,7 @@
 import base64
 import hashlib
 import io
-import json
+
 import logging
 import re
 import secrets
@@ -13,6 +13,7 @@ import httpx
 from PIL import Image
 from bs4 import BeautifulSoup
 
+from . import json
 from .metadata import encrypt_metadata, meta_audible_app
 
 

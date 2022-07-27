@@ -1,6 +1,5 @@
 import base64
 import hmac
-import json
 import logging
 import os
 import pathlib
@@ -11,6 +10,8 @@ from typing import Dict, Optional, Tuple, TYPE_CHECKING, Union
 
 from pbkdf2 import PBKDF2
 from pyaes import AESModeOfOperationCBC, Encrypter, Decrypter
+
+from . import json
 
 if TYPE_CHECKING:
     import audible

@@ -1,20 +1,19 @@
 import base64
-import json
 import logging
 from datetime import datetime, timedelta
 from typing import Any, Callable, Dict, List, Generator, Optional, Union
 from typing import TYPE_CHECKING
 
 import httpx
-import rsa
 from httpx import Cookies
 
+from . import json
 from .activation_bytes import get_activation_bytes as get_ab
 from .aescipher import AESCipher, detect_file_encryption
 from .exceptions import FileEncryptionError, AuthFlowError, NoRefreshToken
 from .login import login, external_login
-from .register import deregister as deregister_
-from .register import register as register_
+from .register import deregister as deregister_, register as register_
+from .rsa import import_key, pkcs1_sha256_sign
 from .utils import test_convert
 
 if TYPE_CHECKING:
@@ -64,7 +63,7 @@ def refresh_access_token(
         data=body
     )
     resp.raise_for_status()
-    resp_dict = resp.json()
+    resp_dict = json.response_to_json(resp)
 
     expires_in_sec = int(resp_dict["expires_in"])
     expires = (datetime.utcnow() + timedelta(seconds=expires_in_sec)).\
@@ -113,7 +112,7 @@ def refresh_website_cookies(
 
     resp = httpx.post(url, data=body)
     resp.raise_for_status()
-    resp_dict = resp.json()
+    resp_dict = json.response_to_json(resp)
 
     raw_cookies = resp_dict["response"]["tokens"]["cookies"]
     website_cookies = dict()
@@ -144,7 +143,7 @@ def user_profile(access_token: str, domain: str) -> Dict[str, Any]:
     )
     resp.raise_for_status()
 
-    return resp.json()
+    return json.response_to_json(resp)
 
 
 def user_profile_audible(access_token: str, domain: str) -> Dict[str, Any]:
@@ -167,15 +166,14 @@ def user_profile_audible(access_token: str, domain: str) -> Dict[str, Any]:
     )
     resp.raise_for_status()
 
-    return resp.json()
-
+    return json.response_to_json(resp)
 
 def sign_request(
         method: str,
         path: str,
         body: bytes,
         adp_token: str,
-        private_key: str) -> Dict[str, str]:
+        private_key) -> Dict[str, str]:
     """Helper function who creates signed headers for http requests.
 
     Args:
@@ -194,8 +192,8 @@ def sign_request(
 
     data = f"{method}\n{path}\n{date}\n{body}\n{adp_token}"
 
-    key = rsa.PrivateKey.load_pkcs1(private_key.encode("utf-8"))
-    cipher = rsa.pkcs1.sign(data.encode(), key, "SHA-256")
+    key = import_key(private_key) if isinstance(private_key, str) else private_key
+    cipher = pkcs1_sha256_sign(key, data)
     signed_encoded = base64.b64encode(cipher)
 
     signature = f"{signed_encoded.decode()}:{date}"
@@ -245,6 +243,7 @@ class Authenticator(httpx.Auth):
     requires_request_body: bool = True
     _forbid_new_attrs: bool = True
     _apply_test_convert: bool = True
+    _sign_key = None
 
     def __setattr__(self, attr, value):
         if self._forbid_new_attrs and not hasattr(self, attr):
@@ -528,12 +527,15 @@ class Authenticator(httpx.Auth):
         yield request
 
     def _apply_signing_auth_flow(self, request: httpx.Request) -> None:
+        if self._sign_key is None:
+            self._sign_key = import_key(self.device_private_key)
+        
         headers = sign_request(
             method=request.method,
             path=request.url.raw_path.decode(),
             body=request.content,
             adp_token=self.adp_token,
-            private_key=self.device_private_key
+            private_key=self._sign_key
         )
 
         request.headers.update(headers)

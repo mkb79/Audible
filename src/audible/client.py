@@ -1,5 +1,4 @@
 import inspect
-import json
 import logging
 from typing import Any, Callable, Dict, Optional, Union
 
@@ -7,6 +6,7 @@ import httpx
 from httpx import URL
 from httpx._types import HeaderTypes
 
+from . import json
 from .auth import Authenticator
 from .exceptions import (
     BadRequest, NotFoundError, NotResponding, NetworkError, ServerError,
@@ -49,7 +49,7 @@ def raise_for_status(resp: httpx.Response) -> None:
 
 def convert_response_content(resp: httpx.Response) -> Union[Dict, str]:
     try:
-        return resp.json()
+        return json.response_to_json(resp)
     except json.JSONDecodeError:
         return resp.text
 
