@@ -60,7 +60,7 @@ setup(
             'sphinx-autodoc-typehints',
             'myst-parser'
         ],
-        'speedup': [
+        'speedups': [
             'ujson',
             'pycryptodomex'
         ]
