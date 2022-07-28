@@ -40,6 +40,20 @@ supports:
 
 `pip install audible`
 
+You may want to install *optional* [ujson](https://github.com/ultrajson/ultrajson) library as faster replacement for [json](https://docs.python.org/3/library/json.html):
+
+`pip install ujson`
+
+For speeding up request signing by client API you may install [pycryptodomex](https://www.pycryptodome.org) as well. This option is highly recommended:
+
+`pip install pycryptodomex`
+
+### Installing speedups altogether
+
+The following will get you `audible` along with `ujson` and `pycryptodomex` in one bundle. No need to type separate commands!
+
+`pip install audible[speedups]`
+
 ## Read the Doc
 
 The documentation can be found at [Read the Docs](https://audible.readthedocs.io/en/latest)
