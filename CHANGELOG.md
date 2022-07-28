@@ -6,7 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## Unreleased
 
--
+### Changed
+
+- using `ujson` as replacement for `json`, if installed
+- using `pycryptodomex` as replacement for `rsa` to sign requests, if installed
 
 ## [0.8.2] - 2022-05-25
 
