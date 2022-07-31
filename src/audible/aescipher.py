@@ -9,7 +9,6 @@ from hashlib import sha256
 from typing import Dict, Optional, Tuple, TYPE_CHECKING, Union
 
 from pbkdf2 import PBKDF2
-from pyaes import AESModeOfOperationCBC, Encrypter, Decrypter
 
 from . import json
 
@@ -19,46 +18,84 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger('audible.aescipher')
 
+
+has_pycryptodomex = False
+try:
+    if "DISABLE_PYCRYPTODOMEX" in os.environ:
+        msg = "pycryptodomex is disabled"
+        logger.debug(msg)
+        raise ImportError(msg)
+    from Cryptodome.Cipher import AES
+    from Cryptodome.Hash import SHA256
+    # from Cryptodome.Protocol.KDF import PBKDF2
+    from Cryptodome.Util.Padding import pad, unpad
+    has_pycryptodomex = True
+    logger.debug("using pycryptodomex module for aes")
+except ImportError:
+    from pyaes import AESModeOfOperationCBC, Encrypter, Decrypter
+    logger.debug("using pyaes module for aes")
+
+
 BLOCK_SIZE: int = 16  # the AES block size
 
 
-def aes_cbc_encrypt(
-        key: bytes, iv: bytes, data: str, padding: str = "default") -> bytes:
-    """Encrypts data in cipher block chaining mode of operation.
-
-    Args:
-        key: The AES key.
-        iv: The initialization vector.
-        data: The data to encrypt.
-        padding: Can be ``default`` or ``none`` (Default: default)
-
-    Returns:
-        The encrypted data.
-    """
-
-    encrypter = Encrypter(AESModeOfOperationCBC(key, iv), padding=padding)
-    encrypted = encrypter.feed(data) + encrypter.feed()
-    return encrypted
-
-
-def aes_cbc_decrypt(
-        key: bytes, iv: bytes, encrypted_data: bytes, padding: str = "default"
-) -> str:
-    """Decrypts data encrypted in cipher block chaining mode of operation.
-
-    Args:
-        key: The AES key used at encryption.
-        iv: The initialization vector used at encryption.
-        encrypted_data: The encrypted data to decrypt.
-        padding: Can be ``default`` or ``none`` (Default: default)
+if has_pycryptodomex:
+    def aes_cbc_encrypt(
+            key: bytes, iv: bytes, data: str, padding: str = "default"
+    ) -> bytes:
+        """Encrypts data in cipher block chaining mode of operation.
     
-    Returns:
-        The decrypted data.
-    """
+        Args:
+            key: The AES key.
+            iv: The initialization vector.
+            data: The data to encrypt.
+            padding: Can be ``default`` or ``none`` (Default: default)
+    
+        Returns:
+            The encrypted data.
+        """
+    
+        data = data.encode()
+        encrypter = AES.new(key, AES.MODE_CBC, iv=iv)
+        if padding == "default":
+            data = pad(data, BLOCK_SIZE)
+        encrypted = encrypter.encrypt(data)
+        return encrypted
 
-    decrypter = Decrypter(AESModeOfOperationCBC(key, iv), padding=padding)
-    decrypted = decrypter.feed(encrypted_data) + decrypter.feed()
-    return decrypted.decode("utf-8")
+    def aes_cbc_decrypt(
+            key: bytes, iv: bytes, encrypted_data: bytes, padding: str = "default"
+    ) -> str:
+        """Decrypts data encrypted in cipher block chaining mode of operation.
+    
+        Args:
+            key: The AES key used at encryption.
+            iv: The initialization vector used at encryption.
+            encrypted_data: The encrypted data to decrypt.
+            padding: Can be ``default`` or ``none`` (Default: default)
+        
+        Returns:
+            The decrypted data.
+        """
+    
+        decrypter = AES.new(key, AES.MODE_CBC, iv=iv)
+        decrypted = decrypter.decrypt(encrypted_data)
+        if padding == "default":
+            decrypted = unpad(decrypted, BLOCK_SIZE)
+        return decrypted.decode("utf-8")
+else:
+    def aes_cbc_encrypt(
+            key: bytes, iv: bytes, data: str, padding: str = "default"
+    ) -> bytes:
+        encrypter = Encrypter(AESModeOfOperationCBC(key, iv), padding=padding)
+        encrypted = encrypter.feed(data) + encrypter.feed()
+        return encrypted
+    
+    def aes_cbc_decrypt(
+            key: bytes, iv: bytes, encrypted_data: bytes, padding: str = "default"
+    ) -> str:
+        decrypter = Decrypter(AESModeOfOperationCBC(key, iv), padding=padding)
+        decrypted = decrypter.feed(encrypted_data) + decrypter.feed()
+        return decrypted.decode("utf-8")
 
 
 def create_salt(
@@ -410,7 +447,11 @@ def _decrypt_voucher(
     # https://github.com/mkb79/Audible/issues/3#issuecomment-705262614
     buf = device_type + device_serial_number + customer_id + asin
     buf = buf.encode("ascii")
-    digest = sha256(buf).digest()
+
+    if has_pycryptodomex:
+        digest = SHA256.new(buf).digest()
+    else:
+        digest = sha256(buf).digest()
     key = digest[0:16]
     iv = digest[16:]
 
