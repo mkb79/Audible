@@ -149,7 +149,7 @@ By default, this code prints out the login url for the selected country code.
 Paste this url into a web browser or use it programatically to authorize yourself.
 You have to enter your credentials two times (because of missing init cookies). 
 First time, the password can be a random one.
-Decond time, you have to solve a captcha before you can submit the login form and
+Second time, you have to solve a captcha before you can submit the login form and
 you must use your correct password.
 After loggin in, you will end in an error page (not found). This is correct. 
 Copy the url from the address bar from your browser and paste the url into the input 
