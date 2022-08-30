@@ -206,6 +206,12 @@ Products
    :query reviews_sort_by: [MostHelpful, MostRecent]
    :query asins:
 
+.. http:get:: /1.0/catalog/products
+
+   :query asins:
+   :query image_sizes: [1215,408,360,882,315,570,252,558,900]
+   :query response_groups: [sku,product_attrs,rating,product_extended_attrs,media,sample,product_plans,product_plan_details,badges,relationships,customer_rights,product_desc,contributors]
+
 .. http:get:: /1.0/catalog/products/(string:asin)/reviews
 
    :param asin: The asin of the book
