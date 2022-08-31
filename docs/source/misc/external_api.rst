@@ -111,6 +111,12 @@ Library
 
    :<json asin:
 
+.. http:put:: /1.0/library/item
+
+   Add an (AYCL) item to the library
+
+   :<json asin:
+
 .. http:post:: /1.0/library/item/(param1)/(param2)
 
    :param param1:
