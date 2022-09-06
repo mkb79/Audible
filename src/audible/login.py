@@ -6,6 +6,7 @@ import logging
 import re
 import secrets
 import uuid
+import webbrowser
 from typing import Any, Callable, Dict, Optional, Tuple
 from urllib.parse import urlencode, parse_qs
 
@@ -26,11 +27,7 @@ USER_AGENT = (
 
 def default_captcha_callback(captcha_url: str) -> str:
     """Helper function for handling captcha."""
-
-    captcha = httpx.get(captcha_url).content
-    f = io.BytesIO(captcha)
-    img = Image.open(f)
-    img.show()
+    webbrowser.open_new(captcha_url)
     guess = input("Answer for CAPTCHA: ")
     return str(guess).strip().lower()
 
