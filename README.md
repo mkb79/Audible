@@ -32,7 +32,6 @@ supports:
 	- beautifulsoup4
 	- httpx
 	- pbkdf2
-	- Pillow
 	- pyaes
 	- rsa
 

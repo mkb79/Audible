@@ -12,7 +12,6 @@ It depends on the following packages:
 * beautifulsoup4
 * httpx
 * pbkdf2
-* Pillow
 * pyaes
 * rsa
 

@@ -23,9 +23,10 @@ CAPTCHA
 
    Init cookies added to login function to prevent CAPTCHAs in most cases.
 
-Authorization requires answering a CAPTCHA in some cases. By default Pillow is used
-to show captcha and a user prompt will be provided to enter your answer, which
-looks like::
+Authorization requires answering a CAPTCHA in some cases. By default
+the CAPTCHA is opened in a new window of the default browser, if possible,
+otherwise in the only browser window. An user prompt will be
+provided on the CLI to enter your answer, which looks like::
 
    Answer for CAPTCHA:
 

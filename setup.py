@@ -48,7 +48,6 @@ setup(
         'beautifulsoup4',
         'httpx>=0.20.0,<0.24.0',
         'pbkdf2',
-        'Pillow',
         'pyaes',
         'rsa'
     ],

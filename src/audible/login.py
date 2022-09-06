@@ -1,6 +1,5 @@
 import base64
 import hashlib
-import io
 import json
 import logging
 import re
@@ -11,7 +10,6 @@ from typing import Any, Callable, Dict, Optional, Tuple
 from urllib.parse import urlencode, parse_qs
 
 import httpx
-from PIL import Image
 from bs4 import BeautifulSoup
 
 from .metadata import encrypt_metadata, meta_audible_app
@@ -136,7 +134,7 @@ def get_soup(resp, log_errors=True):
 def get_inputs_from_soup(
         soup: BeautifulSoup,
         search_field: Optional[Dict[str, str]] = None) -> Dict[str, str]:
-    """Extracts hidden form input fields from a Amazon login page."""
+    """Extracts hidden form input fields from an Amazon login page."""
 
     search_field = search_field or {"name": "signIn"}
     form = soup.find("form", search_field) or soup.find("form")
@@ -262,28 +260,28 @@ def build_init_cookies() -> Dict[str, str]:
 
 
 def check_for_captcha(soup: BeautifulSoup) -> bool:
-    """Checks a Amazon login page for a captcha form."""
+    """Checks an Amazon login page for a captcha form."""
 
     captcha = soup.find("img", alt=lambda x: x and "CAPTCHA" in x)
     return True if captcha else False
 
 
 def extract_captcha_url(soup: BeautifulSoup) -> Optional[str]:
-    """Returns the captcha url from a Amazon login page."""
+    """Returns the captcha url from an Amazon login page."""
 
     captcha = soup.find("img", alt=lambda x: x and "CAPTCHA" in x)
     return captcha["src"] if captcha else None
 
 
 def check_for_mfa(soup: BeautifulSoup) -> bool:
-    """Checks a Amazon login page for a multi-factor authentication form."""
+    """Checks an Amazon login page for a multi-factor authentication form."""
 
     mfa = soup.find("form", id=lambda x: x and "auth-mfa-form" in x)
     return True if mfa else False
 
 
 def check_for_choice_mfa(soup: BeautifulSoup) -> bool:
-    """Checks a Amazon login page for a MFA selection form."""
+    """Checks an Amazon login page for a MFA selection form."""
 
     mfa_choice = soup.find("form", id="auth-select-device-form")
     return True if mfa_choice else False
@@ -295,7 +293,7 @@ def check_for_cvf(soup: BeautifulSoup) -> bool:
 
 
 def check_for_approval_alert(soup: BeautifulSoup) -> bool:
-    """Checks a Amazon login page for an approval alert."""
+    """Checks an Amazon login page for an approval alert."""
 
     approval_alert = soup.find(id="resend-approval-alert") or soup.find(
         id="resend-approval-form")
@@ -495,11 +493,11 @@ def login(
         login_soup = get_soup(login_resp)
 
         while login_soup.find(
-                 "span", {"class": "transaction-approval-word-break"}
-         ):  # a-size-base-plus transaction-approval-word-break a-text-bold
-             login_resp = session.get(url)
-             login_soup = get_soup(login_resp)
-             logger.info("still waiting for redirect")
+                "span", {"class": "transaction-approval-word-break"}
+        ):  # a-size-base-plus transaction-approval-word-break a-text-bold
+            login_resp = session.get(url)
+            login_soup = get_soup(login_resp)
+            logger.info("still waiting for redirect")
 
     session.close()
 
@@ -526,10 +524,10 @@ def external_login(
         with_username: bool = False,
         login_url_callback: Optional[Callable[[str], str]] = None
 ) -> Dict[str, Any]:
-    """Gives the url to login with external browser and prompt for result.
+    """Gives the url to log in with external browser and prompt for result.
 
     Note:
-        If you are using MacOS and have trouble insert the login result url 
+        If you are using macOS and have trouble insert the login result url
         simply import the readline module in your script. See
         `#34 <https://github.com/mkb79/Audible/issues/34#issuecomment-766408640>`_.
     
