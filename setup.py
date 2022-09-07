@@ -62,7 +62,8 @@ setup(
         ],
         'speedups': [
             'ujson',
-            'pycryptodomex'
+            'pycryptodomex',
+            'uvloop'
         ]
     },
     python_requires='>=3.6',
