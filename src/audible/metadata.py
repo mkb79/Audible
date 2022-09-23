@@ -28,7 +28,7 @@ def raw_xxtea(v: List, n: int, k: Union[List, Tuple]) -> int:
     delta = 2654435769
     if n > 1:  # Encoding
         z = v[n - 1]
-        q = int(6 + (52 / n // 1))
+        q = math.floor(6 + (52 / n // 1))
         while q > 0:
             q -= 1
             sum_ = u32(sum_ + delta)
@@ -44,7 +44,7 @@ def raw_xxtea(v: List, n: int, k: Union[List, Tuple]) -> int:
 
     if n < -1:  # Decoding
         n = -n
-        q = int(6 + (52 / n // 1))
+        q = math.floor(6 + (52 / n // 1))
         sum_ = u32(q * delta)
         while sum_ != 0:
             e = u32(sum_ >> 2) & 3
@@ -112,7 +112,7 @@ class XXTEA:
     def encrypt(self, data: Union[str, bytes]) -> bytes:
         """Encrypts and returns a block of data."""
 
-        ldata = round(len(data) / 4)
+        ldata = math.ceil(len(data) / 4)
         idata = _bytes_to_longs(data)
         if raw_xxtea(idata, ldata, self.key) != 0:
             raise XXTEAException("Cannot encrypt")
@@ -121,7 +121,7 @@ class XXTEA:
     def decrypt(self, data: Union[str, bytes]) -> bytes:
         """Decrypts and returns a block of data."""
 
-        ldata = round(len(data) / 4)
+        ldata = math.ceil(len(data) / 4)
         idata = _bytes_to_longs(data)
         if raw_xxtea(idata, -ldata, self.key) != 0:
             raise XXTEAException("Cannot decrypt")
@@ -136,20 +136,28 @@ def encrypt_metadata(metadata: str) -> str:
 
     checksum = _generate_hex_checksum(metadata)
     object_str = f"{checksum}#{metadata}"
-    object_enc = metadata_crypter.encrypt(object_str)
-    object_base64 = base64.b64encode(object_enc).decode()
+    object_encrypted = metadata_crypter.encrypt(object_str)
+    object_base64 = base64.b64encode(object_encrypted)
+    object_base64_decoded = object_base64.decode('utf-8')
+    encrypted_metadata = f"ECdITeCs:{object_base64_decoded}"
 
-    return f"ECdITeCs:{object_base64}"
+    return encrypted_metadata
 
 
-def decrypt_metadata(metadata: str) -> str:
+def decrypt_metadata(encrypted_metadata: str) -> str:
     """Decrypts metadata for testing purposes only."""
 
-    object_base64 = metadata.lstrip("ECdITeCs:")
-    object_bytes = base64.b64decode(object_base64)
-    object_dec = metadata_crypter.decrypt(object_bytes)
-    object_str = object_dec.decode()
+    metadata_prefix_position = encrypted_metadata.find('ECdITeCs:')
+
+    if metadata_prefix_position != 0:
+        raise Exception('malformed encrypted metadata')
+
+    object_base64_decoded = encrypted_metadata[9:]
+    object_base64 = object_base64_decoded.encode('utf-8')
+    object_encrypted = base64.b64decode(object_base64)
+    object_str = metadata_crypter.decrypt(object_encrypted).decode('utf-8')
     checksum, metadata = object_str.split("#", 1)
+
     assert _generate_hex_checksum(metadata) == checksum
 
     return metadata
