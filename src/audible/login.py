@@ -141,7 +141,7 @@ def get_inputs_from_soup(
             inputs[field["name"]] = ""
             if field["type"] and field["type"] == "hidden":
                 inputs[field["name"]] = field["value"]
-        except BaseException:
+        except BaseException:  # noqa: S110
             pass
     return inputs
 

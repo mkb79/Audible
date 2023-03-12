@@ -128,7 +128,8 @@ def fetch_activation_sign_auth(auth: "audible.Authenticator") -> bytes:
     Raises:
         AuthFlowError: If no valid auth method is available.
     """
-    assert "signing" in auth.available_auth_modes
+    if "signing" not in auth.available_auth_modes:
+        raise AuthFlowError
 
     url = "https://www.audible.com/license/token"
     params = {

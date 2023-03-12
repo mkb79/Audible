@@ -5,7 +5,7 @@ from typing import Any, Callable, Dict, Optional, Union
 
 import httpx
 from httpx import URL
-from httpx._types import HeaderTypes
+from httpx._models import Headers, HeaderTypes  # noqa: F401
 
 from .auth import Authenticator
 from .exceptions import (
@@ -226,7 +226,6 @@ class Client:
             A unprepared httpx Response object.
 
         .. versionadded:: v0.5.1
-
         """
         cookies = self.auth.website_cookies if apply_cookies else {}
         cookies = httpx.Cookies(cookies)
