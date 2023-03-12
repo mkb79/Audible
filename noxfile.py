@@ -211,8 +211,8 @@ def docs_build(session: Session) -> None:
         "sphinx-autodoc-typehints",
         "sphinx-rtd-theme",
         "sphinxcontrib-httpdomain",
-        "myst-parser"
-     )
+        "myst-parser",
+    )
 
     build_dir = Path("docs", "_build")
     if build_dir.exists():
@@ -232,8 +232,8 @@ def docs(session: Session) -> None:
         "sphinx-autodoc-typehints",
         "sphinx-rtd-theme",
         "sphinxcontrib-httpdomain",
-        "myst-parser"
-     )
+        "myst-parser",
+    )
 
     build_dir = Path("docs", "_build")
     if build_dir.exists():

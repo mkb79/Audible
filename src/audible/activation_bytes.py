@@ -3,11 +3,12 @@ import hashlib
 import pathlib
 import struct
 import urllib.parse
-from typing import Optional, TYPE_CHECKING, Union
+from typing import TYPE_CHECKING, Optional, Union
 
 import httpx
 
 from .exceptions import AuthFlowError
+
 
 if TYPE_CHECKING:
     import audible
@@ -15,21 +16,19 @@ if TYPE_CHECKING:
 
 def get_player_id() -> str:
     """Build a software player Id."""
-
-    player_id = base64.encodebytes(hashlib.sha1(b"").digest()).rstrip()  # noqa
+    player_id = base64.encodebytes(hashlib.sha1(b"").digest()).rstrip()  # noqa: S324
     return player_id.decode("ascii")
 
 
 def get_player_token(auth: "audible.Authenticator") -> str:
     """Fetches a player token for further authentication.
 
-    Args:    
+    Args:
         auth: The Authenticator.
 
     Returns:
         The player token.
     """
-
     params = {
         "ipRedirectOverride": True,
         "playerType": "software",
@@ -37,7 +36,7 @@ def get_player_token(auth: "audible.Authenticator") -> str:
         "playerModel": "Desktop",
         "playerId": get_player_id(),
         "playerManufacturer": "Audible",
-        "serial": ""
+        "serial": "",
     }
 
     url = f"https://www.audible.{auth.locale.domain}/player-auth-token"
@@ -53,18 +52,16 @@ def get_player_token(auth: "audible.Authenticator") -> str:
 def extract_activation_bytes(data: bytes) -> str:
     """Extracts the activation bytes from activation blob.
 
-    Args:    
+    Args:
         data: A activation blob returned by ``fetch_activation`` function
-    
+
     Returns:
         The extracted activation bytes.
-    
+
     Raises:
         ValueError: If `data` is not a valid activation blob.
     """
-
-    if (b"BAD_LOGIN" in data or b"Whoops" in data) or \
-            b"group_id" not in data:
+    if (b"BAD_LOGIN" in data or b"Whoops" in data) or b"group_id" not in data:
         print(data)
         print("\nActivation failed! ;(")
         raise ValueError("data wrong")
@@ -77,7 +74,7 @@ def extract_activation_bytes(data: bytes) -> str:
 
     # Strips newline characters from activation body
     fmt = "70s1x" * 8
-    data = b''.join(struct.unpack(fmt, data))
+    data = b"".join(struct.unpack(fmt, data))
 
     # the extracted activation bytes
     ab = "{:x}".format(*struct.unpack("<I", data[:4]))
@@ -85,7 +82,7 @@ def extract_activation_bytes(data: bytes) -> str:
     # check if length of activation bytes are less than 8
     # if so, then append 0 in front to reach 8
     if len(ab) < 8:
-        pad = (8 - len(ab)) * '0'
+        pad = (8 - len(ab)) * "0"
         ab = pad + ab
 
     return ab
@@ -94,13 +91,12 @@ def extract_activation_bytes(data: bytes) -> str:
 def fetch_activation(player_token: str) -> bytes:
     """Fetches the activation blob with player tokenfrom Audible server.
 
-    Args:    
+    Args:
         player_token: A player token returned by ``get_player_token`` function.
-    
+
     Returns:
         The activation blob.
     """
-
     url = "https://www.audible.com/license/licenseForCustomerToken"
 
     # register params
@@ -122,21 +118,20 @@ def fetch_activation(player_token: str) -> bytes:
 def fetch_activation_sign_auth(auth: "audible.Authenticator") -> bytes:
     """Fetches the activation blob with sign authentication from Audible server.
 
-    Args:    
-        auth: A ``Authenticator`` instance with valid `'adp_token`` and 
+    Args:
+        auth: A ``Authenticator`` instance with valid `'adp_token`` and
             ``device_private_cert``.
-    
+
     Returns:
         The activation blob.
     """
-
     assert "signing" in auth.available_auth_modes
 
     url = "https://www.audible.com/license/token"
     params = {
         "player_manuf": "Audible,iPhone",
         "action": "register",
-        "player_model": "iPhone"
+        "player_model": "iPhone",
     }
     with httpx.Client(auth=auth) as client:
         resp = client.get(url, params=params)
@@ -144,21 +139,24 @@ def fetch_activation_sign_auth(auth: "audible.Authenticator") -> bytes:
 
 
 def get_activation_bytes(
-        auth: "audible.Authenticator",
-        filename: Optional[Union[str, pathlib.Path]] = None,
-        extract: bool = True) -> Union[str, bytes]:
+    auth: "audible.Authenticator",
+    filename: Optional[Union[str, pathlib.Path]] = None,
+    extract: bool = True,
+) -> Union[str, bytes]:
     """Fetches the activation blob from Audible and extracts the bytes.
 
-    Args:    
+    Args:
         auth: The Authenticator.
         filename: The filename to save the activation blob (Default: None).
         extract: If True, returns the extracted activation bytes otherwise
             the whole activation blob (Default: True).
-    
+
     Returns:
         The activation bytes or activation blob.
-    """
 
+    Raises:
+        AuthFlowError: If no valid auth method is available.
+    """
     auth_modes = auth.available_auth_modes
     if "signing" in auth_modes:
         activation = fetch_activation_sign_auth(auth)

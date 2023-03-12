@@ -37,7 +37,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ### Bugfix
 
-- fix a bug in registration url 
+- fix a bug in registration url
 
 ## [0.7.1] - 2022-03-27
 
@@ -55,7 +55,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 - make sure activation bytes has 8 bytes, otherwise append ‚0‘ in front until 8 bytes are reached
 - make sure metadata1 has 8 bytes, otherwise append ‚0‘ in front until 8 bytes are reached
-- If installed, use playwright to login with external browser. Please 
+- If installed, use playwright to login with external browser. Please
   [read here](https://playwright.dev/python/docs/intro) how to install playwright.
   Then use `audible.Authenticator.from_login_external(COUNTRY_CODE)` for login.
 - fix login issues
@@ -142,12 +142,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ### Added
 
-- Fetched activation bytes (with ``extract=True`` argument) will be stored to ``activation_bytes`` attribute of Authenticator class instance for now. Ignore existing activation bytes and force refresh with ``auth.get_activation_bytes(force_refresh=True)``
-- ``activation_bytes`` will be loaded from and save  to file. Saved auth files are **not backward compatible** to previous audible versions so keep old files save.
-- Add ``Client.raw_request`` and ``AsyncClient.raw_request`` method.
-- Provide a custom Callback with ``approval_callback`` keyword argument when login.
-- Add classmethod ``Authenticator.from_login_external`` and method ``Authenticator.re_login_external``.
-- Add ``login_external`` function to login.py
+- Fetched activation bytes (with `extract=True` argument) will be stored to `activation_bytes` attribute of Authenticator class instance for now. Ignore existing activation bytes and force refresh with `auth.get_activation_bytes(force_refresh=True)`
+- `activation_bytes` will be loaded from and save to file. Saved auth files are **not backward compatible** to previous audible versions so keep old files save.
+- Add `Client.raw_request` and `AsyncClient.raw_request` method.
+- Provide a custom Callback with `approval_callback` keyword argument when login.
+- Add classmethod `Authenticator.from_login_external` and method `Authenticator.re_login_external`.
+- Add `login_external` function to login.py
 
 ### Misc
 
@@ -168,7 +168,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - The `FileAuthenticator` has been deprecated, use classmethod `Authenticator.from_file` instead.
 - The `Authenticator` don’t inherit from MutableMapping anymore
 - The `Authenticator` sets allowed instance attributes at creation to `None`, not allowed attributes will raise an Exception
-- The `LoginAuthenticator` has been deprecated, use  classmethod `Authenticator.from_login` instead.
+- The `LoginAuthenticator` has been deprecated, use classmethod `Authenticator.from_login` instead.
 - Changed internal code base for encryption and decryption metadata. Moved the related code to `metadata.py`.
 
 ### Remove
@@ -183,10 +183,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Rework documentation.
 - Added `.readthedocs.yml` config file
 - Added module description (autodoc) to docs
-- Uses `httpx` 0.16.* for now
+- Uses `httpx` 0.16.\* for now
 
 ## [0.4.4] - 2020-10-25
 
 ### Bugfix
 
-- Set `padding=„none“` when decrypting license voucher 
+- Set `padding=„none“` when decrypting license voucher

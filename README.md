@@ -9,14 +9,14 @@
 [![CodeFactor](https://www.codefactor.io/repository/github/mkb79/audible/badge)](https://www.codefactor.io/repository/github/mkb79/audible)
 [![image](https://img.shields.io/pypi/dm/audible.svg)](https://pypi.org/project/audible/)
 
-**Audible is a Python low-level interface to communicate with the non-publicly 
-[Audible](https://en.wikipedia.org/wiki/Audible_(service)) API.** 
+**Audible is a Python low-level interface to communicate with the non-publicly
+[Audible](<https://en.wikipedia.org/wiki/Audible_(service)>) API.**
 
-It enables Python developers to create there own Audible services. 
+It enables Python developers to create there own Audible services.
 Asynchronous communication with the Audible API is supported.
 
-For a basic command line interface take a look at my 
-[audible-cli](https://github.com/mkb79/audible-cli) package. This package 
+For a basic command line interface take a look at my
+[audible-cli](https://github.com/mkb79/audible-cli) package. This package
 supports:
 
 - downloading audiobooks (aax/aaxc), cover, PDF and chapter files

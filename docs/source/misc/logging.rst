@@ -22,8 +22,8 @@ You can use it in this way::
    # capture warnings
    log_helper.capture_warnings()
 
-The `LEVEL` argument for :meth:`~audible.log_helper.set_console_logger` 
-and :meth:`~audible.log_helper.set_file_logger` are optional. If a `LEVEL` 
+The `LEVEL` argument for :meth:`~audible.log_helper.set_console_logger`
+and :meth:`~audible.log_helper.set_file_logger` are optional. If a `LEVEL`
 is provided, it must be equal or greater than the log level for the package.
 Otherwise console or file logger will log nothing.
 
