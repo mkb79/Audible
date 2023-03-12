@@ -12,9 +12,12 @@ METADATA_KEY: bytes = b"a\x03\x8fp4\x18\x97\x99:\xeb\xe7\x8b\x85\x97$4"
 
 
 def raw_xxtea(v: List, n: int, k: Union[List, Tuple]) -> int:
-    assert isinstance(v, list)
-    assert isinstance(k, (list, tuple))
-    assert isinstance(n, int)
+    if not isinstance(v, list):
+        raise ValueError("arg `v` is not of type list")
+    if not isinstance(k, (list, tuple)):
+        raise ValueError("arg `key` is not of type list or tuple")
+    if not isinstance(n, int):
+        raise ValueError("arg `n` is not of type int")
 
     def mx():
         return ((z >> 5) ^ (y << 2)) + ((y >> 3) ^ (z << 4)) ^ (sum_ ^ y) + (
@@ -108,8 +111,10 @@ class XXTEA:
         key = key.encode() if isinstance(key, str) else key
         if len(key) != 16:
             raise XXTEAException("Invalid key")
-        self.key = struct.unpack("IIII", key)
-        assert len(self.key) == 4
+        unpacked_key = struct.unpack("IIII", key)
+        if len(unpacked_key) != 4:
+            raise XXTEAException("Invalid key")
+        self.key = unpacked_key
 
     def encrypt(self, data: Union[str, bytes]) -> bytes:
         """Encrypts and returns a block of data."""
@@ -156,7 +161,8 @@ def decrypt_metadata(encrypted_metadata: str) -> str:
     object_str = metadata_crypter.decrypt(object_encrypted).decode("utf-8")
     checksum, metadata = object_str.split("#", 1)
 
-    assert _generate_hex_checksum(metadata) == checksum
+    if _generate_hex_checksum(metadata) != checksum:
+        raise XXTEAException("Checksum mismatch during decryption.")
 
     return metadata
 
