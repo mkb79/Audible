@@ -145,7 +145,7 @@ known-first-party = ["audible"]
 lines-after-imports = 2
 
 [tool.ruff.mccabe]
-max-complexity = 32  # temporarily raise complexity, target is 10
+max-complexity = 20  # temporarily raise complexity, target is 10
 
 [tool.ruff.pydocstyle]
 convention = "google"
