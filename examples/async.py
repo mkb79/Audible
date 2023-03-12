@@ -46,19 +46,20 @@ async def main(auth):
 if __name__ == "__main__":
     # authenticate with login
     # don't stores any credentials on your system
-    auth = audible.Authenticator.from_login("USERNAME", "PASSWORD", locale="us")
+    username = ""
+    password = ""
+    filename = ""
+
+    auth = audible.Authenticator.from_login(username, password, locale="us")
 
     # store credentials to file
-    auth.to_file(
-        filename="FILENAME", encryption="json", password="PASSWORD"
-    )  # noqa: "106
+    auth.to_file(filename=filename, encryption="json", password=password)
 
     # save again
     auth.to_file()
 
     # load credentials from file
-    auth = audible.Authenticator.from_file(filename="FILENAME", password="PASSWORD")
-    # noqa: "106
+    auth = audible.Authenticator.from_file(filename=filename, password=password)
     loop = asyncio.get_event_loop()
     loop.run_until_complete(main(auth))
 
