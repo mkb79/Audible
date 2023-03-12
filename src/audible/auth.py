@@ -54,7 +54,7 @@ def refresh_access_token(
         The new access token is valid for 60 minutes.
 
     .. versionadded:: v0.8
-           The with_username argument
+        The with_username argument
     """
     body = {
         "app_name": "Audible",
@@ -95,7 +95,7 @@ def refresh_website_cookies(
         `cookies_domain` scope.
 
     .. versionadded:: v0.8
-           The with_username argument
+        The with_username argument
     """
     target_domain = "audible" if with_username else "amazon"
 
@@ -202,7 +202,7 @@ class Authenticator(httpx.Auth):
         :meth:`Authenticator.from_login` or :meth:`Authenticator.from_file`.
 
     .. versionadded:: v0.8
-           The with_username attribute.
+        The with_username attribute.
 
     Note:
         Auth data saved with v0.8 or later
@@ -272,7 +272,6 @@ class Authenticator(httpx.Auth):
             data: A dictionary with the authentication data
             locale: The country code of the Audible marketplace to interact
                 with. If ``None`` the country code from file is used.
-
 
         Returns:
             A new Authenticator instance.
@@ -532,7 +531,7 @@ class Authenticator(httpx.Auth):
         """Sign a request.
 
         .. deprecated:: 0.5.0
-        Use :meth:`self._apply_signing_auth_flow` instead.
+            Use :meth:`self._apply_signing_auth_flow` instead.
         """
         self._apply_signing_auth_flow(request)
 
@@ -678,19 +677,20 @@ class Authenticator(httpx.Auth):
     ) -> Union[str, bytes]:
         """Get Activation bytes from Audible.
 
-        :param filename: [Optional] filename to save the activation blob
-        :type filename: string, pathlib.Path
-        :param extract: [Optional] if True, returns the extracted activation
-                        bytes otherwise the whole activation blob
-        :type force_refresh: [Optional] if True, existing activation bytes in
-                             auth file will be ignored and new activation bytes
-                             will be requested from server.
+        Args:
+            filename: [Optional] filename to save the activation blob
+            extract: [Optional] if True, returns the extracted activation
+                bytes otherwise the whole activation blob
+            force_refresh: [Optional] if True, existing activation bytes in
+                auth file will be ignored and new activation bytes
+                will be requested from server.
+
+        Returns:
+            The activation bytes
 
         .. versionadded:: 0.5.1
-
            The ``force_refresh`` argument. Fetched activation bytes are now
            stored to `Authententicator.activation_bytes`.
-
         """
         if not force_refresh and extract and self.activation_bytes is not None:
             logger.debug("Activation bytes already fetched. Returned saved one.")

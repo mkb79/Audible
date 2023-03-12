@@ -130,6 +130,9 @@ def combine_seasonal_cols(seasonal_model_results, csv_file=""):
     Args:
         seasonal_model_results: (statsmodels DecomposeResult object)
         csv_file: csv file to save to.
+
+    Returns:
+        The modified data frame.
     """
     # Add results to original df
     modified_df = pd.DataFrame()

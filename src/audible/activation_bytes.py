@@ -124,6 +124,9 @@ def fetch_activation_sign_auth(auth: "audible.Authenticator") -> bytes:
 
     Returns:
         The activation blob.
+
+    Raises:
+        AuthFlowError: If no valid auth method is available.
     """
     assert "signing" in auth.available_auth_modes
 
