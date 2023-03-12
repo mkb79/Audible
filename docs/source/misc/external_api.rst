@@ -405,6 +405,7 @@ Content
    :<json string drm_type: [Mpeg, PlayReady, Hls, Dash, FairPlay, Widevine, HlsCmaf, Adrm]
    :<json string quality: [High, Normal, Extreme, Low]
    :<json integer num_active_offline_licenses: (max: 10)
+   :<json string chapter_titles_type: [Tree, Flat]
    :<json string response_groups: [last_position_heard, pdf_url,
                                    content_reference, chapter_info]
 
@@ -431,6 +432,7 @@ Content
    :query response_groups: [chapter_info, always-returned, content_reference, content_url]
    :query acr:
    :query quality: [High, Normal, Extreme, Low]
+   :query chapter_titles_type: [Tree, Flat]
    :query drm_type: [Mpeg, PlayReady, Hls, Dash, FairPlay, Widevine, HlsCmaf, Adrm]
 
 Account
