@@ -27,14 +27,7 @@ supports:
 
 ## Requirements
 
-- Python >= 3.6
-- depends on following packages:
-	- beautifulsoup4
-	- httpx
-	- pbkdf2
-	- Pillow
-	- pyaes
-	- rsa
+Python >= 3.8
 
 ## Installation
 
@@ -43,3 +36,36 @@ supports:
 ## Read the Doc
 
 The documentation can be found at [Read the Docs](https://audible.readthedocs.io/en/latest)
+
+## Contributing
+
+Contributions are very welcome.
+To learn more, see the [Contributor Guide].
+
+## License
+
+Distributed under the terms of the [AGPL-3.0][license],
+_Audible_ is free and open source software.
+
+## Issues
+
+If you encounter any problems,
+please [file an issue] along with a detailed description.
+
+## Credits
+
+Thanks a lot JetBrains for supporting me with a free [license](https://www.jetbrains.com/community/opensource/#support)
+This project was generated from [@cjolowicz]'s [Hypermodern Python Cookiecutter] template.
+
+[@cjolowicz]: https://github.com/cjolowicz
+[pypi]: https://pypi.org/
+[hypermodern python cookiecutter]: https://github.com/cjolowicz/cookiecutter-hypermodern-python
+[file an issue]: https://github.com/mkb79/Audible/issues
+[pip]: https://pip.pypa.io/
+[audible]: https://github.com/mkb79/Audible
+[pipx]: https://pypa.github.io/pipx/
+
+<!-- github-only -->
+
+[license]: https://github.com/mkb79/Audible/blob/main/LICENSE
+[contributor guide]: https://github.com/mkb79/Audible/blob/main/CONTRIBUTING.md

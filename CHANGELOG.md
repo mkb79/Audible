@@ -53,8 +53,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ### Bugfix
 
-- make sure activation bytes has 8 bytes, otherwise append '0' in front until 8 bytes are reached
-- make sure metadata1 has 8 bytes, otherwise append '0' in front until 8 bytes are reached
+- make sure activation bytes has 8 bytes, otherwise append ‚0‘ in front until 8 bytes are reached
+- make sure metadata1 has 8 bytes, otherwise append ‚0‘ in front until 8 bytes are reached
 - If installed, use playwright to login with external browser. Please 
   [read here](https://playwright.dev/python/docs/intro) how to install playwright.
   Then use `audible.Authenticator.from_login_external(COUNTRY_CODE)` for login.
@@ -64,7 +64,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ### Bugfix
 
-- Fix a bug when searching for "resend-approval-link" in login page
+- Fix a bug when searching for „resend-approval-link“ in login page
 
 ### Changed
 
@@ -78,7 +78,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 - Correct documentation
 - Update example download_books_aaxc.py
-- Bump httpx to v0.20.*
+- Bump httpx to `v0.20.*`
 
 ### Remove
 
@@ -166,7 +166,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ### Changed
 
 - The `FileAuthenticator` has been deprecated, use classmethod `Authenticator.from_file` instead.
-- The `Authenticator` don't inherit from MutableMapping anymore
+- The `Authenticator` don’t inherit from MutableMapping anymore
 - The `Authenticator` sets allowed instance attributes at creation to `None`, not allowed attributes will raise an Exception
 - The `LoginAuthenticator` has been deprecated, use  classmethod `Authenticator.from_login` instead.
 - Changed internal code base for encryption and decryption metadata. Moved the related code to `metadata.py`.
@@ -189,4 +189,4 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ### Bugfix
 
-- Set `padding="none"` when decrypting license voucher 
+- Set `padding=„none“` when decrypting license voucher 

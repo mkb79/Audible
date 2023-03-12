@@ -1,0 +1,155 @@
+[tool.poetry]
+name = "audible"
+version = "0.8.2"
+description = "A(Sync) Interface for internal Audible API written in pure Python."
+authors = ["mkb79 <mkb79@hackitall.de>"]
+license = "AGPL-3.0-only"
+readme = "README.md"
+homepage = "https://github.com/mkb79/Audible"
+repository = "https://github.com/mkb79/Audible"
+documentation = "https://audible.readthedocs.io"
+packages = [
+    { include = "audible", from = "src" },
+]
+keywords = [
+    "Audible",
+    "API",
+    "async"
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: GNU Affero General Public License v3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11"
+    ]
+
+[tool.poetry.urls]
+Changelog = "https://github.com/mkb79/Audible/releases"
+
+[tool.poetry.dependencies]
+python = ">=3.8,<3.12"
+Pillow = ">=9.4.0"
+beautifulsoup4 = "^4.11.2"
+httpx = "^0.23.3"
+pbkdf2 = "^1.3"
+pyaes = "^1.6.1"
+rsa = "^4.9"
+
+
+[tool.poetry.group.dev.dependencies]
+Pygments = ">=2.10.0"
+black = ">=21.10b0"
+coverage = {extras = ["toml"], version = ">=6.2"}
+darglint = ">=1.8.1"
+mypy = ">=0.930"
+myst-parser = {version = ">=0.16.1"}
+pre-commit = ">=2.16.0"
+pre-commit-hooks = ">=4.1.0"
+pyinstaller = ">=5.8.0"
+pytest = ">=6.2.5"
+pytest-mock = ">=3.10.0"
+ruff = ">=0.0.254"
+safety = ">=1.10.3"
+sphinx = ">=4.3.2"
+sphinx-autobuild = ">=2021.3.14"
+sphinx-autodoc-typehints = ">=1.22"
+sphinx-rtd-theme = ">=1.2.0"
+sphinxcontrib-httpdomain = ">=1.8.1"
+typeguard = ">=2.13.3"
+xdoctest = {extras = ["colors"], version = ">=0.15.10"}
+
+[tool.poetry_bumpversion.file."src/audible/__init__.py"]
+
+[tool.coverage.paths]
+source = ["src", "*/site-packages"]
+tests = ["tests", "*/tests"]
+
+[tool.coverage.run]
+branch = true
+source = ["audible", "tests"]
+
+[tool.coverage.report]
+show_missing = true
+fail_under = 100
+exclude_lines = [
+    "pragma: no cover",
+    "if TYPE_CHECKING:"
+]
+
+[tool.mypy]
+disable_error_code = [
+    "arg-type",
+    "assignment",
+    "attr-defined",
+    "call-overload",
+    "dict-item",
+    "func-returns-value",
+    "has-type",
+    "import",
+    "index",
+    "no-any-return",
+    "no-untyped-call",
+    "no-untyped-def",
+    "operator",
+    "return-value",
+    "type-arg",
+    "union-attr",
+    "valid-type",
+    "var-annotated",
+]
+pretty = true
+show_column_numbers = true
+show_error_codes = true
+show_error_context = true
+strict = true
+warn_unreachable = true
+
+[tool.ruff]
+#  missing rst-docstrings check, these should be adding through ruff
+ignore = [
+    "D10",  # temporarily ignore missing docstrings
+    "E501",
+    "N818",
+]
+line-length = 80
+select=[
+    "A",
+    "B",
+    "C4",
+    "C9",
+    "D",
+    "E",
+    "F",
+    "G",
+    "I",
+    "N",
+    "PGH",
+    "PLC",
+    "PLE",
+    "S",
+    "UP",
+    "W",
+]
+src = ["src"]
+target-version = "py38"
+
+[tool.ruff.per-file-ignores]
+"tests/*" = ["S101"]
+
+[tool.ruff.isort]
+force-single-line = false
+known-first-party = ["audible"]
+lines-after-imports = 2
+
+[tool.ruff.mccabe]
+max-complexity = 32  # temporarily raise complexity, target is 10
+
+[tool.ruff.pydocstyle]
+convention = "google"
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
