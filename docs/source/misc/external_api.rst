@@ -362,7 +362,7 @@ Wishlist
 
 .. http:post:: /1.0/wishlist
 
-   :<json string asin: The asin of the book to remove
+   :<json string asin: The asin of the book to add
    :statuscode 201: Returns the `Location` to the resource.
 
    **Example request body**
