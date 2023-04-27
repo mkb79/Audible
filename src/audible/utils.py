@@ -2,7 +2,7 @@ import logging
 import pathlib
 import re
 import time
-from typing import Any, Dict, Optional, Union
+from typing import Any, Callable, Dict, Union
 
 from .aescipher import AESCipher
 from .localization import Locale
@@ -64,9 +64,9 @@ def _check_device_private_key(value: str) -> None:
         raise ValueError("device_private_key: Invalid token.")
 
 
-def _check_expires(value: Union[int, float, str]) -> Optional[float]:
-    if not isinstance(value, (int, float, str)):
-        raise TypeError(f"expires: Expected int/float/str, got {type(value).__name__}.")
+def _check_expires(value: Union[int, float, str]) -> Union[int, float]:
+    if isinstance(value, (int, float)):
+        return value
 
     if isinstance(value, str):
         try:
@@ -76,17 +76,24 @@ def _check_expires(value: Union[int, float, str]) -> Optional[float]:
                 "expires: Got str. Converting to float raises an error."
             ) from exc
 
+    raise TypeError(f"expires: Expected int/float/str, got {type(value).__name__}.")
 
-def _check_locale(value: Union[str, Locale]) -> Optional[Locale]:
-    if not isinstance(value, (Locale, str)):
-        raise TypeError(f"locales: Expected Locale/str, got {type(value).__name__}.")
+
+def _check_locale(value: Union[str, Locale]) -> Locale:
+    if isinstance(value, Locale):
+        return value
 
     if isinstance(value, str):
         return Locale(value.lower())
 
+    raise TypeError(f"locales: Expected Locale/str, got {type(value).__name__}.")
 
-def _check_filename(value) -> pathlib.Path:
-    if not isinstance(value, pathlib.Path):
+
+def _check_filename(value: Union[str, pathlib.Path]) -> pathlib.Path:
+    if isinstance(value, pathlib.Path):
+        return value
+
+    if isinstance(value, str):
         try:
             return pathlib.Path(value)
         except Exception as exc:
@@ -94,6 +101,8 @@ def _check_filename(value) -> pathlib.Path:
                 f"filename: Got {type(value).__name__}. Converting "
                 f"to Path raises an error."
             ) from exc
+
+    raise TypeError(f"filename: Expected Path/str, got {type(value).__name__}.")
 
 
 def _check_crypter(value: AESCipher) -> None:
@@ -109,7 +118,7 @@ def _check_encryption(value: Union[bool, str]) -> None:
         raise ValueError("encryption: Value are not allowed.")
 
 
-string_function_map = {
+string_function_map: Dict[str, Callable[[Any], Any]] = {
     "website_cookies": _check_website_cookies,
     "adp_token": _check_adp_token,
     "access_token": _check_access_token,
@@ -132,8 +141,8 @@ def test_convert(key: str, value: Any) -> Any:
 
 
 class ElapsedTime:
-    def __init__(self):
+    def __init__(self) -> None:
         self.start_time = time.time()
 
-    def __call__(self):
+    def __call__(self) -> float:
         return time.time() - self.start_time
