@@ -5,7 +5,8 @@ build:
     python: "3.11"
 sphinx:
   configuration: docs/source/conf.py
-formats: pdf
+formats:
+  - pdf
 python:
   install:
     - requirements: docs/requirements.txt
