@@ -6,7 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## Unreleased
 
--
+- Drop support for Python 3.7.
+- First step to refactor code.
+- Switch project to poetry.
+- Using nox for tests.
 
 ## [0.8.2] - 2022-05-25
 
