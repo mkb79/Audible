@@ -62,7 +62,7 @@ jobs:
       - name: Publish package on PyPI
         continue-on-error: true
         if: steps.check-version.outputs.tag
-        uses: pypa/gh-action-pypi-publish@v1.8.6
+        uses: pypa/gh-action-pypi-publish@v1.8.10
         with:
           user: __token__
           password: ${{ secrets.PYPI_TOKEN }}
@@ -70,7 +70,7 @@ jobs:
       - name: Publish package on TestPyPI
         continue-on-error: true
         if: "! steps.check-version.outputs.tag"
-        uses: pypa/gh-action-pypi-publish@v1.8.6
+        uses: pypa/gh-action-pypi-publish@v1.8.10
         with:
           user: __token__
           password: ${{ secrets.TEST_PYPI_TOKEN }}
