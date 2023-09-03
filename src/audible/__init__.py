@@ -1,10 +1,8 @@
-# -*- coding: utf-8 -*-
+__version__ = "0.8.2"
 
 from ._logging import log_helper
-from ._version import __version__
 from .auth import Authenticator
-from .client import Client, AsyncClient
+from .client import AsyncClient, Client
 
-__all__ = [
-    "__version__", "Authenticator", "log_helper", "Client", "AsyncClient"
-]
+
+__all__ = ["__version__", "Authenticator", "log_helper", "Client", "AsyncClient"]

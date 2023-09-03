@@ -22,9 +22,9 @@ And can then be reused later like so::
 
    The :meth:`audible.Authenticator.to_dict` and :meth:`audible.Authenticator.from_dict` methods.
 
-With :meth:`audible.Authenticator.to_dict` you can get the authentication data as a 
+With :meth:`audible.Authenticator.to_dict` you can get the authentication data as a
 dictionary. This enables you to implement your own save/load methods. Simply
-use the :meth:`audible.Authenticator.from_dict` classmethod to load the data from 
+use the :meth:`audible.Authenticator.from_dict` classmethod to load the data from
 the dictionary.
 
 Encrypted Load/Save
@@ -103,7 +103,7 @@ Following options are supported:
 - salt_marker (default = b"$")
 - kdf_iterations (default = 1000)
 - hashmod (default = Crypto.Hash.SHA256)
-    
+
 `key_size` may be 16, 24 or 32. The key is derived via the PBKDF2 key derivation
 function (KDF) from the password and a random salt of 16 bytes (the AES block
 size) minus the length of the salt header (see below).
@@ -140,4 +140,3 @@ unencrypted. If the `Authenticator` can't load your data, you can try::
        decrypted_file=FILENAME,
        password=PASSWORD_FOR_ENCRYPTED_FILE
    )
-

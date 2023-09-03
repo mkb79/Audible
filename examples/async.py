@@ -17,7 +17,7 @@ async def get_book_infos(client, asin):
                     "category_ladders, claim_code_url, is_downloaded, pdf_url, "
                     "is_returnable, origin_asin, percent_complete, provided_review"
                 )
-            }
+            },
         )
         return book
     except Exception as e:
@@ -28,12 +28,7 @@ async def main(auth):
     async with audible.AsyncClient(auth) as client:
         print(repr(client))
 
-        library = await client.get(
-            path="library",
-            params={
-                "num_results": 999
-            }
-        )
+        library = await client.get(path="library", params={"num_results": 999})
         asins = [book["asin"] for book in library["items"]]
 
         # books = await asyncio.gather(*(dl_book(asin) for asin in asins))
@@ -45,36 +40,28 @@ async def main(auth):
         for book in books:
             if book is not None:
                 print(book["item"])
-                print("\n", 40*"-", "\n")
+                print("\n", 40 * "-", "\n")
 
 
 if __name__ == "__main__":
     # authenticate with login
     # don't stores any credentials on your system
-    auth = audible.Authenticator.from_login(
-        "USERNAME",
-        "PASSWORD",
-        locale="us"
-    )
+    username = ""
+    password = ""
+    filename = ""
+
+    auth = audible.Authenticator.from_login(username, password, locale="us")
 
     # store credentials to file
-    auth.to_file(
-        filename="FILENAME",
-        encryption="json",
-        password="PASSWORD"
-    )
+    auth.to_file(filename=filename, encryption="json", password=password)
 
     # save again
     auth.to_file()
 
     # load credentials from file
-    auth = audible.Authenticator.from_file(
-        filename="FILENAME",
-        password="PASSWORD"
-    )
+    auth = audible.Authenticator.from_file(filename=filename, password=password)
     loop = asyncio.get_event_loop()
     loop.run_until_complete(main(auth))
 
     # deregister device
     auth.deregister_device()
-

@@ -8,20 +8,24 @@ from typing import List, Tuple, Union
 
 
 # key used for encrypt/decrypt metadata1
-METADATA_KEY: bytes = b'a\x03\x8fp4\x18\x97\x99:\xeb\xe7\x8b\x85\x97$4'
+METADATA_KEY: bytes = b"a\x03\x8fp4\x18\x97\x99:\xeb\xe7\x8b\x85\x97$4"
 
 
 def raw_xxtea(v: List, n: int, k: Union[List, Tuple]) -> int:
-    assert isinstance(v, list)
-    assert isinstance(k, (list, tuple))
-    assert isinstance(n, int)
+    if not isinstance(v, list):
+        raise ValueError("arg `v` is not of type list")
+    if not isinstance(k, (list, tuple)):
+        raise ValueError("arg `key` is not of type list or tuple")
+    if not isinstance(n, int):
+        raise ValueError("arg `n` is not of type int")
 
     def mx():
         return ((z >> 5) ^ (y << 2)) + ((y >> 3) ^ (z << 4)) ^ (sum_ ^ y) + (
-                k[(p & 3) ^ e] ^ z)
+            k[(p & 3) ^ e] ^ z
+        )
 
     def u32(x):
-        return x % 2 ** 32
+        return x % 2**32
 
     y = v[0]
     sum_ = 0
@@ -63,20 +67,22 @@ def raw_xxtea(v: List, n: int, k: Union[List, Tuple]) -> int:
 def _bytes_to_longs(data: Union[str, bytes]) -> List[int]:
     data_bytes = data.encode() if isinstance(data, str) else data
 
-    return [int.from_bytes(data_bytes[i:i + 4], "little")
-            for i in range(0, len(data_bytes), 4)]
+    return [
+        int.from_bytes(data_bytes[i : i + 4], "little")
+        for i in range(0, len(data_bytes), 4)
+    ]
 
 
 def _longs_to_bytes(data: List[int]) -> bytes:
-    return b"".join([i.to_bytes(4, 'little') for i in data])
+    return b"".join([i.to_bytes(4, "little") for i in data])
 
 
 def _generate_hex_checksum(data: str) -> str:
-    checksum = binascii.crc32(data.encode()) % 2 ** 32
+    checksum = binascii.crc32(data.encode()) % 2**32
     checksum = format(checksum, "X")
 
     if len(checksum) < 8:
-        pad = (8 - len(checksum)) * '0'
+        pad = (8 - len(checksum)) * "0"
         checksum = pad + checksum
 
     return checksum
@@ -88,30 +94,30 @@ class XXTEAException(Exception):
 
 class XXTEA:
     """XXTEA wrapper class.
-    
+
     Easy to use and compatible (by duck typing) with the Blowfish class.
 
-    Note:    
-        Partial copied from https://github.com/andersekbom/prycut and ported 
+    Note:
+        Partial copied from https://github.com/andersekbom/prycut and ported
         from PY2 to PY3
     """
 
     def __init__(self, key: Union[str, bytes]) -> None:
         """Initializes the inner class data with the given key.
 
-        Note:        
+        Note:
             The key must be 128-bit (16 characters) in length.
         """
-
         key = key.encode() if isinstance(key, str) else key
         if len(key) != 16:
             raise XXTEAException("Invalid key")
-        self.key = struct.unpack("IIII", key)
-        assert len(self.key) == 4
+        unpacked_key = struct.unpack("IIII", key)
+        if len(unpacked_key) != 4:
+            raise XXTEAException("Invalid key")
+        self.key = unpacked_key
 
     def encrypt(self, data: Union[str, bytes]) -> bytes:
         """Encrypts and returns a block of data."""
-
         ldata = math.ceil(len(data) / 4)
         idata = _bytes_to_longs(data)
         if raw_xxtea(idata, ldata, self.key) != 0:
@@ -120,7 +126,6 @@ class XXTEA:
 
     def decrypt(self, data: Union[str, bytes]) -> bytes:
         """Decrypts and returns a block of data."""
-
         ldata = math.ceil(len(data) / 4)
         idata = _bytes_to_longs(data)
         if raw_xxtea(idata, -ldata, self.key) != 0:
@@ -132,13 +137,12 @@ metadata_crypter = XXTEA(METADATA_KEY)
 
 
 def encrypt_metadata(metadata: str) -> str:
-    """Encrypts metadata to be used to log in to Amazon"""
-
+    """Encrypts metadata to be used to log in to Amazon."""
     checksum = _generate_hex_checksum(metadata)
     object_str = f"{checksum}#{metadata}"
     object_encrypted = metadata_crypter.encrypt(object_str)
     object_base64 = base64.b64encode(object_encrypted)
-    object_base64_decoded = object_base64.decode('utf-8')
+    object_base64_decoded = object_base64.decode("utf-8")
     encrypted_metadata = f"ECdITeCs:{object_base64_decoded}"
 
     return encrypted_metadata
@@ -146,19 +150,19 @@ def encrypt_metadata(metadata: str) -> str:
 
 def decrypt_metadata(encrypted_metadata: str) -> str:
     """Decrypts metadata for testing purposes only."""
-
-    metadata_prefix_position = encrypted_metadata.find('ECdITeCs:')
+    metadata_prefix_position = encrypted_metadata.find("ECdITeCs:")
 
     if metadata_prefix_position != 0:
-        raise Exception('malformed encrypted metadata')
+        raise Exception("malformed encrypted metadata")
 
     object_base64_decoded = encrypted_metadata[9:]
-    object_base64 = object_base64_decoded.encode('utf-8')
+    object_base64 = object_base64_decoded.encode("utf-8")
     object_encrypted = base64.b64decode(object_base64)
-    object_str = metadata_crypter.decrypt(object_encrypted).decode('utf-8')
+    object_str = metadata_crypter.decrypt(object_encrypted).decode("utf-8")
     checksum, metadata = object_str.split("#", 1)
 
-    assert _generate_hex_checksum(metadata) == checksum
+    if _generate_hex_checksum(metadata) != checksum:
+        raise XXTEAException("Checksum mismatch during decryption.")
 
     return metadata
 
@@ -168,10 +172,7 @@ def now_to_unix_ms() -> int:
 
 
 def meta_audible_app(user_agent: str, oauth_url: str) -> str:
-    """
-    Returns json-formatted metadata to simulate sign-in from iOS audible app.
-    """
-
+    """Returns json-formatted metadata to simulate sign-in from iOS audible app."""
     meta_dict = {
         "start": now_to_unix_ms(),
         "interaction": {
@@ -185,35 +186,55 @@ def meta_audible_app(user_agent: str, oauth_url: str) -> str:
             "mouseClickPositions": [],
             "keyCycles": [],
             "mouseCycles": [],
-            "touchCycles": []
+            "touchCycles": [],
         },
         "version": "3.0.0",
         "lsUbid": "X39-6721012-8795219:1549849158",
         "timeZone": -6,
         "scripts": {
             "dynamicUrls": [
-                ("https://images-na.ssl-images-amazon.com/images/I/"
-                 "61HHaoAEflL._RC|11-BZEJ8lnL.js,01qkmZhGmAL.js,71qOHv6nKaL."
-                 "js_.js?AUIClients/AudibleiOSMobileWhiteAuthSkin#mobile"),
-                ("https://images-na.ssl-images-amazon.com/images/I/"
-                 "21T7I7qVEeL._RC|21T1XtqIBZL.js,21WEJWRAQlL.js,31DwnWh8lFL."
-                 "js,21VKEfzET-L.js,01fHQhWQYWL.js,51TfwrUQAQL.js_.js?"
-                 "AUIClients/AuthenticationPortalAssets#mobile"),
-                ("https://images-na.ssl-images-amazon.com/images/I/"
-                 "0173Lf6yxEL.js?AUIClients/AuthenticationPortalInlineAssets"),
-                ("https://images-na.ssl-images-amazon.com/images/I/"
-                 "211S6hvLW6L.js?AUIClients/CVFAssets"),
-                ("https://images-na.ssl-images-amazon.com/images/G/"
-                 "01/x-locale/common/login/fwcim._CB454428048_.js")
+                (
+                    "https://images-na.ssl-images-amazon.com/images/I/"
+                    "61HHaoAEflL._RC|11-BZEJ8lnL.js,01qkmZhGmAL.js,71qOHv6nKaL."
+                    "js_.js?AUIClients/AudibleiOSMobileWhiteAuthSkin#mobile"
+                ),
+                (
+                    "https://images-na.ssl-images-amazon.com/images/I/"
+                    "21T7I7qVEeL._RC|21T1XtqIBZL.js,21WEJWRAQlL.js,31DwnWh8lFL."
+                    "js,21VKEfzET-L.js,01fHQhWQYWL.js,51TfwrUQAQL.js_.js?"
+                    "AUIClients/AuthenticationPortalAssets#mobile"
+                ),
+                (
+                    "https://images-na.ssl-images-amazon.com/images/I/"
+                    "0173Lf6yxEL.js?AUIClients/AuthenticationPortalInlineAssets"
+                ),
+                (
+                    "https://images-na.ssl-images-amazon.com/images/I/"
+                    "211S6hvLW6L.js?AUIClients/CVFAssets"
+                ),
+                (
+                    "https://images-na.ssl-images-amazon.com/images/G/"
+                    "01/x-locale/common/login/fwcim._CB454428048_.js"
+                ),
             ],
             "inlineHashes": [
-                -1746719145, 1334687281, -314038750, 1184642547, -137736901,
-                318224283, 585973559, 1103694443, 11288800, -1611905557,
-                1800521327, -1171760960, -898892073
+                -1746719145,
+                1334687281,
+                -314038750,
+                1184642547,
+                -137736901,
+                318224283,
+                585973559,
+                1103694443,
+                11288800,
+                -1611905557,
+                1800521327,
+                -1171760960,
+                -898892073,
             ],
             "elapsed": 52,
             "dynamicUrlCount": 5,
-            "inlineHashesCount": 13
+            "inlineHashesCount": 13,
         },
         "plugins": "unknown||320-568-548-32-*-*-*",
         "dupedPlugins": "unknown||320-568-548-32-*-*-*",
@@ -225,7 +246,7 @@ def meta_audible_app(user_agent: str, oauth_url: str) -> str:
                 "localStorage": "supported",
                 "touch": True,
                 "video": True,
-                "webWorker": True
+                "webWorker": True,
             },
             "css": {
                 "textShadow": True,
@@ -235,26 +256,20 @@ def meta_audible_app(user_agent: str, oauth_url: str) -> str:
                 "borderImage": True,
                 "opacity": True,
                 "transform": True,
-                "transition": True
+                "transition": True,
             },
-            "elapsed": 1
+            "elapsed": 1,
         },
         "referrer": "",
         "userAgent": user_agent,
         "location": oauth_url,
         "webDriver": None,
-        "history": {
-            "length": 1
-        },
-        "gpu": {
-            "vendor": "Apple Inc.",
-            "model": "Apple A9 GPU",
-            "extensions": []
-        },
+        "history": {"length": 1},
+        "gpu": {"vendor": "Apple Inc.", "model": "Apple A9 GPU", "extensions": []},
         "math": {
             "tan": "-1.4214488238747243",
             "sin": "0.8178819121159085",
-            "cos": "-0.5753861119575491"
+            "cos": "-0.5753861119575491",
         },
         "performance": {
             "timing": {
@@ -278,7 +293,7 @@ def meta_audible_app(user_agent: str, oauth_url: str) -> str:
                 "domContentLoadedEventEnd": now_to_unix_ms(),
                 "domComplete": now_to_unix_ms(),
                 "loadEventStart": now_to_unix_ms(),
-                "loadEventEnd": now_to_unix_ms()
+                "loadEventEnd": now_to_unix_ms(),
             }
         },
         "end": now_to_unix_ms(),
@@ -301,7 +316,7 @@ def meta_audible_app(user_agent: str, oauth_url: str) -> str:
                 "checksum": "C860E86B",
                 "time": 12773,
                 "autocomplete": False,
-                "prefilled": False
+                "prefilled": False,
             },
             "password": {
                 "keys": 0,
@@ -319,14 +334,10 @@ def meta_audible_app(user_agent: str, oauth_url: str) -> str:
                 "height": 43,
                 "time": 10353,
                 "autocomplete": False,
-                "prefilled": False
-            }
+                "prefilled": False,
+            },
         },
-        "canvas": {
-            "hash": -373378155,
-            "emailHash": -1447130560,
-            "histogramBins": []
-        },
+        "canvas": {"hash": -373378155, "emailHash": -1447130560, "histogramBins": []},
         "token": None,
         "errors": [],
         "metrics": [
@@ -353,7 +364,7 @@ def meta_audible_app(user_agent: str, oauth_url: str) -> str:
             {"n": "fwcim-captcha-telemetry-collector", "t": 0},
             {"n": "fwcim-proof-of-work-collector", "t": 1},
             {"n": "fwcim-ubf-collector", "t": 0},
-            {"n": "fwcim-timer-collector", "t": 0}
-        ]
+            {"n": "fwcim-timer-collector", "t": 0},
+        ],
     }
-    return json.dumps(meta_dict, separators=(',', ':'))
+    return json.dumps(meta_dict, separators=(",", ":"))

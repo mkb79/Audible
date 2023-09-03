@@ -5,8 +5,8 @@ Authorization (Login)
 Information
 ===========
 
-Clients are authorized using OpenID in Authorization Code Flow with PKCE. 
-Once a client has successfully authorized to Amazon, they receive an 
+Clients are authorized using OpenID in Authorization Code Flow with PKCE.
+Once a client has successfully authorized to Amazon, they receive an
 `authorization code` for device registration to Audible/Amazon.
 
 .. _authorization:
@@ -33,8 +33,8 @@ A custom callback can be provided (for example submitting the CAPTCHA to an
 external service), like so::
 
    def custom_captcha_callback(captcha_url):
-    
-       # Do some things with the captcha_url ... 
+
+       # Do some things with the captcha_url ...
        # maybe you can call webbrowser.open(captcha_url)
        # or simply print out the captcha_url
 
@@ -56,7 +56,7 @@ using `input` to enter your one time password (OTP), which looks like::
 A custom callback can be provided, like so::
 
    def custom_otp_callback():
-    
+
        # Do some things to insert otp code
 
        return "My answer for otp code"
@@ -66,7 +66,7 @@ A custom callback can be provided, like so::
        otp_callback=custom_otp_callback
    )
 
-If you have to enter an OTP often and don't care about security, you can use 
+If you have to enter an OTP often and don't care about security, you can use
 the `pyotp <https://pypi.org/project/pyotp/>`_ package with a custom callback
 like so::
 
@@ -92,7 +92,7 @@ amazon sends you an email or SMS with a code, which you enter here::
 A custom callback can be provided, like so::
 
    def custom_cvf_callback():
-    
+
        # Do some things to insert cvf code
 
        return "My answer for cvf code"
@@ -120,12 +120,12 @@ Please approve the email/SMS, and press any key to continue.
 A custom callback can be provided, like so::
 
    def custom_approval_callback():
-    
-       # You can let python check for the received Amazon mail and 
+
+       # You can let python check for the received Amazon mail and
        # open the approval link. The login function waits until
        # the callback function is executed. The returned value will be
        # ignored by the login function.
-       
+
 
    auth = audible.Authenticator.from_login(
        ...
@@ -142,18 +142,18 @@ Authorization with external browser or program logic
 To handle the login with a external browser or program logic you can do the following::
 
    import audible
-   
+
    auth = audible.Authenticator.from_login_external(locale=COUNTRY_CODE)
 
 By default, this code prints out the login url for the selected country code.
 Paste this url into a web browser or use it programatically to authorize yourself.
-You have to enter your credentials two times (because of missing init cookies). 
+You have to enter your credentials two times (because of missing init cookies).
 First time, the password can be a random one.
 Second time, you have to solve a captcha before you can submit the login form and
 you must use your correct password.
-After loggin in, you will end in an error page (not found). This is correct. 
-Copy the url from the address bar from your browser and paste the url into the input 
-field of the python code. It will look something like 
+After loggin in, you will end in an error page (not found). This is correct.
+Copy the url from the address bar from your browser and paste the url into the input
+field of the python code. It will look something like
 "https://www.amazon.{domain}/ap/maplanding?...&openid.oa2.authorization_code=..."
 
 .. note::
@@ -163,7 +163,7 @@ field of the python code. It will look something like
 
 .. note::
 
-   If you are using MacOS and have trouble insert the login result url, simply import the 
+   If you are using MacOS and have trouble insert the login result url, simply import the
    readline module in your script. See
    `#34 <https://github.com/mkb79/Audible/issues/34#issuecomment-766408640>`_.
 
@@ -173,8 +173,8 @@ Custom callback
 A custom callback can be provided (for example open the url in a webbrowser directly), like so::
 
    def custom_login_url_callback(login_url):
-    
-       # Do some things with the login_url ... 
+
+       # Do some things with the login_url ...
        # maybe you can call webbrowser.open(login_url)
        # or simply print out the login_url
 
@@ -184,5 +184,3 @@ A custom callback can be provided (for example open the url in a webbrowser dire
        ...
        login_url_callback=custom_login_url_callback
        )
-
-

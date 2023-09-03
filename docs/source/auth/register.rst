@@ -29,7 +29,7 @@ Deregister
 ==========
 
 Authentication data obtained by a device registration are valid until
-deregister. Call ``auth.deregister_device()`` to deregister the current used 
+deregister. Call ``auth.deregister_device()`` to deregister the current used
 device.
 
 Call ``auth.deregister_device(deregister_all=True)`` to deregister **ALL**

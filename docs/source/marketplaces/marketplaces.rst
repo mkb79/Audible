@@ -11,7 +11,7 @@ marketplaces
 
 .. note::
 
-   Except website cookies, authentication data from device registration are valid 
+   Except website cookies, authentication data from device registration are valid
    for all marketplaces, no matter which marketplace are used.
 
 .. _country_codes:
@@ -31,7 +31,7 @@ country code is associated.
 .. list-table:: Marketplaces with country codes
    :widths: 20 50 15
    :header-rows: 1
-   
+
    * - Marketplace
      - Supported Countries
      - Country Code

@@ -28,9 +28,9 @@ Audible |version| documentation!
 
 -------------------
 
-**Audible** is a Python low-level interface to communicate with the non-publicly 
+**Audible** is a Python low-level interface to communicate with the non-publicly
 `Audible <https://en.m.wikipedia.org/wiki/Audible_(service)>`_ API.
-It enables Python developers to create their own Audible services. Asynchronous 
+It enables Python developers to create there own Audible services. Asynchronous
 communication with the Audible API is supported.
 
 .. note::

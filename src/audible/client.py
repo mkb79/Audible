@@ -5,12 +5,19 @@ from typing import Any, Callable, Dict, Optional, Union
 
 import httpx
 from httpx import URL
-from httpx._types import HeaderTypes
+from httpx._models import Headers, HeaderTypes  # noqa: F401
 
 from .auth import Authenticator
 from .exceptions import (
-    BadRequest, NotFoundError, NotResponding, NetworkError, ServerError,
-    Unauthorized, UnexpectedError, RatelimitError, RequestError
+    BadRequest,
+    NetworkError,
+    NotFoundError,
+    NotResponding,
+    RatelimitError,
+    RequestError,
+    ServerError,
+    Unauthorized,
+    UnexpectedError,
 )
 from .localization import LOCALE_TEMPLATES, Locale
 
@@ -61,14 +68,13 @@ class Client:
     _REQUEST_LOG = "{method} {url} has received {text}, has returned {status}"
 
     def __init__(
-            self,
-            auth: Authenticator,
-            country_code: Optional[str] = None,
-            headers: Optional[HeaderTypes] = None,
-            timeout: int = 10,
-            response_callback: Optional[
-                Callable[[httpx.Response], Any]] = None,
-            **session_kwargs
+        self,
+        auth: Authenticator,
+        country_code: Optional[str] = None,
+        headers: Optional[HeaderTypes] = None,
+        timeout: int = 10,
+        response_callback: Optional[Callable[[httpx.Response], Any]] = None,
+        **session_kwargs,
     ):
         locale = Locale(country_code.lower()) if country_code else auth.locale
         self._api_url = httpx.URL(self._API_URL_TEMP + locale.domain)
@@ -76,16 +82,13 @@ class Client:
         default_headers = {
             "Accept": "application/json",
             "Accept-Charset": "utf-8",
-            "Content-Type": "application/json"
+            "Content-Type": "application/json",
         }
         if headers is not None:
             default_headers.update(headers)
 
         self.session = self._SESSION(
-            headers=default_headers,
-            timeout=timeout,
-            auth=auth,
-            **session_kwargs
+            headers=default_headers, timeout=timeout, auth=auth, **session_kwargs
         )
 
         if response_callback is None:
@@ -123,9 +126,8 @@ class Client:
         return self.session.auth
 
     def switch_user(
-            self,
-            auth: Authenticator,
-            switch_to_default_marketplace: bool = False) -> None:
+        self, auth: Authenticator, switch_to_default_marketplace: bool = False
+    ) -> None:
         if switch_to_default_marketplace:
             self.switch_marketplace(auth.locale.country_code)
         self.session.auth = auth
@@ -153,12 +155,11 @@ class Client:
         return self._api_url.copy_with(raw_path=path)
 
     def _request(
-            self,
-            method: str,
-            path: str,
-            response_callback: Optional[
-                Callable[[httpx.Response], Any]] = None,
-            **kwargs
+        self,
+        method: str,
+        path: str,
+        response_callback: Optional[Callable[[httpx.Response], Any]] = None,
+        **kwargs,
     ) -> Any:
         url = self._prepare_api_path(path)
 
@@ -170,24 +171,23 @@ class Client:
 
             logger.debug(
                 self._REQUEST_LOG.format(
-                    method=method,
-                    url=resp.url,
-                    text=resp.text,
-                    status=resp.status_code
+                    method=method, url=resp.url, text=resp.text, status=resp.status_code
                 )
             )
 
             return response_callback(resp)
 
         except (
-            httpx.ConnectTimeout, httpx.ReadTimeout, httpx.WriteTimeout,
-            httpx.PoolTimeout
+            httpx.ConnectTimeout,
+            httpx.ReadTimeout,
+            httpx.WriteTimeout,
+            httpx.PoolTimeout,
         ):
-            raise NotResponding
+            raise NotResponding from None
         except httpx.NetworkError:
-            raise NetworkError
+            raise NetworkError from None
         except httpx.RequestError as exc:
-            raise RequestError(exc)
+            raise RequestError(exc) from None
         finally:
             try:
                 resp.close()
@@ -195,17 +195,18 @@ class Client:
                 pass
 
     def raw_request(
-            self,
-            method: str,
-            url: str,
-            *,
-            stream: bool = False,
-            apply_auth_flow: bool = False,
-            apply_cookies: bool = False,
-            **kwargs) -> httpx.Response:
+        self,
+        method: str,
+        url: str,
+        *,
+        stream: bool = False,
+        apply_auth_flow: bool = False,
+        apply_cookies: bool = False,
+        **kwargs,
+    ) -> httpx.Response:
         """Sends a raw request with the underlying httpx Client.
 
-        This method ignores a set api_url and allows send request to custom 
+        This method ignores a set api_url and allows send request to custom
         hosts. The raw httpx response will be returned.
 
         Args:
@@ -217,14 +218,15 @@ class Client:
             apply_cookies: If `True`, website cookies from
                 :attr:`Authenticator.website_cookies` will be added to
                 request headers.
+            **kwargs: keyword args supported by :class:`httpx.AsyncClient.stream`,
+                :class:`httpx.Client.stream`, :class:`httpx.AsyncClient.request`,
+                :class:`httpx.Client.request`.
 
         Returns:
             A unprepared httpx Response object.
-                
-        .. versionadded:: v0.5.1
-        
-        """
 
+        .. versionadded:: v0.5.1
+        """
         cookies = self.auth.website_cookies if apply_cookies else {}
         cookies = httpx.Cookies(cookies)
         cookies.update(kwargs.pop("cookies", {}))
@@ -242,27 +244,22 @@ class Client:
         kwargs["params"] = params
 
     def get(
-            self,
-            path: str,
-            response_callback: Optional[
-                Callable[[httpx.Response], Any]] = None,
-            **kwargs
+        self,
+        path: str,
+        response_callback: Optional[Callable[[httpx.Response], Any]] = None,
+        **kwargs,
     ) -> Any:
         self._prepare_params(kwargs)
         return self._request(
-            method="GET",
-            path=path,
-            response_callback=response_callback,
-            **kwargs
+            method="GET", path=path, response_callback=response_callback, **kwargs
         )
 
     def post(
-            self,
-            path: str,
-            body: Dict,
-            response_callback: Optional[
-                Callable[[httpx.Response], Any]] = None,
-            **kwargs
+        self,
+        path: str,
+        body: Dict,
+        response_callback: Optional[Callable[[httpx.Response], Any]] = None,
+        **kwargs,
     ) -> Any:
         self._prepare_params(kwargs)
         return self._request(
@@ -270,31 +267,26 @@ class Client:
             path=path,
             response_callback=response_callback,
             json=body,
-            **kwargs
+            **kwargs,
         )
 
     def delete(
-            self,
-            path: str,
-            response_callback: Optional[
-                Callable[[httpx.Response], Any]] = None,
-            **kwargs
+        self,
+        path: str,
+        response_callback: Optional[Callable[[httpx.Response], Any]] = None,
+        **kwargs,
     ) -> Any:
         self._prepare_params(kwargs)
         return self._request(
-            method="DELETE",
-            path=path,
-            response_callback=response_callback,
-            **kwargs
+            method="DELETE", path=path, response_callback=response_callback, **kwargs
         )
 
     def put(
-            self,
-            path: str,
-            body: Dict,
-            response_callback: Optional[
-                Callable[[httpx.Response], Any]] = None,
-            **kwargs
+        self,
+        path: str,
+        body: Dict,
+        response_callback: Optional[Callable[[httpx.Response], Any]] = None,
+        **kwargs,
     ) -> Any:
         self._prepare_params(kwargs)
         return self._request(
@@ -302,7 +294,7 @@ class Client:
             path=path,
             response_callback=response_callback,
             json=body,
-            **kwargs
+            **kwargs,
         )
 
 
@@ -322,12 +314,12 @@ class AsyncClient(Client):
         await self.session.aclose()
 
     async def _request(
-            self,
-            method: str,
-            path: str,
-            response_callback: Optional[
-                Callable[[httpx.Response], Any]] = None,
-            **kwargs) -> Union[Dict, str]:
+        self,
+        method: str,
+        path: str,
+        response_callback: Optional[Callable[[httpx.Response], Any]] = None,
+        **kwargs,
+    ) -> Union[Dict, str]:
         url = self._prepare_api_path(path)
 
         if response_callback is None:
@@ -338,24 +330,23 @@ class AsyncClient(Client):
 
             logger.debug(
                 self._REQUEST_LOG.format(
-                    method=method,
-                    url=resp.url,
-                    text=resp.text,
-                    status=resp.status_code
+                    method=method, url=resp.url, text=resp.text, status=resp.status_code
                 )
             )
 
             return response_callback(resp)
 
         except (
-            httpx.ConnectTimeout, httpx.ReadTimeout, httpx.WriteTimeout,
-            httpx.PoolTimeout
+            httpx.ConnectTimeout,
+            httpx.ReadTimeout,
+            httpx.WriteTimeout,
+            httpx.PoolTimeout,
         ):
-            raise NotResponding
+            raise NotResponding from None
         except httpx.NetworkError:
-            raise NetworkError
+            raise NetworkError from None
         except httpx.RequestError as exc:
-            raise RequestError(exc)
+            raise RequestError(exc) from None
         finally:
             try:
                 await resp.aclose()
