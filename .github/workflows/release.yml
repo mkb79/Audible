@@ -62,7 +62,7 @@ jobs:
       - name: Publish package on PyPI
         continue-on-error: true
         if: steps.check-version.outputs.tag
-        uses: pypa/gh-action-pypi-publish@v1.6.4
+        uses: pypa/gh-action-pypi-publish@v1.8.6
         with:
           user: __token__
           password: ${{ secrets.PYPI_TOKEN }}
@@ -70,7 +70,7 @@ jobs:
       - name: Publish package on TestPyPI
         continue-on-error: true
         if: "! steps.check-version.outputs.tag"
-        uses: pypa/gh-action-pypi-publish@v1.6.4
+        uses: pypa/gh-action-pypi-publish@v1.8.6
         with:
           user: __token__
           password: ${{ secrets.TEST_PYPI_TOKEN }}
@@ -84,11 +84,3 @@ jobs:
           tag: ${{ steps.check-version.outputs.tag }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-  build:
-    name: Build packages
-    needs: release
-    if: needs.release.outputs.tag
-    uses: ./.github/workflows/add-assets-workflow-call.yml
-    with:
-      upload_url: ${{ needs.release.outputs.upload_url }}
