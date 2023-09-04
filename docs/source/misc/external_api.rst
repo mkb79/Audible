@@ -435,6 +435,20 @@ Content
    :query chapter_titles_type: [Tree, Flat]
    :query drm_type: [Mpeg, PlayReady, Hls, Dash, FairPlay, Widevine, HlsCmaf, Adrm]
 
+.. http:post:: /1.0/content/(string:asin)/drmlicense
+
+   :param asin: The asin of the book
+   :type asin: string
+   :<json string licenseChallenge: The license challenge
+   :<json string asin: The asin of the book
+   :<json string consumption_type: "Download"
+   :<json string drm_type: "FairPlay"
+   :>json string license: The encrypted license
+
+.. http:get:: 1.0/content/FairPlay/certificate
+
+   :>json string certificate: The base64 encoded FairPlay certificate
+
 Account
 -------
 
