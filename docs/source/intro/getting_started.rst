@@ -21,7 +21,7 @@ be found at :ref:`country_codes`.
 .. code-block::
 
    import audible
-   
+
    # Authorize and register in one step
    auth = audible.Authenticator.from_login(
        USERNAME,
@@ -29,7 +29,7 @@ be found at :ref:`country_codes`.
        locale=COUNTRY_CODE,
        with_username=False
    )
-   
+
    # Save credentials to file
    auth.to_file(FILENAME)
 
@@ -92,4 +92,3 @@ You can store your authentication data after an device registration with::
 And load the data from file to reuse it with::
 
    auth = audible.Authenticator.from_file(FILENAME)
-

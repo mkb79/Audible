@@ -30,7 +30,7 @@ to the external API:
 - delete
 - put
 
-The external Audible API offers currently two API versions, `0.0` and 
+The external Audible API offers currently two API versions, `0.0` and
 `1.0`. The Client use the `1.0` by default. So both terms are equal::
 
    resp = client.get("library")
@@ -89,7 +89,7 @@ Show/Change Marketplace
 -----------------------
 
 The currently selected marketplace can be shown with::
-   
+
     client.marketplace
 
 The marketplace can be changed with::
@@ -99,7 +99,7 @@ The marketplace can be changed with::
 Username/Userprofile
 --------------------
 
-To get the profile for the user, which authentication data are used you 
+To get the profile for the user, which authentication data are used you
 can do this::
 
    user_profile = client.get_user_profile()
@@ -130,7 +130,7 @@ If you work with multiple users you can do this::
    # now change user with auth2
    client.switch_user(auth2)
    print(client.user_name)
-   
+
    # optional set default marketplace from 2nd user
    client.switch_user(auth2, switch_to_default_marketplace=True)
 
@@ -153,11 +153,11 @@ Audible package.
 
 .. versionadded:: v0.5.0
 
-   The :class:`Authenticator` with the  classmethods ``from_file`` and 
+   The :class:`Authenticator` with the  classmethods ``from_file`` and
    ``from_login``
 
-The :meth:`Authenticator.from_login` classmethod is used to authorize 
-an user and then authenticate requests with the received data. The 
+The :meth:`Authenticator.from_login` classmethod is used to authorize
+an user and then authenticate requests with the received data. The
 :meth:`Authenticator.from_file` classmethod is used to load
 previous saved authentication data.
 
@@ -165,7 +165,7 @@ With an Authenticator you can:
 
 - Save credentials to file with ``auth.to_file()``
 - Deregister a previously registered device with ``auth.deregister_device()``.
-- Refresh an access token from a previously registered device with 
+- Refresh an access token from a previously registered device with
   ``auth.refresh_access_token()``.
 - Get user profile with ``auth.user_profile()``. Needs a valid access token.
 
@@ -203,7 +203,7 @@ The activation blob can be saved to file too::
 
 .. attention::
 
-   Please only use this for gaining full access to your own audiobooks for 
+   Please only use this for gaining full access to your own audiobooks for
    archiving / converson / convenience. DeDRMed audiobooks should not be uploaded
    to open servers, torrents, or other methods of mass distribution. No help
    will be given to people doing such things. Authors, retailers, and
@@ -218,7 +218,7 @@ are missing in the provided link. As a workaround you can do::
 
    import audible
    import httpx
-   
+
    asin = ASIN_FROM_BOOK
    auth = audible.Authenticator.from_file(...)  # or Authenticator.from_login
    tld = auth.locale.domain
@@ -238,14 +238,14 @@ endpoint contains the encrypted license (voucher).
 To decrypt the license response you can do::
 
    from audible.aescipher import decrypt_voucher_from_licenserequest
-   
+
    auth = YOUR_AUTH_INSTANCE
    lr = RESPONSE_FROM_LICENSEREQUEST_ENPOINT
    dlr = decrypt_voucher_from_licenserequest(auth, lr)
 
 .. attention::
 
-   Please only use this for gaining full access to your own audiobooks for 
+   Please only use this for gaining full access to your own audiobooks for
    archiving / converson / convenience. DeDRMed audiobooks should not be uploaded
    to open servers, torrents, or other methods of mass distribution. No help
    will be given to people doing such things. Authors, retailers, and

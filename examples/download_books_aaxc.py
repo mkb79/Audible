@@ -1,8 +1,9 @@
 import json
 import pathlib
 
-import audible
 import httpx
+
+import audible
 from audible.aescipher import decrypt_voucher_from_licenserequest
 
 
@@ -21,8 +22,8 @@ def get_license_response(client, asin, quality):
             body={
                 "drm_type": "Adrm",
                 "consumption_type": "Download",
-                "quality": quality
-            }
+                "quality": quality,
+            },
         )
         return response
     except Exception as e:
@@ -31,15 +32,15 @@ def get_license_response(client, asin, quality):
 
 
 def get_download_link(license_response):
-    return license_response["content_license"]["content_metadata"]["content_url"]["offline_url"]
+    return license_response["content_license"]["content_metadata"]["content_url"][
+        "offline_url"
+    ]
 
 
 def download_file(url, filename):
-    headers = {
-        "User-Agent": "Audible/671 CFNetwork/1240.0.4 Darwin/20.6.0"
-    }
+    headers = {"User-Agent": "Audible/671 CFNetwork/1240.0.4 Darwin/20.6.0"}
     with httpx.stream("GET", url, headers=headers) as r:
-        with open(filename, 'wb') as f:
+        with open(filename, "wb") as f:
             for chunck in r.iter_bytes():
                 f.write(chunck)
     return filename
@@ -48,18 +49,12 @@ def download_file(url, filename):
 if __name__ == "__main__":
     password = input("Password for file: ")
 
-    auth = audible.Authenticator.from_file(
-        filename="FILENAME",
-        password=password
-    )
+    auth = audible.Authenticator.from_file(filename="FILENAME", password=password)
     client = audible.Client(auth)
 
     books = client.get(
         path="library",
-        params={
-            "response_groups": "product_attrs",
-            "num_results": "999"
-            }
+        params={"response_groups": "product_attrs", "num_results": "999"},
     )
 
     for book in books["items"]:

@@ -1,6 +1,7 @@
 import asyncio
 
 import aiohttp
+
 import audible
 
 
@@ -19,7 +20,7 @@ class ClientRequest(aiohttp.ClientRequest):
             path=self.url.path_qs,
             body=body,
             adp_token=self._session._audible_auth.adp_token,
-            private_key=self._session._audible_auth.device_private_key
+            private_key=self._session._audible_auth.device_private_key,
         )
         for header, value in sign_headers.items():
             self.headers.add(header, value)
@@ -35,6 +36,7 @@ class ClientSession(aiohttp.ClientSession):
 
 
 if __name__ == "__main__":
+
     async def main(asin):
         body = {
             "supported_drm_types": ["Mpeg", "Adrm"],
@@ -42,19 +44,18 @@ if __name__ == "__main__":
             "consumption_type": "Download",
             "response_groups": (
                 "last_position_heard, pdf_url, content_reference, chapter_info"
-            )
+            ),
         }
-    
+
         fn = "credentials.json"
         auth = audible.Authenticator.from_file(fn)
-    
+
         async with ClientSession(audible_auth=auth) as session:
             async with session.post(
-                f"https://api.audible.de/1.0/content/{asin}/licenserequest",
-                json=body
+                f"https://api.audible.de/1.0/content/{asin}/licenserequest", json=body
             ) as r:
                 print(await r.json())
-                #print(r.request_info)
+                # print(r.request_info)
                 print(r.status)
 
     loop = asyncio.get_event_loop()

@@ -8,7 +8,7 @@ API Authentication
 Audible uses the `sign request` or the `bearer` method to authenticate the
 requests to the Audible API.
 
-The authentication is done automatically when using the 
+The authentication is done automatically when using the
 :class:`audible.Authenticator`. Simply use the ``Authenticator`` with
 the :class:`audible.Client` or :class:`audible.AsyncClient` like so::
 
@@ -42,9 +42,9 @@ Bearer method
 API requests with the bearer method have some restrictions. Some API call, like
 the :http:post:`/1.0/content/(string:asin)/licenserequest`, doesn't work. To use
 the bearer method you need an access token and a client id. You receive the
-token after a device registration. Which values are valid for the client-id 
-is unknown but 0 does work. An access token expires after 60 minutes. It 
-can be renewed with a refresh token. A refresh token is obtained by a device 
+token after a device registration. Which values are valid for the client-id
+is unknown but 0 does work. An access token expires after 60 minutes. It
+can be renewed with a refresh token. A refresh token is obtained by a device
 registration only. Headers for the bearer method look like::
 
    Authorization: Bearer Atna|...
@@ -88,7 +88,7 @@ Using the sign request method with Postman is possible, but needs some extra wor
 HOWTO:
 
 1. Install the `postman_util_lib <https://joolfe.github.io/postman-util-lib/>`_
-2. Copy the content from the :download:`pre-request-script <../../../utils/postman/pm_pre_request.js>` 
+2. Copy the content from the :download:`pre-request-script <../../../utils/postman/pm_pre_request.js>`
    into the `Pre-request Scripts` Tab for the Collection or request
 3. Create an Environment and define the variables `adp-token` and `private key`
    with the counterparts from the authentication data file

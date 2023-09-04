@@ -7,22 +7,24 @@ import pathlib
 import re
 import struct
 from hashlib import sha256
-from typing import Dict, Optional, Tuple, TYPE_CHECKING, Union
+from typing import TYPE_CHECKING, Dict, Optional, Tuple, Union
 
 from pbkdf2 import PBKDF2
-from pyaes import AESModeOfOperationCBC, Encrypter, Decrypter
+from pyaes import AESModeOfOperationCBC, Decrypter, Encrypter
+
 
 if TYPE_CHECKING:
     import audible
 
 
-logger = logging.getLogger('audible.aescipher')
+logger = logging.getLogger("audible.aescipher")
 
 BLOCK_SIZE: int = 16  # the AES block size
 
 
 def aes_cbc_encrypt(
-        key: bytes, iv: bytes, data: str, padding: str = "default") -> bytes:
+    key: bytes, iv: bytes, data: str, padding: str = "default"
+) -> bytes:
     """Encrypts data in cipher block chaining mode of operation.
 
     Args:
@@ -34,14 +36,13 @@ def aes_cbc_encrypt(
     Returns:
         The encrypted data.
     """
-
     encrypter = Encrypter(AESModeOfOperationCBC(key, iv), padding=padding)
     encrypted = encrypter.feed(data) + encrypter.feed()
     return encrypted
 
 
 def aes_cbc_decrypt(
-        key: bytes, iv: bytes, encrypted_data: bytes, padding: str = "default"
+    key: bytes, iv: bytes, encrypted_data: bytes, padding: str = "default"
 ) -> str:
     """Decrypts data encrypted in cipher block chaining mode of operation.
 
@@ -50,18 +51,16 @@ def aes_cbc_decrypt(
         iv: The initialization vector used at encryption.
         encrypted_data: The encrypted data to decrypt.
         padding: Can be ``default`` or ``none`` (Default: default)
-    
+
     Returns:
         The decrypted data.
     """
-
     decrypter = Decrypter(AESModeOfOperationCBC(key, iv), padding=padding)
     decrypted = decrypter.feed(encrypted_data) + decrypter.feed()
     return decrypted.decode("utf-8")
 
 
-def create_salt(
-        salt_marker: bytes, kdf_iterations: int) -> Tuple[bytes, bytes]:
+def create_salt(salt_marker: bytes, kdf_iterations: int) -> Tuple[bytes, bytes]:
     """Creates the header and salt for the :func:`derive_from_pbkdf2` function.
 
     The header consist of the number of KDF iterations encoded as a big-endian
@@ -69,43 +68,36 @@ def create_salt(
     The random salt has a length of 16 bytes (the AES block size) minus the
     length of the salt header.
     """
-
-    header = (salt_marker + struct.pack('>H', kdf_iterations) + salt_marker)
+    header = salt_marker + struct.pack(">H", kdf_iterations) + salt_marker
     salt = os.urandom(BLOCK_SIZE - len(header))
     return header, salt
 
 
 def pack_salt(header: bytes, salt: bytes) -> bytes:
     """Combines the header and salt created by :func:`create_salt` function."""
-
     return header + salt
 
 
 def unpack_salt(packed_salt: bytes, salt_marker: bytes) -> Tuple[bytes, int]:
     """Unpack salt and kdf_iterations from previous created and packed salt."""
-
     mlen = len(salt_marker)
     hlen = mlen * 2 + 2
 
-    if not (packed_salt[:mlen] == salt_marker and
-            packed_salt[mlen + 2:hlen] == salt_marker):
+    if not (
+        packed_salt[:mlen] == salt_marker
+        and packed_salt[mlen + 2 : hlen] == salt_marker
+    ):
         raise ValueError("Check salt_marker.")
 
-    kdf_iterations = struct.unpack('>H', packed_salt[mlen:mlen + 2])[0]
+    kdf_iterations = struct.unpack(">H", packed_salt[mlen : mlen + 2])[0]
     salt = packed_salt[hlen:]
     return salt, kdf_iterations
 
 
 def derive_from_pbkdf2(
-        password: str,
-        *,
-        key_size: int,
-        salt: bytes,
-        kdf_iterations: int,
-        hashmod,
-        mac) -> bytes:
+    password: str, *, key_size: int, salt: bytes, kdf_iterations: int, hashmod, mac
+) -> bytes:
     """Creates an AES key with the :class:`PBKDF2` key derivation class."""
-
     kdf = PBKDF2(password, salt, min(kdf_iterations, 65535), hashmod, mac)
     return kdf.read(key_size)
 
@@ -154,7 +146,7 @@ class AESCipher:
             derive the key (Default: 1000).
         hashmod: The hash method to use (Default: sha256).
         mac: The mac module to use (Default: hmac).
-    
+
     Raises:
         ValueError: If `salt_marker` is not one to six bytes long.
         ValueError: If `kdf_iterations` is greater than 65535.
@@ -162,22 +154,23 @@ class AESCipher:
     """
 
     def __init__(
-            self,
-            password: str,
-            *,
-            key_size: int = 32,
-            salt_marker: bytes = b"$",
-            kdf_iterations: int = 1000,
-            hashmod=sha256,
-            mac=hmac) -> None:
+        self,
+        password: str,
+        *,
+        key_size: int = 32,
+        salt_marker: bytes = b"$",
+        kdf_iterations: int = 1000,
+        hashmod=sha256,
+        mac=hmac
+    ) -> None:
         if not 1 <= len(salt_marker) <= 6:
-            raise ValueError('The salt_marker must be one to six bytes long.')
+            raise ValueError("The salt_marker must be one to six bytes long.")
 
         if not isinstance(salt_marker, bytes):
-            raise TypeError('salt_marker must be a bytes instance.')
+            raise TypeError("salt_marker must be a bytes instance.")
 
         if kdf_iterations >= 65536:
-            raise ValueError('kdf_iterations must be <= 65535.')
+            raise ValueError("kdf_iterations must be <= 65535.")
 
         self.password = password
         self.key_size = key_size
@@ -194,7 +187,8 @@ class AESCipher:
             salt=salt,
             kdf_iterations=self.kdf_iterations,
             hashmod=self.hashmod,
-            mac=self.mac)
+            mac=self.mac,
+        )
         iv = os.urandom(BLOCK_SIZE)
         encrypted_data = aes_cbc_encrypt(key, iv, data)
         return pack_salt(header, salt), iv, encrypted_data
@@ -211,7 +205,8 @@ class AESCipher:
             salt=salt,
             kdf_iterations=kdf_iterations,
             hashmod=self.hashmod,
-            mac=self.mac)
+            mac=self.mac,
+        )
         return aes_cbc_decrypt(key, iv, encrypted_data)
 
     def to_dict(self, data: str) -> Dict[str, str]:
@@ -223,18 +218,17 @@ class AESCipher:
 
         Args:
             data: The data to encrypt.
-        
+
         Returns:
             The encrypted data in dict style.
         """
-
         salt, iv, encrypted_data = self._encrypt(data)
 
         return {
             "salt": base64.b64encode(salt).decode("utf-8"),
             "iv": base64.b64encode(iv).decode("utf-8"),
             "ciphertext": base64.b64encode(encrypted_data).decode("utf-8"),
-            "info": 'base64-encoded AES-CBC-256 of JSON object'
+            "info": "base64-encoded AES-CBC-256 of JSON object",
         }
 
     def from_dict(self, data: dict) -> str:
@@ -242,11 +236,10 @@ class AESCipher:
 
         Args:
             data: The encrypted data in json style.
-        
+
         Returns:
             The decrypted data.
         """
-
         salt = base64.b64decode(data["salt"])
         iv = base64.b64decode(data["iv"])
         encrypted_data = base64.b64decode(data["ciphertext"])
@@ -259,11 +252,10 @@ class AESCipher:
 
         Args:
             data: The data to encrypt.
-        
+
         Returns:
             The encrypted data in dict style.
         """
-
         salt, iv, encrypted_data = self._encrypt(data)
         return salt + iv + encrypted_data
 
@@ -272,37 +264,36 @@ class AESCipher:
 
         Args:
             data: The encrypted data in bytes style.
-        
+
         Returns:
             The decrypted data.
         """
-
         bs = BLOCK_SIZE
         salt = data[:bs]
-        iv = data[bs:2 * bs]
-        encrypted_data = data[2 * bs:]
+        iv = data[bs : 2 * bs]
+        encrypted_data = data[2 * bs :]
         return self._decrypt(salt, iv, encrypted_data)
 
     def to_file(
-            self,
-            data: str,
-            filename: pathlib.Path,
-            encryption: str = "json",
-            indent: int = 4) -> None:
+        self,
+        data: str,
+        filename: pathlib.Path,
+        encryption: str = "json",
+        indent: int = 4,
+    ) -> None:
         """Encrypts and saves data to given file.
 
         Args:
             data: The data to encrypt.
             filename: The name of the file to save the data to.
-            encryption: The encryption style to use. Can be ``json`` or 
+            encryption: The encryption style to use. Can be ``json`` or
                 ``bytes`` (Default: json).
             indent: The indention level when saving in json style
                 (Default: 4).
-        
+
         Raises:
             ValueError: If `encryption` is not ``json`` or ``bytes``.
         """
-
         if encryption == "json":
             encrypted_dict = self.to_dict(data)
             data_json = json.dumps(encrypted_dict, indent=indent)
@@ -313,24 +304,22 @@ class AESCipher:
             filename.write_bytes(encrypted_data)
 
         else:
-            raise ValueError("encryption must be \"json\" or \"bytes\"..")
+            raise ValueError('encryption must be "json" or "bytes"..')
 
-    def from_file(
-            self, filename: pathlib.Path, encryption: str = "json") -> str:
+    def from_file(self, filename: pathlib.Path, encryption: str = "json") -> str:
         """Loads and decrypts data from given file.
 
         Args:
             filename: The name of the file to load the data from.
-            encryption: The encryption style which where used. Can be ``json`` 
+            encryption: The encryption style which where used. Can be ``json``
                 or ``bytes`` (Default: json).
 
         Returns:
             The decrypted data.
-        
-        Raises:
-            ValueError: If `encryption` is not ``json`` or ``bytes``.        
-        """
 
+        Raises:
+            ValueError: If `encryption` is not ``json`` or ``bytes``.
+        """
         if encryption == "json":
             encrypted_json = filename.read_text()
             encrypted_dict = json.loads(encrypted_json)
@@ -340,7 +329,7 @@ class AESCipher:
             encrypted_data = filename.read_bytes()
             return self.from_bytes(encrypted_data)
 
-        raise ValueError("encryption must be \"json\" or \"bytes\".")
+        raise ValueError('encryption must be "json" or "bytes".')
 
 
 def detect_file_encryption(filename: pathlib.Path) -> Optional[str]:
@@ -352,7 +341,6 @@ def detect_file_encryption(filename: pathlib.Path) -> Optional[str]:
     Returns:
         ``False`` if file is not encrypted otherwise the encryption format.
     """
-
     file = filename.read_bytes()
     encryption = None
 
@@ -369,10 +357,11 @@ def detect_file_encryption(filename: pathlib.Path) -> Optional[str]:
 
 
 def remove_file_encryption(
-        source: Union[str, pathlib.Path],
-        target: Union[str, pathlib.Path],
-        password: str,
-        **kwargs) -> None:
+    source: Union[str, pathlib.Path],
+    target: Union[str, pathlib.Path],
+    password: str,
+    **kwargs
+) -> None:
     """Removes the encryption from an authentication file.
 
     Please try to load the authentication file with
@@ -384,11 +373,11 @@ def remove_file_encryption(
         source: The encrypted authentication file.
         target: The filename for the decrypted file.
         password: The password for the encrypted authentication file.
+        **kwargs: keyword args supported by :class:`AESCipher`
 
     Raises:
         ValueError: If ``source`` is not encrypted.
     """
-
     source_file = pathlib.Path(source)
     encryption = detect_file_encryption(source_file)
 
@@ -401,11 +390,12 @@ def remove_file_encryption(
 
 
 def _decrypt_voucher(
-        device_serial_number: str,
-        customer_id: str,
-        device_type: str,
-        asin: str,
-        voucher: str) -> Dict:
+    device_serial_number: str,
+    customer_id: str,
+    device_type: str,
+    asin: str,
+    voucher: str,
+) -> Dict:
     # https://github.com/mkb79/Audible/issues/3#issuecomment-705262614
     buf = device_type + device_serial_number + customer_id + asin
     buf = buf.encode("ascii")
@@ -415,8 +405,7 @@ def _decrypt_voucher(
 
     # decrypt "voucher" using AES in CBC mode with no padding
     b64d_voucher = base64.b64decode(voucher)
-    plaintext = aes_cbc_decrypt(key, iv, b64d_voucher, padding="none"). \
-        rstrip("\x00")
+    plaintext = aes_cbc_decrypt(key, iv, b64d_voucher, padding="none").rstrip("\x00")
 
     try:
         return json.loads(plaintext)
@@ -427,14 +416,15 @@ def _decrypt_voucher(
 
 
 def decrypt_voucher_from_licenserequest(
-        auth: "audible.Authenticator", license_response: Dict) -> Dict:
+    auth: "audible.Authenticator", license_response: Dict
+) -> Dict:
     """Decrypt the voucher from license request response.
 
     Args:
         auth: The Authenticator.
         license_response: The response content from a
             :http:post:`/1.0/content/(string:asin)/licenserequest` request.
-    
+
     Returns:
         The decrypted license voucher with needed key and iv.
 
@@ -442,7 +432,6 @@ def decrypt_voucher_from_licenserequest(
         A device registration is needed to use the auth instance for a
         license request and to obtain the needed device data
     """
-
     # device data
     device_info = auth.device_info
     device_serial_number = device_info["device_serial_number"]
@@ -460,5 +449,5 @@ def decrypt_voucher_from_licenserequest(
         customer_id=customer_id,
         device_type=device_type,
         asin=asin,
-        voucher=encrypted_voucher
+        voucher=encrypted_voucher,
     )
