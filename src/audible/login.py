@@ -261,7 +261,7 @@ def extract_captcha_url(soup: BeautifulSoup) -> Optional[str]:
 
 def check_for_mfa(soup: BeautifulSoup) -> bool:
     """Checks a Amazon login page for a multi-factor authentication form."""
-    mfa = soup.find("form", id=lambda x: x and "auth-mfa-form" in x)
+    mfa = soup.find("form", id=lambda x: x and ("verification-code-form" in x or "auth-mfa-form" in x))
     return True if mfa else False
 
 
