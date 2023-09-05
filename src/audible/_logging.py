@@ -27,7 +27,10 @@ class AudibleLogHelper:
         logger.info("set log level for %s to: %s", obj.name, level_name)
 
         if 0 < obj.level < logger.level:
-            warn(f"{obj.name} level is lower than {logger.name} logger level")
+            warn(
+                f"{obj.name} level is lower than {logger.name} logger level",
+                stacklevel=1,
+            )
 
     def _set_handler(self, handler, name, level):
         handler.setFormatter(log_formatter)

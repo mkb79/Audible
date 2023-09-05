@@ -16,7 +16,7 @@ class StatusError(RequestError):
                 self.error = data.get("message")
         else:
             self.error = data
-        self.fmt = "{0.reason} ({0.code}): {0.error}".format(self)
+        self.fmt = f"{self.reason} ({self.code}): {self.error}"
         super().__init__(self.fmt)
 
 
