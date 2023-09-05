@@ -62,7 +62,6 @@ def authenticate(username, password, country_code):
 def get_reading_time_since_signup(client):
     signup_year = get_signup_year(client)
     current_year = date.today().year
-    date.today().month
     year_aggregate = {}
     for i in range(current_year - signup_year + 1):
         target_year = signup_year + i
