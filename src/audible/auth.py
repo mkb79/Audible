@@ -579,8 +579,8 @@ class Authenticator(httpx.Auth):
 
     def to_file(
         self,
-        filename: Union["pathlib.Path", str] = None,
-        password: str = None,
+        filename: Optional[Union["pathlib.Path", str]] = None,
+        password: Optional[str] = None,
         encryption: Union[bool, str] = "default",
         indent: int = 4,
         set_default: bool = True,
