@@ -113,13 +113,9 @@ warn_unreachable = true
 [tool.ruff]
 #  missing rst-docstrings check, these should be adding through ruff
 ignore = [
-    "B018",  # temporarily
-    "B028",  # temporarily
-    "C416",  # temporarily
     "D10",  # temporarily ignore missing docstrings
     "E501",
     "N818",
-    "UP032",  # temporarily
 ]
 line-length = 80
 select=[
