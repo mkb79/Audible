@@ -113,20 +113,21 @@ warn_unreachable = true
 [tool.ruff]
 #  missing rst-docstrings check, these should be adding through ruff
 ignore = [
-    "B018",  # temporarily
-    "B028",  # temporarily
-    "C416",  # temporarily
     "D10",  # temporarily ignore missing docstrings
     "E501",
     "N818",
-    "UP032",  # temporarily
+    "PLR0912",  # temporarily
+    "PLR0913",  # temporarily
+    "PLR0915",  # temporarily
+    "PLR2004",  # temporarily
 ]
 line-length = 80
 select=[
     "A",
+    "ASYNC",
     "B",
     "C4",
-    "C9",
+    "C90",
     "D",
     "E",
     "F",
@@ -134,14 +135,16 @@ select=[
     "I",
     "N",
     "PGH",
-    "PLC",
-    "PLE",
+    "PL",
+    "Q",
+    "RUF",
     "S",
     "UP",
     "W",
 ]
 src = ["src"]
 target-version = "py38"
+format = "grouped"
 
 [tool.ruff.per-file-ignores]
 "tests/*" = ["S101"]

@@ -522,7 +522,7 @@ class Authenticator(httpx.Auth):
         logger.info("bearer auth flow applied to request")
 
     def _apply_cookies_auth_flow(self, request: httpx.Request) -> None:
-        cookies = {name: value for (name, value) in self.website_cookies.items()}
+        cookies = self.website_cookies.copy()
 
         Cookies(cookies).set_cookie_header(request)
         logger.info("cookies auth flow applied to request")
@@ -579,8 +579,8 @@ class Authenticator(httpx.Auth):
 
     def to_file(
         self,
-        filename: Union["pathlib.Path", str] = None,
-        password: str = None,
+        filename: Optional[Union["pathlib.Path", str]] = None,
+        password: Optional[str] = None,
         encryption: Union[bool, str] = "default",
         indent: int = 4,
         set_default: bool = True,
