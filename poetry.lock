@@ -1530,13 +1530,13 @@ files = [
 
 [[package]]
 name = "typeguard"
-version = "4.1.3"
+version = "4.1.5"
 description = "Run-time type checker for Python"
 optional = false
 python-versions = ">=3.8"
 files = [
-    {file = "typeguard-4.1.3-py3-none-any.whl", hash = "sha256:5b7453b1e3b35fcfe2d62fa4ec500d05e6f2f2eb46f4126ae964677fcc384fff"},
-    {file = "typeguard-4.1.3.tar.gz", hash = "sha256:7d4264cd631ac1157c5bb5ec992281b4f1e2ba7a35db91bc15f442235e244803"},
+    {file = "typeguard-4.1.5-py3-none-any.whl", hash = "sha256:8923e55f8873caec136c892c3bed1f676eae7be57cdb94819281b3d3bc9c0953"},
+    {file = "typeguard-4.1.5.tar.gz", hash = "sha256:ea0a113bbc111bcffc90789ebb215625c963411f7096a7e9062d4e4630c155fd"},
 ]
 
 [package.dependencies]
