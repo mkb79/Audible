@@ -135,7 +135,7 @@ class Locale:
         self._domain = domain or locale["domain"]
         self._market_place_id = market_place_id or locale["market_place_id"]
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return (
             f"Locale class for domain: {self.domain}, "
             f"marketplace: {self.market_place_id}"

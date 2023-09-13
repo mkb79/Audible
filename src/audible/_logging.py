@@ -18,7 +18,9 @@ class AudibleLogHelper:
         self._set_level(logger, level)
 
     @staticmethod
-    def _set_level(obj, level: Optional[Union[str, int]]) -> None:
+    def _set_level(
+        obj: Union[logging.Logger, logging.Handler], level: Optional[Union[str, int]]
+    ) -> None:
         if level:
             level = level.upper() if isinstance(level, str) else level
             obj.setLevel(level)
@@ -32,7 +34,9 @@ class AudibleLogHelper:
                 stacklevel=1,
             )
 
-    def _set_handler(self, handler, name, level):
+    def _set_handler(
+        self, handler: logging.Handler, name: str, level: Optional[Union[str, int]]
+    ) -> None:
         handler.setFormatter(log_formatter)
         handler.set_name(name)
         logger.addHandler(handler)
@@ -45,7 +49,9 @@ class AudibleLogHelper:
         self._set_handler(handler, "ConsoleLogger", level)
 
     def set_file_logger(
-        self, filename: str, level: Optional[Union[str, int]] = None
+        self,
+        filename: Union[str, pathlib.Path],
+        level: Optional[Union[str, int]] = None,
     ) -> None:
         """Set up a file logger to the audible package."""
         filename = pathlib.Path(filename)
