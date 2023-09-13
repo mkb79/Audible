@@ -23,7 +23,7 @@ categories:
     labels:
       - "dependencies"
       - "build"
-    collapse-after: 5 
+    collapse-after: 5
 exclude-labels:
   - "skip-changelog"
 exclude-contributors:
