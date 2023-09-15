@@ -12,7 +12,6 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       tag: ${{ steps.check-version.outputs.tag }}
-      upload_url: ${{ steps.create-release.outputs.upload_url }}
     steps:
       - name: Check out the repository
         uses: actions/checkout@v4
@@ -59,22 +58,12 @@ jobs:
         run: |
           poetry build --ansi
 
-      - name: Publish package on PyPI
-        continue-on-error: true
-        if: steps.check-version.outputs.tag
-        uses: pypa/gh-action-pypi-publish@v1.8.10
+      - name: Upload build package artifact
+        uses: actions/upload-artifact@v3
         with:
-          user: __token__
-          password: ${{ secrets.PYPI_API_TOKEN }}
-
-      - name: Publish package on TestPyPI
-        continue-on-error: true
-        if: "! steps.check-version.outputs.tag"
-        uses: pypa/gh-action-pypi-publish@v1.8.10
-        with:
-          user: __token__
-          password: ${{ secrets.TEST_PYPI_API_TOKEN }}
-          repository_url: https://test.pypi.org/legacy/
+          name: dist
+          path: dist
+          retention-days: 1
 
       - name: Publish the release notes
         id: create-release
@@ -84,3 +73,30 @@ jobs:
           tag: ${{ steps.check-version.outputs.tag }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  pypi-publish:
+    needs: release
+    environment:
+      name: publish
+    name: upload release to PyPI or TestPyPI
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+    steps:
+      - name: Download build package artifact
+        uses: actions/download-artifact@v3
+        with:
+          name: dist
+          path: dist
+
+      - name: Publish package distributions to PyPI
+        continue-on-error: true
+        if: needs.release.outputs.tag
+        uses: pypa/gh-action-pypi-publish@release/v1
+
+      - name: Publish package on TestPyPI
+        continue-on-error: true
+        if: "! needs.release.outputs.tag"
+        uses: pypa/gh-action-pypi-publish@v1.8.10
+        with:
+          repository-url: https://test.pypi.org/legacy/
