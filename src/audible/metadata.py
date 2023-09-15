@@ -21,11 +21,11 @@ def raw_xxtea(v: List, n: int, k: Union[List, Tuple]) -> int:
 
     def mx():
         return ((z >> 5) ^ (y << 2)) + ((y >> 3) ^ (z << 4)) ^ (sum_ ^ y) + (
-                k[(p & 3) ^ e] ^ z
+            k[(p & 3) ^ e] ^ z
         )
 
     def u32(x):
-        return x % 2 ** 32
+        return x % 2**32
 
     y = v[0]
     sum_ = 0
@@ -68,7 +68,7 @@ def _bytes_to_longs(data: Union[str, bytes]) -> List[int]:
     data_bytes = data.encode() if isinstance(data, str) else data
 
     return [
-        int.from_bytes(data_bytes[i: i + 4], "little")
+        int.from_bytes(data_bytes[i : i + 4], "little")
         for i in range(0, len(data_bytes), 4)
     ]
 
@@ -78,7 +78,7 @@ def _longs_to_bytes(data: List[int]) -> bytes:
 
 
 def _generate_hex_checksum(data: str) -> str:
-    checksum = binascii.crc32(data.encode()) % 2 ** 32
+    checksum = binascii.crc32(data.encode()) % 2**32
     checksum = format(checksum, "X")
 
     if len(checksum) < 8:
