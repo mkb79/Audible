@@ -108,7 +108,7 @@ def deregister(
     domain: str,
     deregister_all: bool = False,
     with_username: bool = False,
-) -> Dict[str, Any]:
+) -> Any:
     """Deregister a previous registered Audible device.
 
     Note:
