@@ -45,13 +45,26 @@ LOCALE_TEMPLATES = {
         "domain": "com.au",
         "market_place_id": "AN7EY7DTAW63G",
     },
-    "india": {"country_code": "in", "domain": "in", "market_place_id": "AJO3FBRUE6J4S"},
+    "india": {
+        "country_code": "in",
+        "domain": "in",
+        "market_place_id": "AJO3FBRUE6J4S",
+    },
     "japan": {
         "country_code": "jp",
         "domain": "co.jp",
         "market_place_id": "A1QAP3MOU4173J",
     },
-    "spain": {"country_code": "es", "domain": "es", "market_place_id": "ALMIKO4SZCSAR"},
+    "spain": {
+        "country_code": "es",
+        "domain": "es",
+        "market_place_id": "ALMIKO4SZCSAR",
+    },
+    "brazil": {
+        "country_code": "br",
+        "domain": "com.br",
+        "market_place_id": "A10J1VAYUDTYRN",
+    },
 }
 
 
