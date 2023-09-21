@@ -11,7 +11,7 @@ from typing import List, Tuple, Union
 METADATA_KEY: bytes = b"a\x03\x8fp4\x18\x97\x99:\xeb\xe7\x8b\x85\x97$4"
 
 
-def raw_xxtea(v: List, n: int, k: Union[List, Tuple]) -> int:
+def raw_xxtea(v: List[int], n: int, k: Union[List[int], Tuple[int, ...]]) -> int:
     if not isinstance(v, list):
         raise ValueError("arg `v` is not of type list")
     if not isinstance(k, (list, tuple)):
@@ -19,12 +19,12 @@ def raw_xxtea(v: List, n: int, k: Union[List, Tuple]) -> int:
     if not isinstance(n, int):
         raise ValueError("arg `n` is not of type int")
 
-    def mx():
+    def mx() -> int:
         return ((z >> 5) ^ (y << 2)) + ((y >> 3) ^ (z << 4)) ^ (sum_ ^ y) + (
             k[(p & 3) ^ e] ^ z
         )
 
-    def u32(x):
+    def u32(x: int) -> int:
         return x % 2**32
 
     y = v[0]
@@ -78,14 +78,14 @@ def _longs_to_bytes(data: List[int]) -> bytes:
 
 
 def _generate_hex_checksum(data: str) -> str:
-    checksum = binascii.crc32(data.encode()) % 2**32
-    checksum = format(checksum, "X")
+    crc_checksum = binascii.crc32(data.encode()) % 2**32
+    hex_checksum = format(crc_checksum, "X")
 
-    if len(checksum) < 8:
-        pad = (8 - len(checksum)) * "0"
-        checksum = pad + checksum
+    if len(hex_checksum) < 8:
+        pad = (8 - len(hex_checksum)) * "0"
+        hex_checksum = pad + hex_checksum
 
-    return checksum
+    return hex_checksum
 
 
 class XXTEAException(Exception):
