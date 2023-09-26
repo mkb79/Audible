@@ -67,6 +67,9 @@
 - name: skip-stale
   description: Skip issue or pull request to be marked as stale
   color: 964B50
+- name: skip-publish
+  description: Skip a pull request to be published on PyPI or TestPyPI
+  color: 964BBF
 - name: wontfix
   description: This will not be worked on
   color: ffffff
