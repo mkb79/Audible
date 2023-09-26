@@ -1,8 +1,8 @@
-name: 'Close stale issues and PRs'
+name: "Close stale issues and PRs"
 
 on:
   schedule:
-    - cron: '00 03 * * *'
+    - cron: "00 03 * * *"
 
 permissions:
   issues: write
@@ -14,10 +14,10 @@ jobs:
     steps:
       - uses: actions/stale@v7
         with:
-          close-issue-message: 'This issue has automatically been closed due to no activities.'
-          close-pr-message: 'This pull-request has automatically been closed due to no activities.'
-          stale-issue-message: 'This issue has not been updated for a while and will be closed soon.'
-          stale-pr-message: 'This pull-request has not been updated for a while and will be closed soon.'
+          close-issue-message: "This issue has automatically been closed due to no activities."
+          close-pr-message: "This pull-request has automatically been closed due to no activities."
+          stale-issue-message: "This issue has not been updated for a while and will be closed soon."
+          stale-pr-message: "This pull-request has not been updated for a while and will be closed soon."
           days-before-stale: 60
           days-before-close: 10
           exempt-all-milestones: true
