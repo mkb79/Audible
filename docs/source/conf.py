@@ -32,7 +32,11 @@ author = "mkb79"
 
 # The full version, including alpha/beta/rc tags
 info = pathlib.Path("../../src/audible/__init__.py").read_text("utf-8")
-version = re.search(f"{'__version__'} = ['\"]([^'\"]+)['\"]", info).group(1)
+
+_version = re.search(f"{'__version__'} = ['\"]([^'\"]+)['\"]", info)
+if _version is None:
+    raise Exception("Could not find version in __init__.py")
+version = _version.group(1)
 
 
 # -- General configuration ---------------------------------------------------
