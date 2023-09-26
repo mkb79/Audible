@@ -64,6 +64,9 @@
 - name: skip-changelog
   description: Skip pull request from release notes
   color: 964B00
+- name: skip-stale
+  description: Skip issue or pull request to be marked as stale
+  color: 964B50
 - name: wontfix
   description: This will not be worked on
   color: ffffff
