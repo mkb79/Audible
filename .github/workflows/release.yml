@@ -75,7 +75,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   pypi-publish:
-    if: !contains(github.event.pull_request.labels.*.name , 'skip-publish')
+    if: "!contains(github.event.pull_request.labels.*.name, 'skip-publish')"
     needs: release
     environment:
       name: publish
