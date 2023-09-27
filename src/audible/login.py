@@ -487,12 +487,21 @@ def login(
 
     session.close()
 
-    if b"openid.oa2.authorization_code" not in login_resp.url.query:
+    url = None
+    if b"openid.oa2.authorization_code" in login_resp.url.query:
+        url = login_resp.url
+    elif len(login_resp.history) > 0:
+        for history in login_resp.history:
+            if b"openid.oa2.authorization_code" in history.url.query:
+                url = history.url
+                break
+
+    if url is None:
         raise Exception("Login failed. Please check the log.")
 
     logger.debug("Login confirmed for %s", username)
 
-    authorization_code = extract_code_from_url(login_resp.url)
+    authorization_code = extract_code_from_url(url)
 
     return {
         "authorization_code": authorization_code,
