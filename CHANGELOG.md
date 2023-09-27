@@ -6,10 +6,24 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## Unreleased
 
+## Bugfix
+
+- Multiple fixes for XXTEA encryption/decryption in metadata module.
+
+### Added
+
+- Add brazilian marketplace.
+- Login function now checks for a `verification-code-form` tag in login HTML page.
+
+### Changes
+
 - Drop support for Python 3.7.
+
+### Misc
+
 - First step to refactor code.
 - Switch project to poetry.
-- Using nox for tests.
+- Using nox and ruff for tests and linting.
 
 ## [0.8.2] - 2022-05-25
 
