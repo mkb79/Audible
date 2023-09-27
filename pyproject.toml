@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "audible"
-version = "0.9.0"
+version = "0.9.1"
 description = "A(Sync) Interface for internal Audible API written in pure Python."
 authors = ["mkb79 <mkb79@hackitall.de>"]
 license = "AGPL-3.0-only"
