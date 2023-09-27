@@ -1,4 +1,4 @@
-__version__ = "0.8.2"
+__version__ = "0.9.0"
 
 from ._logging import log_helper
 from .auth import Authenticator
