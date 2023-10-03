@@ -138,7 +138,7 @@ class Locale:
         domain: Optional[str] = None,
         market_place_id: Optional[str] = None,
     ) -> None:
-        if not all([country_code, domain, market_place_id]):
+        if country_code is None or domain is None or market_place_id is None:
             locale = None
             if country_code:
                 locale = search_template("country_code", country_code)
@@ -148,9 +148,13 @@ class Locale:
             if locale is None:
                 raise Exception("can't find locale")
 
-        self._country_code = country_code or locale["country_code"]
-        self._domain = domain or locale["domain"]
-        self._market_place_id = market_place_id or locale["market_place_id"]
+            country_code = country_code or locale["country_code"]
+            domain = domain or locale["domain"]
+            market_place_id = market_place_id or locale["market_place_id"]
+
+        self._country_code = country_code
+        self._domain = domain
+        self._market_place_id = market_place_id
 
     def __repr__(self) -> str:
         return (
