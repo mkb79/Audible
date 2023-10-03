@@ -1,9 +1,8 @@
 import logging
+import re
 from typing import Dict, Optional
-from urllib.parse import parse_qs, urlparse
 
 import httpx
-from bs4 import BeautifulSoup
 from httpcore import ConnectError
 
 
@@ -94,6 +93,7 @@ def autodetect_locale(domain: str) -> Dict[str, str]:
 
     Raises:
         ConnectError: If site does not exist or network error raises.
+        Exception: If marketplace or country code can't be found.
     """
     domain = domain.lstrip(".")
     site = f"https://www.audible.{domain}"
@@ -105,13 +105,17 @@ def autodetect_locale(domain: str) -> Dict[str, str]:
         logger.warning("site %s does not exists or Network Error occurs", site)
         raise e
 
-    soup = BeautifulSoup(resp.text, "html.parser")
+    marketplace_pattern = re.compile(r"ue_mid = \'(.*)\'")
+    marketplace_search = re.search(marketplace_pattern, resp.text)
+    if marketplace_search is None:
+        raise Exception("can't find marketplace")
+    market_place_id = marketplace_search.group(1)
 
-    login_link = soup.find("a", class_="ui-it-sign-in-link")["href"]
-    parsed_link = urlparse(login_link)
-    query_string = parse_qs(parsed_link.query)
-    market_place_id = query_string["marketPlaceId"][0]
-    country_code = query_string["pageId"][0].split("_")[-1]
+    alias_pattern = re.compile(r"autocomplete_config.searchAlias = \"(.*)\"")
+    alias_search = re.search(alias_pattern, resp.text)
+    if alias_search is None:
+        raise Exception("can't find country code")
+    country_code = alias_search.group(1).split("-")[-1]
 
     return {
         "country_code": country_code,
