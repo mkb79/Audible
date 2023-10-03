@@ -83,10 +83,7 @@ disable_error_code = [
     "assignment",
     "attr-defined",
     "call-arg",
-    "call-overload",
     "dict-item",
-    "func-returns-value",
-    "has-type",
     "import",
     "index",
     "misc",
@@ -100,8 +97,6 @@ disable_error_code = [
     "str-bytes-safe",
     "type-arg",
     "union-attr",
-    "valid-type",
-    "var-annotated",
 ]
 pretty = true
 show_column_numbers = true
