@@ -78,6 +78,68 @@ exclude_lines = [
 ]
 
 [tool.mypy]
+pretty = true
+show_column_numbers = true
+show_error_codes = true
+show_error_context = true
+strict = true
+warn_unreachable = true
+
+[[tool.mypy.overrides]]
+module = "audible.activation_bytes.*"
+disable_error_code = [
+    "arg-type",
+    "assignment",
+    "index",
+    "union-attr",
+]
+
+[[tool.mypy.overrides]]
+module = "audible.aescipher.*"
+disable_error_code = [
+    "arg-type",
+    "assignment",
+    "import",
+    "index",
+    "no-any-return",
+    "no-untyped-def",
+    "operator",
+    "return-value",
+    "type-arg",
+    "union-attr",
+]
+
+[[tool.mypy.overrides]]
+module = "audible.auth.*"
+disable_error_code = [
+    "arg-type",
+    "assignment",
+    "no-any-return",
+    "no-untyped-def",
+    "operator",
+    "str-bytes-safe",
+    "type-arg",
+    "union-attr",
+]
+
+[[tool.mypy.overrides]]
+module = "audible.client.*"
+disable_error_code = [
+    "arg-type",
+    "assignment",
+    "attr-defined",
+    "misc",
+    "no-any-return",
+    "no-untyped-def",
+    "override",
+    "return",
+    "return-value",
+    "type-arg",
+    "union-attr",
+]
+
+[[tool.mypy.overrides]]
+module = "audible.login.*"
 disable_error_code = [
     "arg-type",
     "assignment",
@@ -90,20 +152,9 @@ disable_error_code = [
     "no-any-return",
     "no-untyped-call",
     "no-untyped-def",
-    "operator",
-    "override",
-    "return",
     "return-value",
-    "str-bytes-safe",
-    "type-arg",
     "union-attr",
 ]
-pretty = true
-show_column_numbers = true
-show_error_codes = true
-show_error_context = true
-strict = true
-warn_unreachable = true
 
 [tool.ruff]
 #  missing rst-docstrings check, these should be adding through ruff
