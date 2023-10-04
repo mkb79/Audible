@@ -89,8 +89,6 @@ warn_unreachable = true
 module = "audible.activation_bytes.*"
 disable_error_code = [
     "arg-type",
-    "assignment",
-    "index",
     "union-attr",
 ]
 

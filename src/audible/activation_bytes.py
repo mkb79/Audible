@@ -28,6 +28,9 @@ def get_player_token(auth: "audible.Authenticator") -> str:
 
     Returns:
         The player token.
+
+    Raises:
+        Exception: If `playerToken` not found in response url query.
     """
     params = {
         "ipRedirectOverride": True,
@@ -45,8 +48,11 @@ def get_player_token(auth: "audible.Authenticator") -> str:
 
     query = resp.url.query.decode()
     parsed_query = urllib.parse.parse_qs(query)
-    player_token = parsed_query.get("playerToken")[0]
-    return player_token
+    player_token = parsed_query.get("playerToken")
+    if player_token is None:
+        raise Exception("No player token found in response url query.")
+
+    return player_token[0]
 
 
 def extract_activation_bytes(data: bytes) -> str:
@@ -174,6 +180,6 @@ def get_activation_bytes(
         pathlib.Path(filename).write_bytes(activation)
 
     if extract:
-        activation = extract_activation_bytes(activation)
+        return extract_activation_bytes(activation)
 
     return activation
