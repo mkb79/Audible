@@ -124,15 +124,8 @@ disable_error_code = [
 module = "audible.client.*"
 disable_error_code = [
     "arg-type",
-    "assignment",
-    "attr-defined",
-    "misc",
     "no-any-return",
-    "no-untyped-def",
-    "override",
-    "return",
     "return-value",
-    "type-arg",
     "union-attr",
 ]
 

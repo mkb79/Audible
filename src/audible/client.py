@@ -1,11 +1,23 @@
 import inspect
 import json
 import logging
-from typing import Any, Callable, Dict, Optional, Union
+from abc import ABCMeta, abstractmethod
+from types import TracebackType
+from typing import (
+    Any,
+    Callable,
+    Dict,
+    Generic,
+    Iterator,
+    Optional,
+    Type,
+    TypeVar,
+    Union,
+)
 
 import httpx
 from httpx import URL
-from httpx._models import Headers, HeaderTypes  # noqa: F401
+from httpx._models import HeaderTypes  # type: ignore[attr-defined]
 
 from .auth import Authenticator
 from .exceptions import (
@@ -24,12 +36,14 @@ from .localization import LOCALE_TEMPLATES, Locale
 
 logger = logging.getLogger("audible.client")
 
+T = TypeVar("T", httpx.AsyncClient, httpx.Client)
+
 httpx_client_request_args = list(
     inspect.signature(httpx.Client.request).parameters.keys()
 )
 
 
-def default_response_callback(resp: httpx.Response) -> Union[Dict, str]:
+def default_response_callback(resp: httpx.Response) -> Any:
     raise_for_status(resp)
     return convert_response_content(resp)
 
@@ -54,17 +68,16 @@ def raise_for_status(resp: httpx.Response) -> None:
             raise UnexpectedError(resp, data) from e
 
 
-def convert_response_content(resp: httpx.Response) -> Union[Dict, str]:
+def convert_response_content(resp: httpx.Response) -> Any:
     try:
         return resp.json()
     except json.JSONDecodeError:
         return resp.text
 
 
-class Client:
+class BaseClient(Generic[T], metaclass=ABCMeta):
     _API_URL_TEMP = "https://api.audible."
     _API_VERSION = "1.0"
-    _SESSION = httpx.Client
     _REQUEST_LOG = "{method} {url} has received {text}, has returned {status}"
 
     def __init__(
@@ -74,20 +87,22 @@ class Client:
         headers: Optional[HeaderTypes] = None,
         timeout: int = 10,
         response_callback: Optional[Callable[[httpx.Response], Any]] = None,
-        **session_kwargs,
+        **session_kwargs: Any,
     ):
         locale = Locale(country_code.lower()) if country_code else auth.locale
         self._api_url = httpx.URL(self._API_URL_TEMP + locale.domain)
 
-        default_headers = {
-            "Accept": "application/json",
-            "Accept-Charset": "utf-8",
-            "Content-Type": "application/json",
-        }
+        default_headers = httpx.Headers(
+            {
+                "Accept": "application/json",
+                "Accept-Charset": "utf-8",
+                "Content-Type": "application/json",
+            }
+        )
         if headers is not None:
             default_headers.update(headers)
 
-        self.session = self._SESSION(
+        self.session: T = self._get_session(
             headers=default_headers, timeout=timeout, auth=auth, **session_kwargs
         )
 
@@ -95,17 +110,19 @@ class Client:
             response_callback = default_response_callback
         self._response_callback = response_callback
 
-    def __enter__(self):
-        return self
+    @abstractmethod
+    def _get_session(self, *args: Any, **kwargs: Any) -> T:
+        ...
 
-    def __exit__(self, exc_type, exc_value, traceback):
-        self.close()
-
-    def __repr__(self):
-        return f"<Sync Client for *{self.marketplace}* marketplace>"
-
-    def close(self) -> None:
-        self.session.close()
+    @abstractmethod
+    def _request(
+        self,
+        method: str,
+        path: str,
+        response_callback: Optional[Callable[[httpx.Response], Any]] = None,
+        **kwargs: Any,
+    ) -> Any:
+        ...
 
     def switch_marketplace(self, country_code: str) -> None:
         locale = Locale(country_code.lower())
@@ -121,6 +138,8 @@ class Client:
             if domain == country["domain"]:
                 return country["country_code"]
 
+        return "unknown"
+
     @property
     def auth(self) -> Authenticator:
         return self.session.auth
@@ -132,7 +151,7 @@ class Client:
             self.switch_marketplace(auth.locale.country_code)
         self.session.auth = auth
 
-    def get_user_profile(self) -> Dict:
+    def get_user_profile(self) -> Dict[str, Any]:
         self.auth.refresh_access_token()
         return self.auth.user_profile()
 
@@ -151,15 +170,141 @@ class Client:
         if not (path.startswith(self._API_VERSION) or path.startswith("0.0")):
             path = "/".join((self._API_VERSION, path))
 
-        path = ("/" + path).encode()
-        return self._api_url.copy_with(raw_path=path)
+        path = "/" + path
+        path_bytes = path.encode()
+        return self._api_url.copy_with(raw_path=path_bytes)
+
+    def raw_request(
+        self,
+        method: str,
+        url: str,
+        *,
+        stream: bool = False,
+        apply_auth_flow: bool = False,
+        apply_cookies: bool = False,
+        **kwargs: Any,
+    ) -> Union[httpx.Response, Iterator[httpx.Response]]:
+        """Sends a raw request with the underlying httpx Client.
+
+        This method ignores a set api_url and allows send request to custom
+        hosts. The raw httpx response will be returned.
+
+        Args:
+            method: The http request method.
+            url: The url to make requests to.
+            stream: If `True`, streams the response
+            apply_auth_flow: If `True`, the :meth:`Authenticator.auth_flow`
+                will be applied to the request.
+            apply_cookies: If `True`, website cookies from
+                :attr:`Authenticator.website_cookies` will be added to
+                request headers.
+            **kwargs: keyword args supported by :class:`httpx.AsyncClient.stream`,
+                :class:`httpx.Client.stream`, :class:`httpx.AsyncClient.request`,
+                :class:`httpx.Client.request`.
+
+        Returns:
+            A unprepared httpx Response object.
+
+        .. versionadded:: v0.5.1
+        """
+        _cookies = self.auth.website_cookies if apply_cookies else {}
+        cookies = httpx.Cookies(_cookies)
+        cookies.update(kwargs.pop("cookies", {}))
+        auth = self.auth if apply_auth_flow else None
+
+        r = self.session.stream if stream else self.session.request
+        return r(method, url, cookies=cookies, auth=auth, **kwargs)
+
+    @staticmethod
+    def _prepare_params(kwargs: Dict[str, Any]) -> None:
+        params = kwargs.pop("params", {})
+        for key in list(kwargs.keys()):
+            if key not in httpx_client_request_args:
+                params[key] = kwargs.pop(key)
+        kwargs["params"] = params
+
+    def get(
+        self,
+        path: str,
+        response_callback: Optional[Callable[[httpx.Response], Any]] = None,
+        **kwargs: Dict[str, Any],
+    ) -> Any:
+        self._prepare_params(kwargs)
+        return self._request(
+            method="GET", path=path, response_callback=response_callback, **kwargs
+        )
+
+    def post(
+        self,
+        path: str,
+        body: Any,
+        response_callback: Optional[Callable[[httpx.Response], Any]] = None,
+        **kwargs: Dict[str, Any],
+    ) -> Any:
+        self._prepare_params(kwargs)
+        return self._request(
+            method="POST",
+            path=path,
+            response_callback=response_callback,
+            json=body,
+            **kwargs,
+        )
+
+    def delete(
+        self,
+        path: str,
+        response_callback: Optional[Callable[[httpx.Response], Any]] = None,
+        **kwargs: Dict[str, Any],
+    ) -> Any:
+        self._prepare_params(kwargs)
+        return self._request(
+            method="DELETE", path=path, response_callback=response_callback, **kwargs
+        )
+
+    def put(
+        self,
+        path: str,
+        body: Any,
+        response_callback: Optional[Callable[[httpx.Response], Any]] = None,
+        **kwargs: Dict[str, Any],
+    ) -> Any:
+        self._prepare_params(kwargs)
+        return self._request(
+            method="PUT",
+            path=path,
+            response_callback=response_callback,
+            json=body,
+            **kwargs,
+        )
+
+
+class Client(BaseClient[httpx.Client]):
+    def _get_session(self, *args: Any, **kwargs: Any) -> httpx.Client:
+        return httpx.Client(*args, **kwargs)
+
+    def __enter__(self) -> "Client":
+        return self
+
+    def __exit__(
+        self,
+        exc_type: Optional[Type[BaseException]] = None,
+        exc_value: Optional[BaseException] = None,
+        traceback: Optional[TracebackType] = None,
+    ) -> None:
+        self.close()
+
+    def __repr__(self) -> str:
+        return f"<Sync Client for *{self.marketplace}* marketplace>"
+
+    def close(self) -> None:
+        self.session.close()
 
     def _request(
         self,
         method: str,
         path: str,
         response_callback: Optional[Callable[[httpx.Response], Any]] = None,
-        **kwargs,
+        **kwargs: Any,
     ) -> Any:
         url = self._prepare_api_path(path)
 
@@ -194,120 +339,23 @@ class Client:
             except UnboundLocalError:
                 pass
 
-    def raw_request(
-        self,
-        method: str,
-        url: str,
-        *,
-        stream: bool = False,
-        apply_auth_flow: bool = False,
-        apply_cookies: bool = False,
-        **kwargs,
-    ) -> httpx.Response:
-        """Sends a raw request with the underlying httpx Client.
 
-        This method ignores a set api_url and allows send request to custom
-        hosts. The raw httpx response will be returned.
+class AsyncClient(BaseClient[httpx.AsyncClient]):
+    def _get_session(self, *args: Any, **kwargs: Any) -> httpx.AsyncClient:
+        return httpx.AsyncClient(*args, **kwargs)
 
-        Args:
-            method: The http request method.
-            url: The url to make requests to.
-            stream: If `True`, streams the response
-            apply_auth_flow: If `True`, the :meth:`Authenticator.auth_flow`
-                will be applied to the request.
-            apply_cookies: If `True`, website cookies from
-                :attr:`Authenticator.website_cookies` will be added to
-                request headers.
-            **kwargs: keyword args supported by :class:`httpx.AsyncClient.stream`,
-                :class:`httpx.Client.stream`, :class:`httpx.AsyncClient.request`,
-                :class:`httpx.Client.request`.
-
-        Returns:
-            A unprepared httpx Response object.
-
-        .. versionadded:: v0.5.1
-        """
-        cookies = self.auth.website_cookies if apply_cookies else {}
-        cookies = httpx.Cookies(cookies)
-        cookies.update(kwargs.pop("cookies", {}))
-        auth = self.session.auth if apply_auth_flow else None
-
-        r = self.session.stream if stream else self.session.request
-        return r(method, url, cookies=cookies, auth=auth, **kwargs)
-
-    @staticmethod
-    def _prepare_params(kwargs: Dict) -> None:
-        params = kwargs.pop("params", {})
-        for key in list(kwargs.keys()):
-            if key not in httpx_client_request_args:
-                params[key] = kwargs.pop(key)
-        kwargs["params"] = params
-
-    def get(
-        self,
-        path: str,
-        response_callback: Optional[Callable[[httpx.Response], Any]] = None,
-        **kwargs,
-    ) -> Any:
-        self._prepare_params(kwargs)
-        return self._request(
-            method="GET", path=path, response_callback=response_callback, **kwargs
-        )
-
-    def post(
-        self,
-        path: str,
-        body: Dict,
-        response_callback: Optional[Callable[[httpx.Response], Any]] = None,
-        **kwargs,
-    ) -> Any:
-        self._prepare_params(kwargs)
-        return self._request(
-            method="POST",
-            path=path,
-            response_callback=response_callback,
-            json=body,
-            **kwargs,
-        )
-
-    def delete(
-        self,
-        path: str,
-        response_callback: Optional[Callable[[httpx.Response], Any]] = None,
-        **kwargs,
-    ) -> Any:
-        self._prepare_params(kwargs)
-        return self._request(
-            method="DELETE", path=path, response_callback=response_callback, **kwargs
-        )
-
-    def put(
-        self,
-        path: str,
-        body: Dict,
-        response_callback: Optional[Callable[[httpx.Response], Any]] = None,
-        **kwargs,
-    ) -> Any:
-        self._prepare_params(kwargs)
-        return self._request(
-            method="PUT",
-            path=path,
-            response_callback=response_callback,
-            json=body,
-            **kwargs,
-        )
-
-
-class AsyncClient(Client):
-    _SESSION = httpx.AsyncClient
-
-    async def __aenter__(self):
+    async def __aenter__(self) -> "AsyncClient":
         return self
 
-    async def __aexit__(self, exc_type, exc_value, traceback):
+    async def __aexit__(
+        self,
+        exc_type: Optional[Type[BaseException]] = None,
+        exc_value: Optional[BaseException] = None,
+        traceback: Optional[TracebackType] = None,
+    ) -> None:
         await self.close()
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"<AyncClient for *{self.marketplace}* marketplace>"
 
     async def close(self) -> None:
@@ -318,8 +366,8 @@ class AsyncClient(Client):
         method: str,
         path: str,
         response_callback: Optional[Callable[[httpx.Response], Any]] = None,
-        **kwargs,
-    ) -> Union[Dict, str]:
+        **kwargs: Any,
+    ) -> Any:
         url = self._prepare_api_path(path)
 
         if response_callback is None:
