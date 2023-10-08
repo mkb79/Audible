@@ -86,13 +86,6 @@ strict = true
 warn_unreachable = true
 
 [[tool.mypy.overrides]]
-module = "audible.activation_bytes.*"
-disable_error_code = [
-    "arg-type",
-    "union-attr",
-]
-
-[[tool.mypy.overrides]]
 module = "audible.aescipher.*"
 disable_error_code = [
     "arg-type",
@@ -117,15 +110,6 @@ disable_error_code = [
     "operator",
     "str-bytes-safe",
     "type-arg",
-    "union-attr",
-]
-
-[[tool.mypy.overrides]]
-module = "audible.client.*"
-disable_error_code = [
-    "arg-type",
-    "no-any-return",
-    "return-value",
     "union-attr",
 ]
 

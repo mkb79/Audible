@@ -3,10 +3,11 @@ import hashlib
 import pathlib
 import struct
 import urllib.parse
-from typing import TYPE_CHECKING, Optional, Union
+from typing import TYPE_CHECKING, Literal, Optional, Union, overload
 
 import httpx
 
+from ._types import TrueFalseType
 from .exceptions import AuthFlowError
 
 
@@ -32,19 +33,25 @@ def get_player_token(auth: "audible.Authenticator") -> str:
     Raises:
         Exception: If `playerToken` not found in response url query.
     """
-    params = {
-        "ipRedirectOverride": True,
-        "playerType": "software",
-        "bp_ua": "y",
-        "playerModel": "Desktop",
-        "playerId": get_player_id(),
-        "playerManufacturer": "Audible",
-        "serial": "",
-    }
+    if auth.locale is None:
+        raise Exception("No locale set on `Authenticator`.")
 
-    url = f"https://www.audible.{auth.locale.domain}/player-auth-token"
+    player_id = get_player_id()
+    url = httpx.URL(
+        url=f"https://www.audible.{auth.locale.domain}/player-auth-token",
+        params={
+            "ipRedirectOverride": True,
+            "playerType": "software",
+            "bp_ua": "y",
+            "playerModel": "Desktop",
+            "playerId": player_id,
+            "playerManufacturer": "Audible",
+            "serial": "",
+        },
+    )
+
     with httpx.Client(cookies=auth.website_cookies) as session:
-        resp = session.get(url, params=params)
+        resp = session.get(url, follow_redirects=True)
 
     query = resp.url.query.decode()
     parsed_query = urllib.parse.parse_qs(query)
@@ -95,7 +102,7 @@ def extract_activation_bytes(data: bytes) -> str:
 
 
 def fetch_activation(player_token: str) -> bytes:
-    """Fetches the activation blob with player tokenfrom Audible server.
+    """Fetches the activation blob with player token from Audible server.
 
     Args:
         player_token: A player token returned by ``get_player_token`` function.
@@ -125,7 +132,7 @@ def fetch_activation_sign_auth(auth: "audible.Authenticator") -> bytes:
     """Fetches the activation blob with sign authentication from Audible server.
 
     Args:
-        auth: A ``Authenticator`` instance with valid `'adp_token`` and
+        auth: A ``Authenticator`` instance with valid ``adp_token`` and
             ``device_private_cert``.
 
     Returns:
@@ -148,10 +155,29 @@ def fetch_activation_sign_auth(auth: "audible.Authenticator") -> bytes:
         return resp.content
 
 
+@overload
+def get_activation_bytes(
+    auth: "audible.Authenticator",
+    filename: Optional[Union[str, pathlib.Path]] = ...,
+    extract: Literal[True] = ...,
+) -> str:
+    ...
+
+
+@overload
+def get_activation_bytes(
+    auth: "audible.Authenticator",
+    filename: Optional[Union[str, pathlib.Path]] = ...,
+    *,
+    extract: Literal[False],
+) -> bytes:
+    ...
+
+
 def get_activation_bytes(
     auth: "audible.Authenticator",
     filename: Optional[Union[str, pathlib.Path]] = None,
-    extract: bool = True,
+    extract: TrueFalseType = True,
 ) -> Union[str, bytes]:
     """Fetches the activation blob from Audible and extracts the bytes.
 

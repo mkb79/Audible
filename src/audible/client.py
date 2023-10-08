@@ -5,20 +5,25 @@ from abc import ABCMeta, abstractmethod
 from types import TracebackType
 from typing import (
     Any,
+    AsyncContextManager,
     Callable,
+    ContextManager,
+    Coroutine,
     Dict,
     Generic,
-    Iterator,
+    Literal,
     Optional,
     Type,
     TypeVar,
     Union,
+    overload,
 )
 
 import httpx
 from httpx import URL
 from httpx._models import HeaderTypes  # type: ignore[attr-defined]
 
+from ._types import TrueFalseType
 from .auth import Authenticator
 from .exceptions import (
     BadRequest,
@@ -36,7 +41,7 @@ from .localization import LOCALE_TEMPLATES, Locale
 
 logger = logging.getLogger("audible.client")
 
-T = TypeVar("T", httpx.AsyncClient, httpx.Client)
+ClientType = TypeVar("ClientType", httpx.AsyncClient, httpx.Client)
 
 httpx_client_request_args = list(
     inspect.signature(httpx.Client.request).parameters.keys()
@@ -75,7 +80,7 @@ def convert_response_content(resp: httpx.Response) -> Any:
         return resp.text
 
 
-class BaseClient(Generic[T], metaclass=ABCMeta):
+class BaseClient(Generic[ClientType], metaclass=ABCMeta):
     _API_URL_TEMP = "https://api.audible."
     _API_VERSION = "1.0"
     _REQUEST_LOG = "{method} {url} has received {text}, has returned {status}"
@@ -90,6 +95,8 @@ class BaseClient(Generic[T], metaclass=ABCMeta):
         **session_kwargs: Any,
     ):
         locale = Locale(country_code.lower()) if country_code else auth.locale
+        if not isinstance(locale, Locale):
+            raise Exception("Authenticator has no `Locale` class set.")
         self._api_url = httpx.URL(self._API_URL_TEMP + locale.domain)
 
         default_headers = httpx.Headers(
@@ -102,7 +109,7 @@ class BaseClient(Generic[T], metaclass=ABCMeta):
         if headers is not None:
             default_headers.update(headers)
 
-        self.session: T = self._get_session(
+        self.session: ClientType = self._get_session(
             headers=default_headers, timeout=timeout, auth=auth, **session_kwargs
         )
 
@@ -111,7 +118,7 @@ class BaseClient(Generic[T], metaclass=ABCMeta):
         self._response_callback = response_callback
 
     @abstractmethod
-    def _get_session(self, *args: Any, **kwargs: Any) -> T:
+    def _get_session(self, *args: Any, **kwargs: Any) -> ClientType:
         ...
 
     @abstractmethod
@@ -142,12 +149,19 @@ class BaseClient(Generic[T], metaclass=ABCMeta):
 
     @property
     def auth(self) -> Authenticator:
+        if not isinstance(self.session.auth, Authenticator):
+            auth_type = type(self.session.auth)
+            raise Exception(
+                f"`session.auth` has type {auth_type}, expected `Authenticator`."
+            )
         return self.session.auth
 
     def switch_user(
         self, auth: Authenticator, switch_to_default_marketplace: bool = False
     ) -> None:
         if switch_to_default_marketplace:
+            if not isinstance(auth.locale, Locale):
+                raise Exception("Authenticator has no `Locale` class set.")
             self.switch_marketplace(auth.locale.country_code)
         self.session.auth = auth
 
@@ -158,7 +172,14 @@ class BaseClient(Generic[T], metaclass=ABCMeta):
     @property
     def user_name(self) -> str:
         user_profile = self.get_user_profile()
-        return user_profile["name"]
+        if "name" not in user_profile:
+            raise Exception("user profile has no key `name`.")
+
+        user_name = user_profile["name"]
+        if not isinstance(user_name, str):
+            user_name_type = type(user_name)
+            raise Exception(f"username has type {user_name_type}, expected `str`.")
+        return user_name
 
     def _prepare_api_path(self, path: str) -> httpx.URL:
         if httpx.URL(path).is_absolute_url:
@@ -174,16 +195,73 @@ class BaseClient(Generic[T], metaclass=ABCMeta):
         path_bytes = path.encode()
         return self._api_url.copy_with(raw_path=path_bytes)
 
+    @overload
+    def raw_request(
+        self: "BaseClient[httpx.Client]",
+        method: str,
+        url: str,
+        *,
+        stream: Literal[False] = ...,
+        apply_auth_flow: bool = ...,
+        apply_cookies: bool = ...,
+        **kwargs: Any,
+    ) -> httpx.Response:
+        ...
+
+    @overload
+    def raw_request(
+        self: "BaseClient[httpx.Client]",
+        method: str,
+        url: str,
+        *,
+        stream: Literal[True],
+        apply_auth_flow: bool = ...,
+        apply_cookies: bool = ...,
+        **kwargs: Any,
+    ) -> ContextManager[httpx.Response]:
+        ...
+
+    @overload
+    def raw_request(
+        self: "BaseClient[httpx.AsyncClient]",
+        method: str,
+        url: str,
+        *,
+        stream: Literal[False] = ...,
+        apply_auth_flow: bool = ...,
+        apply_cookies: bool = ...,
+        **kwargs: Any,
+    ) -> Coroutine[Any, Any, httpx.Response]:
+        ...
+
+    @overload
+    def raw_request(
+        self: "BaseClient[httpx.AsyncClient]",
+        method: str,
+        url: str,
+        *,
+        stream: Literal[True],
+        apply_auth_flow: bool = ...,
+        apply_cookies: bool = ...,
+        **kwargs: Any,
+    ) -> AsyncContextManager[httpx.Response]:
+        ...
+
     def raw_request(
         self,
         method: str,
         url: str,
         *,
-        stream: bool = False,
+        stream: TrueFalseType = False,
         apply_auth_flow: bool = False,
         apply_cookies: bool = False,
         **kwargs: Any,
-    ) -> Union[httpx.Response, Iterator[httpx.Response]]:
+    ) -> Union[
+        httpx.Response,
+        Coroutine[Any, Any, httpx.Response],
+        ContextManager[httpx.Response],
+        AsyncContextManager[httpx.Response],
+    ]:
         """Sends a raw request with the underlying httpx Client.
 
         This method ignores a set api_url and allows send request to custom
@@ -203,17 +281,23 @@ class BaseClient(Generic[T], metaclass=ABCMeta):
                 :class:`httpx.Client.request`.
 
         Returns:
-            A unprepared httpx Response object.
+            An unprepared httpx Response object.
 
         .. versionadded:: v0.5.1
         """
-        _cookies = self.auth.website_cookies if apply_cookies else {}
-        cookies = httpx.Cookies(_cookies)
-        cookies.update(kwargs.pop("cookies", {}))
-        auth = self.auth if apply_auth_flow else None
+        request_params = {"method": method, "url": url, **kwargs}
 
-        r = self.session.stream if stream else self.session.request
-        return r(method, url, cookies=cookies, auth=auth, **kwargs)
+        if apply_cookies:
+            cookies = httpx.Cookies(self.auth.website_cookies)
+            cookies.update(kwargs.pop("cookies", {}))
+            request_params["cookies"] = cookies
+
+        if apply_auth_flow:
+            request_params["auth"] = self.auth
+
+        if stream:
+            return self.session.stream(**request_params)
+        return self.session.request(**request_params)
 
     @staticmethod
     def _prepare_params(kwargs: Dict[str, Any]) -> None:
@@ -223,17 +307,16 @@ class BaseClient(Generic[T], metaclass=ABCMeta):
                 params[key] = kwargs.pop(key)
         kwargs["params"] = params
 
+    @abstractmethod
     def get(
         self,
         path: str,
         response_callback: Optional[Callable[[httpx.Response], Any]] = None,
         **kwargs: Dict[str, Any],
     ) -> Any:
-        self._prepare_params(kwargs)
-        return self._request(
-            method="GET", path=path, response_callback=response_callback, **kwargs
-        )
+        ...
 
+    @abstractmethod
     def post(
         self,
         path: str,
@@ -241,26 +324,18 @@ class BaseClient(Generic[T], metaclass=ABCMeta):
         response_callback: Optional[Callable[[httpx.Response], Any]] = None,
         **kwargs: Dict[str, Any],
     ) -> Any:
-        self._prepare_params(kwargs)
-        return self._request(
-            method="POST",
-            path=path,
-            response_callback=response_callback,
-            json=body,
-            **kwargs,
-        )
+        ...
 
+    @abstractmethod
     def delete(
         self,
         path: str,
         response_callback: Optional[Callable[[httpx.Response], Any]] = None,
         **kwargs: Dict[str, Any],
     ) -> Any:
-        self._prepare_params(kwargs)
-        return self._request(
-            method="DELETE", path=path, response_callback=response_callback, **kwargs
-        )
+        ...
 
+    @abstractmethod
     def put(
         self,
         path: str,
@@ -268,14 +343,7 @@ class BaseClient(Generic[T], metaclass=ABCMeta):
         response_callback: Optional[Callable[[httpx.Response], Any]] = None,
         **kwargs: Dict[str, Any],
     ) -> Any:
-        self._prepare_params(kwargs)
-        return self._request(
-            method="PUT",
-            path=path,
-            response_callback=response_callback,
-            json=body,
-            **kwargs,
-        )
+        ...
 
 
 class Client(BaseClient[httpx.Client]):
@@ -339,6 +407,60 @@ class Client(BaseClient[httpx.Client]):
             except UnboundLocalError:
                 pass
 
+    def get(
+        self,
+        path: str,
+        response_callback: Optional[Callable[[httpx.Response], Any]] = None,
+        **kwargs: Dict[str, Any],
+    ) -> Any:
+        self._prepare_params(kwargs)
+        return self._request(
+            method="GET", path=path, response_callback=response_callback, **kwargs
+        )
+
+    def post(
+        self,
+        path: str,
+        body: Any,
+        response_callback: Optional[Callable[[httpx.Response], Any]] = None,
+        **kwargs: Dict[str, Any],
+    ) -> Any:
+        self._prepare_params(kwargs)
+        return self._request(
+            method="POST",
+            path=path,
+            response_callback=response_callback,
+            json=body,
+            **kwargs,
+        )
+
+    def delete(
+        self,
+        path: str,
+        response_callback: Optional[Callable[[httpx.Response], Any]] = None,
+        **kwargs: Dict[str, Any],
+    ) -> Any:
+        self._prepare_params(kwargs)
+        return self._request(
+            method="DELETE", path=path, response_callback=response_callback, **kwargs
+        )
+
+    def put(
+        self,
+        path: str,
+        body: Any,
+        response_callback: Optional[Callable[[httpx.Response], Any]] = None,
+        **kwargs: Dict[str, Any],
+    ) -> Any:
+        self._prepare_params(kwargs)
+        return self._request(
+            method="PUT",
+            path=path,
+            response_callback=response_callback,
+            json=body,
+            **kwargs,
+        )
+
 
 class AsyncClient(BaseClient[httpx.AsyncClient]):
     def _get_session(self, *args: Any, **kwargs: Any) -> httpx.AsyncClient:
@@ -400,3 +522,57 @@ class AsyncClient(BaseClient[httpx.AsyncClient]):
                 await resp.aclose()
             except UnboundLocalError:
                 pass
+
+    async def get(
+        self,
+        path: str,
+        response_callback: Optional[Callable[[httpx.Response], Any]] = None,
+        **kwargs: Dict[str, Any],
+    ) -> Any:
+        self._prepare_params(kwargs)
+        return await self._request(
+            method="GET", path=path, response_callback=response_callback, **kwargs
+        )
+
+    async def post(
+        self,
+        path: str,
+        body: Any,
+        response_callback: Optional[Callable[[httpx.Response], Any]] = None,
+        **kwargs: Dict[str, Any],
+    ) -> Any:
+        self._prepare_params(kwargs)
+        return await self._request(
+            method="POST",
+            path=path,
+            response_callback=response_callback,
+            json=body,
+            **kwargs,
+        )
+
+    async def delete(
+        self,
+        path: str,
+        response_callback: Optional[Callable[[httpx.Response], Any]] = None,
+        **kwargs: Dict[str, Any],
+    ) -> Any:
+        self._prepare_params(kwargs)
+        return await self._request(
+            method="DELETE", path=path, response_callback=response_callback, **kwargs
+        )
+
+    async def put(
+        self,
+        path: str,
+        body: Any,
+        response_callback: Optional[Callable[[httpx.Response], Any]] = None,
+        **kwargs: Dict[str, Any],
+    ) -> Any:
+        self._prepare_params(kwargs)
+        return await self._request(
+            method="PUT",
+            path=path,
+            response_callback=response_callback,
+            json=body,
+            **kwargs,
+        )

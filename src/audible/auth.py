@@ -9,14 +9,17 @@ from typing import (
     Dict,
     Generator,
     List,
+    Literal,
     Optional,
     Union,
+    overload,
 )
 
 import httpx
 import rsa
 from httpx import Cookies
 
+from ._types import TrueFalseType
 from .activation_bytes import get_activation_bytes as get_ab
 from .aescipher import AESCipher, detect_file_encryption
 from .exceptions import AuthFlowError, FileEncryptionError, NoRefreshToken
@@ -669,10 +672,29 @@ class Authenticator(httpx.Auth):
             self.refresh_token, self.locale.domain, cookies_domain, self.with_username
         )
 
+    @overload
+    def get_activation_bytes(
+        self,
+        filename: Optional[Union["pathlib.Path", str]] = ...,
+        extract: Literal[True] = ...,
+        force_refresh: bool = ...,
+    ) -> str:
+        ...
+
+    @overload
+    def get_activation_bytes(
+        self,
+        filename: Optional[Union["pathlib.Path", str]] = ...,
+        *,
+        extract: Literal[False],
+        force_refresh: bool = ...,
+    ) -> bytes:
+        ...
+
     def get_activation_bytes(
         self,
         filename: Optional[Union["pathlib.Path", str]] = None,
-        extract: bool = True,
+        extract: TrueFalseType = True,
         force_refresh: bool = False,
     ) -> Union[str, bytes]:
         """Get Activation bytes from Audible.
