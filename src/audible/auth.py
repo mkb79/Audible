@@ -19,7 +19,6 @@ import httpx
 import rsa
 from httpx import Cookies
 
-from ._types import TrueFalseType
 from .activation_bytes import get_activation_bytes as get_ab
 from .aescipher import AESCipher, detect_file_encryption
 from .exceptions import AuthFlowError, FileEncryptionError, NoRefreshToken
@@ -32,6 +31,7 @@ from .utils import test_convert
 if TYPE_CHECKING:
     import pathlib
 
+    from ._types import TrueFalseT
     from .localization import Locale
 
 
@@ -221,16 +221,16 @@ class Authenticator(httpx.Auth):
     activation_bytes: Optional[str] = None
     adp_token: Optional[str] = None
     crypter: Optional[AESCipher] = None
-    customer_info: Optional[Dict] = None
-    device_info: Optional[Dict] = None
+    customer_info: Optional[Dict[str, Any]] = None
+    device_info: Optional[Dict[str, Any]] = None
     device_private_key: Optional[str] = None
     encryption: Optional[Union[str, bool]] = None
     expires: Optional[float] = None
     filename: Optional["pathlib.Path"] = None
     locale: Optional["Locale"] = None
     refresh_token: Optional[str] = None
-    store_authentication_cookie: Optional[Dict] = None
-    website_cookies: Optional[Dict] = None
+    store_authentication_cookie: Optional[Dict[str, Any]] = None
+    website_cookies: Optional[Dict[str, Any]] = None
     with_username: Optional[bool] = False
     requires_request_body: bool = True
     _forbid_new_attrs: bool = True
@@ -694,7 +694,7 @@ class Authenticator(httpx.Auth):
     def get_activation_bytes(
         self,
         filename: Optional[Union["pathlib.Path", str]] = None,
-        extract: TrueFalseType = True,
+        extract: "TrueFalseT" = True,
         force_refresh: bool = False,
     ) -> Union[str, bytes]:
         """Get Activation bytes from Audible.

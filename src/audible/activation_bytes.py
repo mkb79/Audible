@@ -7,12 +7,13 @@ from typing import TYPE_CHECKING, Literal, Optional, Union, overload
 
 import httpx
 
-from ._types import TrueFalseType
 from .exceptions import AuthFlowError
 
 
 if TYPE_CHECKING:
     import audible
+
+    from ._types import TrueFalseT
 
 
 def get_player_id() -> str:
@@ -113,19 +114,19 @@ def fetch_activation(player_token: str) -> bytes:
     url = "https://www.audible.com/license/licenseForCustomerToken"
 
     # register params
-    rparams = {"customer_token": player_token}
+    register_params = {"customer_token": player_token}
 
     # deregister params
-    dparams = {"customer_token": player_token, "action": "de-register"}
+    deregister_params = {"customer_token": player_token, "action": "de-register"}
 
     headers = {"User-Agent": "Audible Download Manager"}
     with httpx.Client(headers=headers) as session:
-        session.get(url, params=dparams)
+        session.get(url, params=deregister_params)
         try:
-            resp = session.get(url, params=rparams)
+            resp = session.get(url, params=register_params)
             return resp.content
         finally:
-            session.get(url, params=dparams)
+            session.get(url, params=deregister_params)
 
 
 def fetch_activation_sign_auth(auth: "audible.Authenticator") -> bytes:
@@ -177,7 +178,7 @@ def get_activation_bytes(
 def get_activation_bytes(
     auth: "audible.Authenticator",
     filename: Optional[Union[str, pathlib.Path]] = None,
-    extract: TrueFalseType = True,
+    extract: "TrueFalseT" = True,
 ) -> Union[str, bytes]:
     """Fetches the activation blob from Audible and extracts the bytes.
 

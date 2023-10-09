@@ -23,7 +23,7 @@ import httpx
 from httpx import URL
 from httpx._models import HeaderTypes  # type: ignore[attr-defined]
 
-from ._types import TrueFalseType
+from ._types import TrueFalseT
 from .auth import Authenticator
 from .exceptions import (
     BadRequest,
@@ -41,7 +41,7 @@ from .localization import LOCALE_TEMPLATES, Locale
 
 logger = logging.getLogger("audible.client")
 
-ClientType = TypeVar("ClientType", httpx.AsyncClient, httpx.Client)
+ClientT = TypeVar("ClientT", httpx.AsyncClient, httpx.Client)
 
 httpx_client_request_args = list(
     inspect.signature(httpx.Client.request).parameters.keys()
@@ -80,7 +80,7 @@ def convert_response_content(resp: httpx.Response) -> Any:
         return resp.text
 
 
-class BaseClient(Generic[ClientType], metaclass=ABCMeta):
+class BaseClient(Generic[ClientT], metaclass=ABCMeta):
     _API_URL_TEMP = "https://api.audible."
     _API_VERSION = "1.0"
     _REQUEST_LOG = "{method} {url} has received {text}, has returned {status}"
@@ -109,7 +109,7 @@ class BaseClient(Generic[ClientType], metaclass=ABCMeta):
         if headers is not None:
             default_headers.update(headers)
 
-        self.session: ClientType = self._get_session(
+        self.session: ClientT = self._get_session(
             headers=default_headers, timeout=timeout, auth=auth, **session_kwargs
         )
 
@@ -118,7 +118,7 @@ class BaseClient(Generic[ClientType], metaclass=ABCMeta):
         self._response_callback = response_callback
 
     @abstractmethod
-    def _get_session(self, *args: Any, **kwargs: Any) -> ClientType:
+    def _get_session(self, *args: Any, **kwargs: Any) -> ClientT:
         ...
 
     @abstractmethod
@@ -252,7 +252,7 @@ class BaseClient(Generic[ClientType], metaclass=ABCMeta):
         method: str,
         url: str,
         *,
-        stream: TrueFalseType = False,
+        stream: TrueFalseT = False,
         apply_auth_flow: bool = False,
         apply_cookies: bool = False,
         **kwargs: Any,

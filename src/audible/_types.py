@@ -1,4 +1,4 @@
-from typing import Literal, Union
+from typing import Literal
 
 
-TrueFalseType = Union[Literal[True], Literal[False]]
+TrueFalseT = Literal[True, False]
