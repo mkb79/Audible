@@ -58,7 +58,7 @@ def default_approval_alert_callback() -> None:
 def default_login_url_callback(url: str) -> str:
     """Helper function for login with external browsers."""
     try:
-        from playwright.sync_api import sync_playwright
+        from playwright.sync_api import sync_playwright  # type: ignore[import]
     except ImportError:
         sync_playwright = None
 
@@ -77,7 +77,7 @@ def default_login_url_callback(url: str) -> str:
             while True:
                 page.wait_for_timeout(600)
                 if "/ap/maplanding" in page.url:
-                    response_url = page.url
+                    response_url: str = page.url
                     break
 
             browser.close()
@@ -106,7 +106,7 @@ def default_login_url_callback(url: str) -> str:
     return input("Please insert the copied url (after login):\n")
 
 
-def get_soup(resp, log_errors=True):
+def get_soup(resp: httpx.Response, log_errors: bool = True) -> BeautifulSoup:
     soup = BeautifulSoup(resp.text, "html.parser")
 
     if not log_errors:
@@ -552,11 +552,11 @@ def external_login(
     )
 
     if login_url_callback:
-        response_url = login_url_callback(oauth_url)
+        _response_url = login_url_callback(oauth_url)
     else:
-        response_url = default_login_url_callback(oauth_url)
+        _response_url = default_login_url_callback(oauth_url)
 
-    response_url = httpx.URL(response_url)
+    response_url = httpx.URL(_response_url)
     parsed_url = parse_qs(response_url.query.decode())
 
     authorization_code = parsed_url["openid.oa2.authorization_code"][0]

@@ -100,21 +100,6 @@ disable_error_code = [
 
 [[tool.mypy.overrides]]
 module = "audible.login.*"
-disable_error_code = [
-    "arg-type",
-    "assignment",
-    "attr-defined",
-    "call-arg",
-    "dict-item",
-    "import",
-    "index",
-    "misc",
-    "no-any-return",
-    "no-untyped-call",
-    "no-untyped-def",
-    "return-value",
-    "union-attr",
-]
 
 [tool.ruff]
 #  missing rst-docstrings check, these should be adding through ruff

@@ -9,8 +9,8 @@ import struct
 from hashlib import sha256
 from typing import TYPE_CHECKING, Any, Dict, Literal, Optional, Tuple, Union
 
-from pbkdf2 import PBKDF2  # type: ignore[import]
-from pyaes import (  # type: ignore[import]
+from pbkdf2 import PBKDF2  # type: ignore[import-untyped]
+from pyaes import (  # type: ignore[import-untyped]
     AESModeOfOperationCBC,
     Decrypter,
     Encrypter,
