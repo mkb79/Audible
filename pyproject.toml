@@ -98,9 +98,6 @@ disable_error_code = [
     "union-attr",
 ]
 
-[[tool.mypy.overrides]]
-module = "audible.login.*"
-
 [tool.ruff]
 #  missing rst-docstrings check, these should be adding through ruff
 ignore = [
