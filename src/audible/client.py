@@ -3,11 +3,10 @@ import json
 import logging
 from abc import ABCMeta, abstractmethod
 from collections.abc import Callable, Coroutine
+from contextlib import AbstractAsyncContextManager, AbstractContextManager
 from types import TracebackType
 from typing import (
     Any,
-    AsyncContextManager,
-    ContextManager,
     Generic,
     Literal,
     TypeVar,
@@ -213,7 +212,7 @@ class BaseClient(Generic[ClientT], metaclass=ABCMeta):
         apply_auth_flow: bool = ...,
         apply_cookies: bool = ...,
         **kwargs: Any,
-    ) -> ContextManager[httpx.Response]:
+    ) -> AbstractContextManager[httpx.Response]:
         ...
 
     @overload
@@ -239,7 +238,7 @@ class BaseClient(Generic[ClientT], metaclass=ABCMeta):
         apply_auth_flow: bool = ...,
         apply_cookies: bool = ...,
         **kwargs: Any,
-    ) -> AsyncContextManager[httpx.Response]:
+    ) -> AbstractAsyncContextManager[httpx.Response]:
         ...
 
     def raw_request(
@@ -253,7 +252,10 @@ class BaseClient(Generic[ClientT], metaclass=ABCMeta):
         **kwargs: Any,
     ) -> httpx.Response | (
         Coroutine[Any, Any, httpx.Response]
-        | (ContextManager[httpx.Response] | AsyncContextManager[httpx.Response])
+        | (
+            AbstractContextManager[httpx.Response]
+            | AbstractAsyncContextManager[httpx.Response]
+        )
     ):
         """Sends a raw request with the underlying httpx Client.
 
