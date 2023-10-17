@@ -90,8 +90,7 @@ def default_login_url_callback(url: str) -> str:
     except ImportError:
         pass
 
-    message = dedent(
-        f"""\
+    message = f"""\
         Please copy the following url and insert it into a web browser of your choice:
 
         {url}
@@ -109,9 +108,8 @@ def default_login_url_callback(url: str) -> str:
         import the readline module in your script.
 
         Please insert the copied url (after login):
-        """
-    )
-    print(message)
+    """
+    print(dedent(message))
     return input()
 
 
@@ -174,6 +172,10 @@ def get_inputs_from_soup(
     """Extracts hidden form input fields from a Amazon login page."""
     search_field = search_field or {"name": "signIn"}
     form = soup.find("form", search_field) or soup.find("form")
+
+    if not isinstance(form, Tag):
+        raise Exception("No form found in page or something other is going wrong.")
+
     inputs = {}
     for field in form.find_all("input"):
         try:
@@ -190,8 +192,15 @@ def get_next_action_from_soup(
 ) -> tuple[str, str]:
     search_field = search_field or {"name": "signIn"}
     form = soup.find("form", search_field) or soup.find("form")
+
+    if not isinstance(form, Tag):
+        raise Exception("No form found in page or something other is going wrong.")
+
     method = form.get("method", "GET")
     url = form["action"]
+
+    if not isinstance(method, str) or not isinstance(url, str):
+        raise Exception("Error during extraction of next action in page.")
 
     return method, url
 
@@ -292,10 +301,12 @@ def check_for_captcha(soup: BeautifulSoup) -> bool:
     return True if captcha else False
 
 
-def extract_captcha_url(soup: BeautifulSoup) -> str | None:
+def extract_captcha_url(soup: BeautifulSoup) -> str:
     """Returns the captcha url from a Amazon login page."""
     captcha = soup.find("img", alt=lambda x: x and "CAPTCHA" in x)
-    return captcha["src"] if captcha else None
+    if not isinstance(captcha, Tag) or not isinstance(captcha["src"], str):
+        raise Exception("Error during extracting the captcha url.")
+    return captcha["src"]
 
 
 def check_for_mfa(soup: BeautifulSoup) -> bool:
@@ -457,7 +468,12 @@ def login(
             # auth-TOTP, auth-SMS, auth-VOICE
             if "auth-TOTP" in node["class"]:
                 inp_node = node.find("input")
-                inputs[inp_node["name"]] = inp_node["value"]
+                if (
+                    isinstance(inp_node, Tag)
+                    and isinstance(inp_node["name"], str)
+                    and isinstance(inp_node["value"], str)
+                ):
+                    inputs[inp_node["name"]] = inp_node["value"]
 
         method, url = get_next_action_from_soup(login_soup)
 
