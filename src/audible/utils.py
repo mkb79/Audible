@@ -2,7 +2,8 @@ import logging
 import pathlib
 import re
 import time
-from typing import Any, Callable, Dict, Union
+from collections.abc import Callable
+from typing import Any
 
 from .aescipher import AESCipher
 from .localization import Locale
@@ -11,7 +12,7 @@ from .localization import Locale
 logger = logging.getLogger("audible.utils")
 
 
-def _check_website_cookies(value: Dict[str, str]) -> None:
+def _check_website_cookies(value: dict[str, str]) -> None:
     if not isinstance(value, dict):
         raise TypeError(
             f"website_cookies: Expected dict, " f"got {type(value).__name__}."
@@ -64,8 +65,8 @@ def _check_device_private_key(value: str) -> None:
         raise ValueError("device_private_key: Invalid token.")
 
 
-def _check_expires(value: Union[int, float, str]) -> Union[int, float]:
-    if isinstance(value, (int, float)):
+def _check_expires(value: int | (float | str)) -> int | float:
+    if isinstance(value, int | float):
         return value
 
     if isinstance(value, str):
@@ -79,7 +80,7 @@ def _check_expires(value: Union[int, float, str]) -> Union[int, float]:
     raise TypeError(f"expires: Expected int/float/str, got {type(value).__name__}.")
 
 
-def _check_locale(value: Union[str, Locale]) -> Locale:
+def _check_locale(value: str | Locale) -> Locale:
     if isinstance(value, Locale):
         return value
 
@@ -89,7 +90,7 @@ def _check_locale(value: Union[str, Locale]) -> Locale:
     raise TypeError(f"locales: Expected Locale/str, got {type(value).__name__}.")
 
 
-def _check_filename(value: Union[str, pathlib.Path]) -> pathlib.Path:
+def _check_filename(value: str | pathlib.Path) -> pathlib.Path:
     if isinstance(value, pathlib.Path):
         return value
 
@@ -110,15 +111,15 @@ def _check_crypter(value: AESCipher) -> None:
         raise TypeError(f"crypter: Expected AESCipher, got {type(value).__name__}.")
 
 
-def _check_encryption(value: Union[bool, str]) -> None:
-    if not isinstance(value, (bool, str)):
+def _check_encryption(value: bool | str) -> None:
+    if not isinstance(value, bool | str):
         raise TypeError(f"encryption: Expected bool/str, got {type(value).__name__}.")
 
     if value not in [False, "json", "bytes"]:
         raise ValueError("encryption: Value are not allowed.")
 
 
-string_function_map: Dict[str, Callable[[Any], Any]] = {
+string_function_map: dict[str, Callable[[Any], Any]] = {
     "website_cookies": _check_website_cookies,
     "adp_token": _check_adp_token,
     "access_token": _check_access_token,

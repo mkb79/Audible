@@ -2,20 +2,15 @@ import inspect
 import json
 import logging
 from abc import ABCMeta, abstractmethod
+from collections.abc import Callable, Coroutine
 from types import TracebackType
 from typing import (
     Any,
     AsyncContextManager,
-    Callable,
     ContextManager,
-    Coroutine,
-    Dict,
     Generic,
     Literal,
-    Optional,
-    Type,
     TypeVar,
-    Union,
     overload,
 )
 
@@ -88,10 +83,10 @@ class BaseClient(Generic[ClientT], metaclass=ABCMeta):
     def __init__(
         self,
         auth: Authenticator,
-        country_code: Optional[str] = None,
-        headers: Optional[HeaderTypes] = None,
+        country_code: str | None = None,
+        headers: HeaderTypes | None = None,
         timeout: int = 10,
-        response_callback: Optional[Callable[[httpx.Response], Any]] = None,
+        response_callback: Callable[[httpx.Response], Any] | None = None,
         **session_kwargs: Any,
     ):
         locale = Locale(country_code.lower()) if country_code else auth.locale
@@ -126,7 +121,7 @@ class BaseClient(Generic[ClientT], metaclass=ABCMeta):
         self,
         method: str,
         path: str,
-        response_callback: Optional[Callable[[httpx.Response], Any]] = None,
+        response_callback: Callable[[httpx.Response], Any] | None = None,
         **kwargs: Any,
     ) -> Any:
         ...
@@ -165,7 +160,7 @@ class BaseClient(Generic[ClientT], metaclass=ABCMeta):
             self.switch_marketplace(auth.locale.country_code)
         self.session.auth = auth
 
-    def get_user_profile(self) -> Dict[str, Any]:
+    def get_user_profile(self) -> dict[str, Any]:
         self.auth.refresh_access_token()
         return self.auth.user_profile()
 
@@ -256,12 +251,10 @@ class BaseClient(Generic[ClientT], metaclass=ABCMeta):
         apply_auth_flow: bool = False,
         apply_cookies: bool = False,
         **kwargs: Any,
-    ) -> Union[
-        httpx.Response,
-        Coroutine[Any, Any, httpx.Response],
-        ContextManager[httpx.Response],
-        AsyncContextManager[httpx.Response],
-    ]:
+    ) -> httpx.Response | (
+        Coroutine[Any, Any, httpx.Response]
+        | (ContextManager[httpx.Response] | AsyncContextManager[httpx.Response])
+    ):
         """Sends a raw request with the underlying httpx Client.
 
         This method ignores a set api_url and allows send request to custom
@@ -300,7 +293,7 @@ class BaseClient(Generic[ClientT], metaclass=ABCMeta):
         return self.session.request(**request_params)
 
     @staticmethod
-    def _prepare_params(kwargs: Dict[str, Any]) -> None:
+    def _prepare_params(kwargs: dict[str, Any]) -> None:
         params = kwargs.pop("params", {})
         for key in list(kwargs.keys()):
             if key not in httpx_client_request_args:
@@ -311,8 +304,8 @@ class BaseClient(Generic[ClientT], metaclass=ABCMeta):
     def get(
         self,
         path: str,
-        response_callback: Optional[Callable[[httpx.Response], Any]] = None,
-        **kwargs: Dict[str, Any],
+        response_callback: Callable[[httpx.Response], Any] | None = None,
+        **kwargs: dict[str, Any],
     ) -> Any:
         ...
 
@@ -321,8 +314,8 @@ class BaseClient(Generic[ClientT], metaclass=ABCMeta):
         self,
         path: str,
         body: Any,
-        response_callback: Optional[Callable[[httpx.Response], Any]] = None,
-        **kwargs: Dict[str, Any],
+        response_callback: Callable[[httpx.Response], Any] | None = None,
+        **kwargs: dict[str, Any],
     ) -> Any:
         ...
 
@@ -330,8 +323,8 @@ class BaseClient(Generic[ClientT], metaclass=ABCMeta):
     def delete(
         self,
         path: str,
-        response_callback: Optional[Callable[[httpx.Response], Any]] = None,
-        **kwargs: Dict[str, Any],
+        response_callback: Callable[[httpx.Response], Any] | None = None,
+        **kwargs: dict[str, Any],
     ) -> Any:
         ...
 
@@ -340,8 +333,8 @@ class BaseClient(Generic[ClientT], metaclass=ABCMeta):
         self,
         path: str,
         body: Any,
-        response_callback: Optional[Callable[[httpx.Response], Any]] = None,
-        **kwargs: Dict[str, Any],
+        response_callback: Callable[[httpx.Response], Any] | None = None,
+        **kwargs: dict[str, Any],
     ) -> Any:
         ...
 
@@ -355,9 +348,9 @@ class Client(BaseClient[httpx.Client]):
 
     def __exit__(
         self,
-        exc_type: Optional[Type[BaseException]] = None,
-        exc_value: Optional[BaseException] = None,
-        traceback: Optional[TracebackType] = None,
+        exc_type: type[BaseException] | None = None,
+        exc_value: BaseException | None = None,
+        traceback: TracebackType | None = None,
     ) -> None:
         self.close()
 
@@ -371,7 +364,7 @@ class Client(BaseClient[httpx.Client]):
         self,
         method: str,
         path: str,
-        response_callback: Optional[Callable[[httpx.Response], Any]] = None,
+        response_callback: Callable[[httpx.Response], Any] | None = None,
         **kwargs: Any,
     ) -> Any:
         url = self._prepare_api_path(path)
@@ -410,8 +403,8 @@ class Client(BaseClient[httpx.Client]):
     def get(
         self,
         path: str,
-        response_callback: Optional[Callable[[httpx.Response], Any]] = None,
-        **kwargs: Dict[str, Any],
+        response_callback: Callable[[httpx.Response], Any] | None = None,
+        **kwargs: dict[str, Any],
     ) -> Any:
         self._prepare_params(kwargs)
         return self._request(
@@ -422,8 +415,8 @@ class Client(BaseClient[httpx.Client]):
         self,
         path: str,
         body: Any,
-        response_callback: Optional[Callable[[httpx.Response], Any]] = None,
-        **kwargs: Dict[str, Any],
+        response_callback: Callable[[httpx.Response], Any] | None = None,
+        **kwargs: dict[str, Any],
     ) -> Any:
         self._prepare_params(kwargs)
         return self._request(
@@ -437,8 +430,8 @@ class Client(BaseClient[httpx.Client]):
     def delete(
         self,
         path: str,
-        response_callback: Optional[Callable[[httpx.Response], Any]] = None,
-        **kwargs: Dict[str, Any],
+        response_callback: Callable[[httpx.Response], Any] | None = None,
+        **kwargs: dict[str, Any],
     ) -> Any:
         self._prepare_params(kwargs)
         return self._request(
@@ -449,8 +442,8 @@ class Client(BaseClient[httpx.Client]):
         self,
         path: str,
         body: Any,
-        response_callback: Optional[Callable[[httpx.Response], Any]] = None,
-        **kwargs: Dict[str, Any],
+        response_callback: Callable[[httpx.Response], Any] | None = None,
+        **kwargs: dict[str, Any],
     ) -> Any:
         self._prepare_params(kwargs)
         return self._request(
@@ -471,9 +464,9 @@ class AsyncClient(BaseClient[httpx.AsyncClient]):
 
     async def __aexit__(
         self,
-        exc_type: Optional[Type[BaseException]] = None,
-        exc_value: Optional[BaseException] = None,
-        traceback: Optional[TracebackType] = None,
+        exc_type: type[BaseException] | None = None,
+        exc_value: BaseException | None = None,
+        traceback: TracebackType | None = None,
     ) -> None:
         await self.close()
 
@@ -487,7 +480,7 @@ class AsyncClient(BaseClient[httpx.AsyncClient]):
         self,
         method: str,
         path: str,
-        response_callback: Optional[Callable[[httpx.Response], Any]] = None,
+        response_callback: Callable[[httpx.Response], Any] | None = None,
         **kwargs: Any,
     ) -> Any:
         url = self._prepare_api_path(path)
@@ -526,8 +519,8 @@ class AsyncClient(BaseClient[httpx.AsyncClient]):
     async def get(
         self,
         path: str,
-        response_callback: Optional[Callable[[httpx.Response], Any]] = None,
-        **kwargs: Dict[str, Any],
+        response_callback: Callable[[httpx.Response], Any] | None = None,
+        **kwargs: dict[str, Any],
     ) -> Any:
         self._prepare_params(kwargs)
         return await self._request(
@@ -538,8 +531,8 @@ class AsyncClient(BaseClient[httpx.AsyncClient]):
         self,
         path: str,
         body: Any,
-        response_callback: Optional[Callable[[httpx.Response], Any]] = None,
-        **kwargs: Dict[str, Any],
+        response_callback: Callable[[httpx.Response], Any] | None = None,
+        **kwargs: dict[str, Any],
     ) -> Any:
         self._prepare_params(kwargs)
         return await self._request(
@@ -553,8 +546,8 @@ class AsyncClient(BaseClient[httpx.AsyncClient]):
     async def delete(
         self,
         path: str,
-        response_callback: Optional[Callable[[httpx.Response], Any]] = None,
-        **kwargs: Dict[str, Any],
+        response_callback: Callable[[httpx.Response], Any] | None = None,
+        **kwargs: dict[str, Any],
     ) -> Any:
         self._prepare_params(kwargs)
         return await self._request(
@@ -565,8 +558,8 @@ class AsyncClient(BaseClient[httpx.AsyncClient]):
         self,
         path: str,
         body: Any,
-        response_callback: Optional[Callable[[httpx.Response], Any]] = None,
-        **kwargs: Dict[str, Any],
+        response_callback: Callable[[httpx.Response], Any] | None = None,
+        **kwargs: dict[str, Any],
     ) -> Any:
         self._prepare_params(kwargs)
         return await self._request(

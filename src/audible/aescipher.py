@@ -7,7 +7,7 @@ import pathlib
 import re
 import struct
 from hashlib import sha256
-from typing import TYPE_CHECKING, Any, Dict, Literal, Optional, Tuple, Union
+from typing import TYPE_CHECKING, Any, Literal
 
 from pbkdf2 import PBKDF2  # type: ignore[import-untyped]
 from pyaes import (  # type: ignore[import-untyped]
@@ -64,7 +64,7 @@ def aes_cbc_decrypt(
     return decrypted.decode("utf-8")
 
 
-def create_salt(salt_marker: bytes, kdf_iterations: int) -> Tuple[bytes, bytes]:
+def create_salt(salt_marker: bytes, kdf_iterations: int) -> tuple[bytes, bytes]:
     """Creates the header and salt for the :func:`derive_from_pbkdf2` function.
 
     The header consist of the number of KDF iterations encoded as a big-endian
@@ -82,7 +82,7 @@ def pack_salt(header: bytes, salt: bytes) -> bytes:
     return header + salt
 
 
-def unpack_salt(packed_salt: bytes, salt_marker: bytes) -> Tuple[bytes, int]:
+def unpack_salt(packed_salt: bytes, salt_marker: bytes) -> tuple[bytes, int]:
     """Unpack salt and kdf_iterations from previous created and packed salt."""
     mlen = len(salt_marker)
     hlen = mlen * 2 + 2
@@ -184,7 +184,7 @@ class AESCipher:
         self.salt_marker = salt_marker
         self.kdf_iterations = kdf_iterations
 
-    def _encrypt(self, data: str) -> Tuple[bytes, bytes, bytes]:
+    def _encrypt(self, data: str) -> tuple[bytes, bytes, bytes]:
         header, salt = create_salt(self.salt_marker, self.kdf_iterations)
         key = derive_from_pbkdf2(
             password=self.password,
@@ -214,7 +214,7 @@ class AESCipher:
         )
         return aes_cbc_decrypt(key, iv, encrypted_data)
 
-    def to_dict(self, data: str) -> Dict[str, str]:
+    def to_dict(self, data: str) -> dict[str, str]:
         """Encrypts data in dict style.
 
         The output dict contains the base64 encoded (packed) salt, iv and
@@ -236,7 +236,7 @@ class AESCipher:
             "info": "base64-encoded AES-CBC-256 of JSON object",
         }
 
-    def from_dict(self, data: Dict[str, str]) -> str:
+    def from_dict(self, data: dict[str, str]) -> str:
         """Decrypts data previously encrypted with :meth:`AESCipher.to_dict`.
 
         Args:
@@ -339,7 +339,7 @@ class AESCipher:
 
 def detect_file_encryption(
     filename: pathlib.Path,
-) -> Optional[Literal[False, "json", "bytes"]]:
+) -> Literal[False, "json", "bytes"] | None:
     """Detect the encryption format from an authentication file.
 
     Args:
@@ -349,7 +349,7 @@ def detect_file_encryption(
         ``False`` if file is not encrypted otherwise the encryption format.
     """
     file = filename.read_bytes()
-    encryption: Optional[Literal[False, "json", "bytes"]] = None
+    encryption: Literal[False, "json", "bytes"] | None = None
 
     try:
         file_json = json.loads(file)
@@ -364,10 +364,7 @@ def detect_file_encryption(
 
 
 def remove_file_encryption(
-    source: Union[str, pathlib.Path],
-    target: Union[str, pathlib.Path],
-    password: str,
-    **kwargs: Any
+    source: str | pathlib.Path, target: str | pathlib.Path, password: str, **kwargs: Any
 ) -> None:
     """Removes the encryption from an authentication file.
 
@@ -402,7 +399,7 @@ def _decrypt_voucher(
     device_type: str,
     asin: str,
     voucher: str,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     # https://github.com/mkb79/Audible/issues/3#issuecomment-705262614
     buf_str = device_type + device_serial_number + customer_id + asin
     buf = buf_str.encode("ascii")
@@ -415,7 +412,7 @@ def _decrypt_voucher(
     plaintext = aes_cbc_decrypt(key, iv, b64d_voucher, padding="none").rstrip("\x00")
 
     try:
-        voucher_dict: Dict[str, Any] = json.loads(plaintext)
+        voucher_dict: dict[str, Any] = json.loads(plaintext)
         return voucher_dict
     except json.JSONDecodeError:
         fmt = r"^{\"key\":\"(?P<key>.*?)\",\"iv\":\"(?P<iv>.*?)\","
@@ -426,8 +423,8 @@ def _decrypt_voucher(
 
 
 def decrypt_voucher_from_licenserequest(
-    auth: "audible.Authenticator", license_response: Dict[str, Any]
-) -> Dict[str, Any]:
+    auth: "audible.Authenticator", license_response: dict[str, Any]
+) -> dict[str, Any]:
     """Decrypt the voucher from license request response.
 
     Args:

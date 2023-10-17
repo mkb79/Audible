@@ -6,8 +6,9 @@ import logging
 import re
 import secrets
 import uuid
+from collections.abc import Callable
 from textwrap import dedent
-from typing import Any, Callable, Dict, Optional, Tuple
+from typing import Any
 from urllib.parse import parse_qs, urlencode
 
 import httpx
@@ -129,7 +130,7 @@ def _extract_message_from_box(box: Tag) -> str:
     return message
 
 
-def _get_messages_in_soup(soup: BeautifulSoup) -> Dict[str, str]:
+def _get_messages_in_soup(soup: BeautifulSoup) -> dict[str, str]:
     messages = {}
 
     error_box = soup.find(id="auth-error-message-box")
@@ -168,8 +169,8 @@ def get_soup(resp: httpx.Response, log_errors: bool = True) -> BeautifulSoup:
 
 
 def get_inputs_from_soup(
-    soup: BeautifulSoup, search_field: Optional[Dict[str, str]] = None
-) -> Dict[str, str]:
+    soup: BeautifulSoup, search_field: dict[str, str] | None = None
+) -> dict[str, str]:
     """Extracts hidden form input fields from a Amazon login page."""
     search_field = search_field or {"name": "signIn"}
     form = soup.find("form", search_field) or soup.find("form")
@@ -185,8 +186,8 @@ def get_inputs_from_soup(
 
 
 def get_next_action_from_soup(
-    soup: BeautifulSoup, search_field: Optional[Dict[str, str]] = None
-) -> Tuple[str, str]:
+    soup: BeautifulSoup, search_field: dict[str, str] | None = None
+) -> tuple[str, str]:
     search_field = search_field or {"name": "signIn"}
     form = soup.find("form", search_field) or soup.find("form")
     method = form.get("method", "GET")
@@ -219,9 +220,9 @@ def build_oauth_url(
     domain: str,
     market_place_id: str,
     code_verifier: bytes,
-    serial: Optional[str] = None,
+    serial: str | None = None,
     with_username: bool = False,
-) -> Tuple[str, str]:
+) -> tuple[str, str]:
     """Builds the url to login to Amazon as an Audible device."""
     if with_username and domain.lower() not in ("de", "com", "co.uk"):
         raise ValueError(
@@ -267,7 +268,7 @@ def build_oauth_url(
     return f"{base_url}?{urlencode(oauth_params)}", serial
 
 
-def build_init_cookies() -> Dict[str, str]:
+def build_init_cookies() -> dict[str, str]:
     """Build initial cookies to prevent captcha in most cases."""
     token_bytes = secrets.token_bytes(313)
     frc = base64.b64encode(token_bytes).decode("ascii").rstrip("=")
@@ -291,7 +292,7 @@ def check_for_captcha(soup: BeautifulSoup) -> bool:
     return True if captcha else False
 
 
-def extract_captcha_url(soup: BeautifulSoup) -> Optional[str]:
+def extract_captcha_url(soup: BeautifulSoup) -> str | None:
     """Returns the captcha url from a Amazon login page."""
     captcha = soup.find("img", alt=lambda x: x and "CAPTCHA" in x)
     return captcha["src"] if captcha else None
@@ -344,13 +345,13 @@ def login(
     country_code: str,
     domain: str,
     market_place_id: str,
-    serial: Optional[str] = None,
+    serial: str | None = None,
     with_username: bool = False,
-    captcha_callback: Optional[Callable[[str], str]] = None,
-    otp_callback: Optional[Callable[[], str]] = None,
-    cvf_callback: Optional[Callable[[], str]] = None,
-    approval_callback: Optional[Callable[[], Any]] = None,
-) -> Dict[str, Any]:
+    captcha_callback: Callable[[str], str] | None = None,
+    otp_callback: Callable[[], str] | None = None,
+    cvf_callback: Callable[[], str] | None = None,
+    approval_callback: Callable[[], Any] | None = None,
+) -> dict[str, Any]:
     """Login to Audible by simulating an Audible App for iOS.
 
     Args:
@@ -553,10 +554,10 @@ def external_login(
     country_code: str,
     domain: str,
     market_place_id: str,
-    serial: Optional[str] = None,
+    serial: str | None = None,
     with_username: bool = False,
-    login_url_callback: Optional[Callable[[str], str]] = None,
-) -> Dict[str, Any]:
+    login_url_callback: Callable[[str], str] | None = None,
+) -> dict[str, Any]:
     """Gives the url to login with external browser and prompt for result.
 
     Note:

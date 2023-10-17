@@ -3,7 +3,7 @@ import hashlib
 import pathlib
 import struct
 import urllib.parse
-from typing import TYPE_CHECKING, Literal, Optional, Union, overload
+from typing import TYPE_CHECKING, Literal, overload
 
 import httpx
 
@@ -159,7 +159,7 @@ def fetch_activation_sign_auth(auth: "audible.Authenticator") -> bytes:
 @overload
 def get_activation_bytes(
     auth: "audible.Authenticator",
-    filename: Optional[Union[str, pathlib.Path]] = ...,
+    filename: str | pathlib.Path | None = ...,
     extract: Literal[True] = ...,
 ) -> str:
     ...
@@ -168,7 +168,7 @@ def get_activation_bytes(
 @overload
 def get_activation_bytes(
     auth: "audible.Authenticator",
-    filename: Optional[Union[str, pathlib.Path]] = ...,
+    filename: str | pathlib.Path | None = ...,
     *,
     extract: Literal[False],
 ) -> bytes:
@@ -177,9 +177,9 @@ def get_activation_bytes(
 
 def get_activation_bytes(
     auth: "audible.Authenticator",
-    filename: Optional[Union[str, pathlib.Path]] = None,
+    filename: str | pathlib.Path | None = None,
     extract: "TrueFalseT" = True,
-) -> Union[str, bytes]:
+) -> str | bytes:
     """Fetches the activation blob from Audible and extracts the bytes.
 
     Args:

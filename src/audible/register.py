@@ -1,5 +1,5 @@
 from datetime import datetime, timedelta
-from typing import Any, Dict
+from typing import Any
 
 import httpx
 
@@ -12,7 +12,7 @@ def register(
     domain: str,
     serial: str,
     with_username: bool = False,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Registers a dummy Audible device.
 
     Args:

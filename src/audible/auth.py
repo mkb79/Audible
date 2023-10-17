@@ -1,14 +1,11 @@
 import base64
 import json
 import logging
+from collections.abc import Callable, Generator
 from datetime import datetime, timedelta
 from typing import (
     TYPE_CHECKING,
     Any,
-    Callable,
-    Dict,
-    Generator,
-    List,
     Literal,
     Optional,
     Union,
@@ -40,7 +37,7 @@ logger = logging.getLogger("audible.auth")
 
 def refresh_access_token(
     refresh_token: str, domain: str, with_username: bool = False
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Refreshes an access token.
 
     Args:
@@ -81,7 +78,7 @@ def refresh_access_token(
 
 def refresh_website_cookies(
     refresh_token: str, domain: str, cookies_domain: str, with_username: bool = False
-) -> Dict[str, str]:
+) -> dict[str, str]:
     """Fetches website cookies for a specific domain.
 
     Args:
@@ -126,7 +123,7 @@ def refresh_website_cookies(
     return website_cookies
 
 
-def user_profile(access_token: str, domain: str) -> Dict[str, Any]:
+def user_profile(access_token: str, domain: str) -> dict[str, Any]:
     """Returns user profile from Amazon.
 
     Args:
@@ -145,7 +142,7 @@ def user_profile(access_token: str, domain: str) -> Dict[str, Any]:
     return resp.json()
 
 
-def user_profile_audible(access_token: str, domain: str) -> Dict[str, Any]:
+def user_profile_audible(access_token: str, domain: str) -> dict[str, Any]:
     """Returns user profile from Audible.
 
     Args:
@@ -166,7 +163,7 @@ def user_profile_audible(access_token: str, domain: str) -> Dict[str, Any]:
 
 def sign_request(
     method: str, path: str, body: bytes, adp_token: str, private_key: str
-) -> Dict[str, str]:
+) -> dict[str, str]:
     """Helper function who creates signed headers for http requests.
 
     Args:
@@ -217,21 +214,21 @@ class Authenticator(httpx.Auth):
         pre-Amazon accounts.
     """
 
-    access_token: Optional[str] = None
-    activation_bytes: Optional[str] = None
-    adp_token: Optional[str] = None
-    crypter: Optional[AESCipher] = None
-    customer_info: Optional[Dict[str, Any]] = None
-    device_info: Optional[Dict[str, Any]] = None
-    device_private_key: Optional[str] = None
-    encryption: Optional[Union[str, bool]] = None
-    expires: Optional[float] = None
+    access_token: str | None = None
+    activation_bytes: str | None = None
+    adp_token: str | None = None
+    crypter: AESCipher | None = None
+    customer_info: dict[str, Any] | None = None
+    device_info: dict[str, Any] | None = None
+    device_private_key: str | None = None
+    encryption: str | bool | None = None
+    expires: float | None = None
     filename: Optional["pathlib.Path"] = None
     locale: Optional["Locale"] = None
-    refresh_token: Optional[str] = None
-    store_authentication_cookie: Optional[Dict[str, Any]] = None
-    website_cookies: Optional[Dict[str, Any]] = None
-    with_username: Optional[bool] = False
+    refresh_token: str | None = None
+    store_authentication_cookie: dict[str, Any] | None = None
+    website_cookies: dict[str, Any] | None = None
+    with_username: bool | None = False
     requires_request_body: bool = True
     _forbid_new_attrs: bool = True
     _apply_test_convert: bool = True
@@ -265,7 +262,7 @@ class Authenticator(httpx.Auth):
 
     @classmethod
     def from_dict(
-        cls, data: Dict, locale: Optional[Union[str, "Locale"]] = None
+        cls, data: dict, locale: Union[str, "Locale"] | None = None
     ) -> "Authenticator":
         """Instantiate an Authenticator from authentication file.
 
@@ -298,9 +295,9 @@ class Authenticator(httpx.Auth):
     def from_file(
         cls,
         filename: Union[str, "pathlib.Path"],
-        password: Optional[str] = None,
-        locale: Optional[Union[str, "Locale"]] = None,
-        encryption: Optional[Union[bool, str]] = None,
+        password: str | None = None,
+        locale: Union[str, "Locale"] | None = None,
+        encryption: bool | str | None = None,
         **kwargs,
     ) -> "Authenticator":
         """Instantiate an Authenticator from authentication file.
@@ -371,12 +368,12 @@ class Authenticator(httpx.Auth):
         username: str,
         password: str,
         locale: Union[str, "Locale"],
-        serial: Optional[str] = None,
+        serial: str | None = None,
         with_username: bool = False,
-        captcha_callback: Optional[Callable[[str], str]] = None,
-        otp_callback: Optional[Callable[[], str]] = None,
-        cvf_callback: Optional[Callable[[], str]] = None,
-        approval_callback: Optional[Callable[[], Any]] = None,
+        captcha_callback: Callable[[str], str] | None = None,
+        otp_callback: Callable[[], str] | None = None,
+        cvf_callback: Callable[[], str] | None = None,
+        approval_callback: Callable[[], Any] | None = None,
     ) -> "Authenticator":
         """Instantiate a new Authenticator with authentication data from login.
 
@@ -433,9 +430,9 @@ class Authenticator(httpx.Auth):
     def from_login_external(
         cls,
         locale: Union[str, "Locale"],
-        serial: Optional[str] = None,
+        serial: str | None = None,
         with_username: bool = False,
-        login_url_callback: Optional[Callable[[str], str]] = None,
+        login_url_callback: Callable[[str], str] | None = None,
     ) -> "Authenticator":
         """Instantiate a new Authenticator from login with external browser.
 
@@ -539,7 +536,7 @@ class Authenticator(httpx.Auth):
         self._apply_signing_auth_flow(request)
 
     @property
-    def available_auth_modes(self) -> List:
+    def available_auth_modes(self) -> list:
         available_modes = []
 
         if self.adp_token and self.device_private_key:
@@ -556,7 +553,7 @@ class Authenticator(httpx.Auth):
 
         return available_modes
 
-    def to_dict(self) -> Dict:
+    def to_dict(self) -> dict:
         """Returns authentication data as dict.
 
         .. versionadded:: 0.7.1
@@ -582,9 +579,9 @@ class Authenticator(httpx.Auth):
 
     def to_file(
         self,
-        filename: Optional[Union["pathlib.Path", str]] = None,
-        password: Optional[str] = None,
-        encryption: Union[bool, str] = "default",
+        filename: Union["pathlib.Path", str] | None = None,
+        password: str | None = None,
+        encryption: bool | str = "default",
         indent: int = 4,
         set_default: bool = True,
         **kwargs,
@@ -637,7 +634,7 @@ class Authenticator(httpx.Auth):
 
         logger.info("set filename %s as default", target_file)
 
-    def deregister_device(self, deregister_all: bool = False) -> Dict[str, Any]:
+    def deregister_device(self, deregister_all: bool = False) -> dict[str, Any]:
         self.refresh_access_token()
         return deregister_(
             access_token=self.access_token,
@@ -675,7 +672,7 @@ class Authenticator(httpx.Auth):
     @overload
     def get_activation_bytes(
         self,
-        filename: Optional[Union["pathlib.Path", str]] = ...,
+        filename: Union["pathlib.Path", str] | None = ...,
         extract: Literal[True] = ...,
         force_refresh: bool = ...,
     ) -> str:
@@ -684,7 +681,7 @@ class Authenticator(httpx.Auth):
     @overload
     def get_activation_bytes(
         self,
-        filename: Optional[Union["pathlib.Path", str]] = ...,
+        filename: Union["pathlib.Path", str] | None = ...,
         *,
         extract: Literal[False],
         force_refresh: bool = ...,
@@ -693,10 +690,10 @@ class Authenticator(httpx.Auth):
 
     def get_activation_bytes(
         self,
-        filename: Optional[Union["pathlib.Path", str]] = None,
+        filename: Union["pathlib.Path", str] | None = None,
         extract: "TrueFalseT" = True,
         force_refresh: bool = False,
-    ) -> Union[str, bytes]:
+    ) -> str | bytes:
         """Get Activation bytes from Audible.
 
         Args:
@@ -731,7 +728,7 @@ class Authenticator(httpx.Auth):
 
         return ab
 
-    def user_profile(self) -> Dict:
+    def user_profile(self) -> dict:
         return user_profile(access_token=self.access_token, domain=self.locale.domain)
 
     @property
