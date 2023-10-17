@@ -5,7 +5,7 @@ Installation Guide
 Requirements / Dependencies
 ===========================
 
-Audible needs at least *Python 3.8*.
+Audible needs at least *Python 3.10*.
 
 It depends on the following packages:
 

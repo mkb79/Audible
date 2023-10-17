@@ -6,7 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## Unreleased
 
--
+### Misc
+
+- Drop support for Python 3.8 and 3.9
+- Add support for Python 3.12
 
 ## [0.9.1] - 2023-09-27
 
