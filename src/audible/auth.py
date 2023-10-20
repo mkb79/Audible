@@ -251,7 +251,7 @@ class Authenticator(httpx.Auth):
                 yield i
 
     def __len__(self):
-        return len(list(self))
+        return len(list(iter(self)))
 
     def __repr__(self):
         return f"{type(self).__name__}({self.__dict__})"
