@@ -1,7 +1,7 @@
 import base64
 import json
 import logging
-from collections.abc import Callable, Generator
+from collections.abc import Callable, Generator, Iterator
 from datetime import datetime, timedelta
 from typing import (
     TYPE_CHECKING,
@@ -9,6 +9,7 @@ from typing import (
     Literal,
     Optional,
     Union,
+    cast,
     overload,
 )
 
@@ -133,13 +134,20 @@ def user_profile(access_token: str, domain: str) -> dict[str, Any]:
 
     Returns:
         The Amazon user profile for the authenticated user.
+
+    Raises:
+        Exception: If the user profile is malformed
     """
     headers = {"Authorization": f"Bearer {access_token}"}
 
     resp = httpx.get(f"https://api.amazon.{domain}/user/profile", headers=headers)
     resp.raise_for_status()
+    profile = resp.json()
 
-    return resp.json()
+    if not isinstance(profile, dict) and "user_id" not in profile:
+        raise Exception("Malformed user profile response.")
+
+    return profile
 
 
 def user_profile_audible(access_token: str, domain: str) -> dict[str, Any]:
@@ -152,13 +160,20 @@ def user_profile_audible(access_token: str, domain: str) -> dict[str, Any]:
 
     Returns:
         The Audible user profile for the authenticated user.
+
+    Raises:
+        Exception: If the user profile is malformed
     """
     headers = {"Authorization": f"Bearer {access_token}"}
 
     resp = httpx.get(f"https://api.audible.{domain}/user/profile", headers=headers)
     resp.raise_for_status()
+    profile = resp.json()
 
-    return resp.json()
+    if not isinstance(profile, dict) and "user_id" not in profile:
+        raise Exception("Malformed user profile response.")
+
+    return profile
 
 
 def sign_request(
@@ -177,9 +192,9 @@ def sign_request(
         A dict with the signed headers.
     """
     date = datetime.utcnow().isoformat("T") + "Z"
-    body = body.decode("utf-8")
+    str_body = body.decode("utf-8")
 
-    data = f"{method}\n{path}\n{date}\n{body}\n{adp_token}"
+    data = f"{method}\n{path}\n{date}\n{str_body}\n{adp_token}"
 
     key = rsa.PrivateKey.load_pkcs1(private_key.encode("utf-8"))
     cipher = rsa.pkcs1.sign(data.encode(), key, "SHA-256")
@@ -233,7 +248,7 @@ class Authenticator(httpx.Auth):
     _forbid_new_attrs: bool = True
     _apply_test_convert: bool = True
 
-    def __setattr__(self, attr, value):
+    def __setattr__(self, attr: str, value: Any) -> None:
         if self._forbid_new_attrs and not hasattr(self, attr):
             msg = (
                 f"{self.__class__.__name__} is frozen, can't " f"add attribute: {attr}."
@@ -245,24 +260,24 @@ class Authenticator(httpx.Auth):
             value = test_convert(attr, value)
         object.__setattr__(self, attr, value)
 
-    def __iter__(self):
+    def __iter__(self) -> Iterator[str]:
         for i in self.__dict__:
             if self.__dict__[i] is not None and not i.startswith("_"):
                 yield i
 
-    def __len__(self):
+    def __len__(self) -> int:
         return len(list(self))
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"{type(self).__name__}({self.__dict__})"
 
-    def _update_attrs(self, **kwargs) -> None:
+    def _update_attrs(self, **kwargs: Any) -> None:
         for attr, value in kwargs.items():
             setattr(self, attr, value)
 
     @classmethod
     def from_dict(
-        cls, data: dict, locale: Union[str, "Locale"] | None = None
+        cls, data: dict[str, Any], locale: Union[str, "Locale"] | None = None
     ) -> "Authenticator":
         """Instantiate an Authenticator from authentication file.
 
@@ -278,9 +293,8 @@ class Authenticator(httpx.Auth):
         """
         auth = cls()
 
-        locale_code = data.pop("locale_code", None)
-        locale = locale or locale_code
-        auth.locale = locale
+        locale_code: str | None = data.pop("locale_code", None)
+        auth.locale = cast(Locale, locale or locale_code)
 
         if "login_cookies" in data:
             auth.website_cookies = data.pop("login_cookies")
@@ -298,7 +312,7 @@ class Authenticator(httpx.Auth):
         password: str | None = None,
         locale: Union[str, "Locale"] | None = None,
         encryption: bool | str | None = None,
-        **kwargs,
+        **kwargs: Any,
     ) -> "Authenticator":
         """Instantiate an Authenticator from authentication file.
 
@@ -329,10 +343,10 @@ class Authenticator(httpx.Auth):
             FileEncryptionError: If file ist encrypted without providing a password
         """
         auth = cls()
-        auth.filename = filename
+        auth.filename = cast(pathlib.Path, filename)
         auth.encryption = encryption or detect_file_encryption(auth.filename)
 
-        if auth.encryption:
+        if isinstance(auth.encryption, str):
             if password is None:
                 message = "File is encrypted but no password provided."
                 logger.critical(message)
@@ -346,7 +360,7 @@ class Authenticator(httpx.Auth):
 
         locale_code = json_data.pop("locale_code", None)
         locale = locale or locale_code
-        auth.locale = locale
+        auth.locale = cast(Locale, locale)
 
         # login cookies where renamed to website cookies
         # old names must be adjusted
@@ -403,7 +417,7 @@ class Authenticator(httpx.Auth):
             An :class:`~audible.auth.Authenticator` instance.
         """
         auth = cls()
-        auth.locale = locale
+        auth.locale = cast(Locale, locale)
 
         login_device = login(
             username=username,
@@ -455,7 +469,7 @@ class Authenticator(httpx.Auth):
             An :class:`~audible.auth.Authenticator` instance.
         """
         auth = cls()
-        auth.locale = locale
+        auth.locale = cast(Locale, locale)
 
         login_device = external_login(
             country_code=auth.locale.country_code,
@@ -502,6 +516,9 @@ class Authenticator(httpx.Auth):
         yield request
 
     def _apply_signing_auth_flow(self, request: httpx.Request) -> None:
+        if self.adp_token is None or self.device_private_key is None:
+            raise Exception("No signing data found.")
+
         headers = sign_request(
             method=request.method,
             path=request.url.raw_path.decode(),
@@ -517,11 +534,16 @@ class Authenticator(httpx.Auth):
         if self.access_token_expired:
             self.refresh_access_token()
 
+        if self.access_token is None:
+            raise Exception("No access token found.")
+
         headers = {"Authorization": "Bearer " + self.access_token, "client-id": "0"}
         request.headers.update(headers)
         logger.info("bearer auth flow applied to request")
 
     def _apply_cookies_auth_flow(self, request: httpx.Request) -> None:
+        if self.website_cookies is None:
+            raise Exception("No website cookies found.")
         cookies = self.website_cookies.copy()
 
         Cookies(cookies).set_cookie_header(request)
@@ -536,7 +558,7 @@ class Authenticator(httpx.Auth):
         self._apply_signing_auth_flow(request)
 
     @property
-    def available_auth_modes(self) -> list:
+    def available_auth_modes(self) -> list[str]:
         available_modes = []
 
         if self.adp_token and self.device_private_key:
@@ -553,7 +575,7 @@ class Authenticator(httpx.Auth):
 
         return available_modes
 
-    def to_dict(self) -> dict:
+    def to_dict(self) -> dict[str, Any]:
         """Returns authentication data as dict.
 
         .. versionadded:: 0.7.1
@@ -571,7 +593,7 @@ class Authenticator(httpx.Auth):
             "device_info": self.device_info,
             "customer_info": self.customer_info,
             "expires": self.expires,
-            "locale_code": self.locale.country_code,
+            "locale_code": self.locale.country_code if self.locale else None,
             "with_username": self.with_username,
             "activation_bytes": self.activation_bytes,
         }
@@ -584,7 +606,7 @@ class Authenticator(httpx.Auth):
         encryption: bool | str = "default",
         indent: int = 4,
         set_default: bool = True,
-        **kwargs,
+        **kwargs: Any,
     ) -> None:
         """Save authentication data to file.
 
@@ -598,9 +620,11 @@ class Authenticator(httpx.Auth):
             raise ValueError("No filename provided")
 
         if filename:
-            filename = test_convert("filename", filename)
-
-        target_file = filename or self.filename
+            target_file: pathlib.Path = test_convert("filename", filename)
+        elif self.filename:
+            target_file = self.filename
+        else:
+            raise ValueError("No filename provided")
 
         if encryption != "default":
             encryption = test_convert("encryption", encryption)
@@ -634,13 +658,19 @@ class Authenticator(httpx.Auth):
 
         logger.info("set filename %s as default", target_file)
 
-    def deregister_device(self, deregister_all: bool = False) -> dict[str, Any]:
+    def deregister_device(self, deregister_all: bool = False) -> Any:
         self.refresh_access_token()
+
+        if self.access_token is None:
+            raise Exception("No access token found.")
+        if self.locale is None:
+            raise Exception("No locale found.")
+
         return deregister_(
             access_token=self.access_token,
             deregister_all=deregister_all,
             domain=self.locale.domain,
-            with_username=self.with_username,
+            with_username=self.with_username or False,
         )
 
     def refresh_access_token(self, force: bool = False) -> None:
@@ -649,10 +679,13 @@ class Authenticator(httpx.Auth):
                 message = "No refresh token found. Can't refresh access token."
                 logger.critical(message)
                 raise NoRefreshToken(message)
+            if self.locale is None:
+                raise Exception("No locale found.")
+
             refresh_data = refresh_access_token(
                 refresh_token=self.refresh_token,
                 domain=self.locale.domain,
-                with_username=self.with_username,
+                with_username=self.with_username or False,
             )
 
             self._update_attrs(**refresh_data)
@@ -665,8 +698,16 @@ class Authenticator(httpx.Auth):
     def set_website_cookies_for_country(self, country_code: str) -> None:
         cookies_domain = test_convert("locale", country_code).domain
 
+        if self.refresh_token is None:
+            raise Exception("No refresh token found.")
+        if self.locale is None:
+            raise Exception("No locale found.")
+
         self.website_cookies = refresh_website_cookies(
-            self.refresh_token, self.locale.domain, cookies_domain, self.with_username
+            self.refresh_token,
+            self.locale.domain,
+            cookies_domain,
+            self.with_username or False,
         )
 
     @overload
@@ -728,13 +769,22 @@ class Authenticator(httpx.Auth):
 
         return ab
 
-    def user_profile(self) -> dict:
+    def user_profile(self) -> dict[str, Any]:
+        if self.access_token is None:
+            raise Exception("No access token found.")
+        if self.locale is None:
+            raise Exception("No locale found.")
+
         return user_profile(access_token=self.access_token, domain=self.locale.domain)
 
     @property
     def access_token_expires(self) -> timedelta:
+        if self.expires is None:
+            raise Exception("No expires timestamp found.")
         return datetime.fromtimestamp(self.expires) - datetime.utcnow()
 
     @property
     def access_token_expired(self) -> bool:
+        if self.expires is None:
+            raise Exception("No expires timestamp found.")
         return datetime.fromtimestamp(self.expires) <= datetime.utcnow()
