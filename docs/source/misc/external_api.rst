@@ -403,7 +403,7 @@ Content
    :<json string supported_drm_types: [Mpeg, Adrm]
    :<json string consumption_type: [Streaming, Offline, Download]
    :<json string drm_type: [Mpeg, PlayReady, Hls, Dash, FairPlay, Widevine, HlsCmaf, Adrm]
-   :<json string quality: [High, Normal, Extreme, Low]
+   :<json string quality: [High, Normal]
    :<json integer num_active_offline_licenses: (max: 10)
    :<json string chapter_titles_type: [Tree, Flat]
    :<json string response_groups: [last_position_heard, pdf_url,
@@ -431,7 +431,7 @@ Content
    :type asin: string
    :query response_groups: [chapter_info, always-returned, content_reference, content_url]
    :query acr:
-   :query quality: [High, Normal, Extreme, Low]
+   :query quality: [High, Normal]
    :query chapter_titles_type: [Tree, Flat]
    :query drm_type: [Mpeg, PlayReady, Hls, Dash, FairPlay, Widevine, HlsCmaf, Adrm]
 
