@@ -757,7 +757,7 @@ class Authenticator(httpx.Auth):
             return self.activation_bytes
 
         logger.debug("Fetch activation blob from server now.")
-        ab = get_ab(self, filename, extract)
+        ab = get_ab(self, filename, extract)  # type: ignore[arg-type]
 
         if extract:
             logger.debug(
