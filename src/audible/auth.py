@@ -265,7 +265,7 @@ class Authenticator(httpx.Auth):
             if self.__dict__[i] is not None and not i.startswith("_"):
                 yield i
 
-    def __len__(self):
+    def __len__(self) -> int:
         return len(list(iter(self)))
 
     def __repr__(self) -> str:
