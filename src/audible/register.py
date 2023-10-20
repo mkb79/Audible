@@ -1,5 +1,5 @@
 from datetime import datetime, timedelta
-from typing import Any, Dict, Optional
+from typing import Any
 
 import httpx
 
@@ -10,9 +10,9 @@ def register(
     authorization_code: str,
     code_verifier: bytes,
     domain: str,
-    serial: Optional[str] = None,
+    serial: str,
     with_username: bool = False,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Registers a dummy Audible device.
 
     Args:
@@ -108,7 +108,7 @@ def deregister(
     domain: str,
     deregister_all: bool = False,
     with_username: bool = False,
-) -> Dict[str, Any]:
+) -> Any:
     """Deregister a previous registered Audible device.
 
     Note:

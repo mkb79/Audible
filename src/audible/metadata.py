@@ -4,27 +4,26 @@ import json
 import math
 import struct
 from datetime import datetime
-from typing import List, Tuple, Union
 
 
 # key used for encrypt/decrypt metadata1
 METADATA_KEY: bytes = b"a\x03\x8fp4\x18\x97\x99:\xeb\xe7\x8b\x85\x97$4"
 
 
-def raw_xxtea(v: List, n: int, k: Union[List, Tuple]) -> int:
+def raw_xxtea(v: list[int], n: int, k: list[int] | tuple[int, ...]) -> int:
     if not isinstance(v, list):
         raise ValueError("arg `v` is not of type list")
-    if not isinstance(k, (list, tuple)):
+    if not isinstance(k, list | tuple):
         raise ValueError("arg `key` is not of type list or tuple")
     if not isinstance(n, int):
         raise ValueError("arg `n` is not of type int")
 
-    def mx():
+    def mx() -> int:
         return ((z >> 5) ^ (y << 2)) + ((y >> 3) ^ (z << 4)) ^ (sum_ ^ y) + (
             k[(p & 3) ^ e] ^ z
         )
 
-    def u32(x):
+    def u32(x: int) -> int:
         return x % 2**32
 
     y = v[0]
@@ -64,7 +63,7 @@ def raw_xxtea(v: List, n: int, k: Union[List, Tuple]) -> int:
     return 1
 
 
-def _bytes_to_longs(data: Union[str, bytes]) -> List[int]:
+def _bytes_to_longs(data: str | bytes) -> list[int]:
     data_bytes = data.encode() if isinstance(data, str) else data
 
     return [
@@ -73,19 +72,19 @@ def _bytes_to_longs(data: Union[str, bytes]) -> List[int]:
     ]
 
 
-def _longs_to_bytes(data: List[int]) -> bytes:
+def _longs_to_bytes(data: list[int]) -> bytes:
     return b"".join([i.to_bytes(4, "little") for i in data])
 
 
 def _generate_hex_checksum(data: str) -> str:
-    checksum = binascii.crc32(data.encode()) % 2**32
-    checksum = format(checksum, "X")
+    crc_checksum = binascii.crc32(data.encode()) % 2**32
+    hex_checksum = format(crc_checksum, "X")
 
-    if len(checksum) < 8:
-        pad = (8 - len(checksum)) * "0"
-        checksum = pad + checksum
+    if len(hex_checksum) < 8:
+        pad = (8 - len(hex_checksum)) * "0"
+        hex_checksum = pad + hex_checksum
 
-    return checksum
+    return hex_checksum
 
 
 class XXTEAException(Exception):
@@ -102,7 +101,7 @@ class XXTEA:
         from PY2 to PY3
     """
 
-    def __init__(self, key: Union[str, bytes]) -> None:
+    def __init__(self, key: str | bytes) -> None:
         """Initializes the inner class data with the given key.
 
         Note:
@@ -116,7 +115,7 @@ class XXTEA:
             raise XXTEAException("Invalid key")
         self.key = unpacked_key
 
-    def encrypt(self, data: Union[str, bytes]) -> bytes:
+    def encrypt(self, data: str | bytes) -> bytes:
         """Encrypts and returns a block of data."""
         ldata = math.ceil(len(data) / 4)
         idata = _bytes_to_longs(data)
@@ -124,7 +123,7 @@ class XXTEA:
             raise XXTEAException("Cannot encrypt")
         return _longs_to_bytes(idata)
 
-    def decrypt(self, data: Union[str, bytes]) -> bytes:
+    def decrypt(self, data: str | bytes) -> bytes:
         """Decrypts and returns a block of data."""
         ldata = math.ceil(len(data) / 4)
         idata = _bytes_to_longs(data)

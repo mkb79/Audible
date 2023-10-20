@@ -1,3 +1,10 @@
+from typing import TYPE_CHECKING, Any
+
+
+if TYPE_CHECKING:
+    import httpx
+
+
 class RequestError(Exception):
     """Base class for all errors."""
 
@@ -5,7 +12,7 @@ class RequestError(Exception):
 class StatusError(RequestError):
     """Base class for all errors except NotResponding and RatelimitDetectedError."""
 
-    def __init__(self, resp, data):
+    def __init__(self, resp: "httpx.Response", data: Any) -> None:
         self.response = resp
         self.code = resp.status_code
         self.method = getattr(resp, "method", None)
@@ -23,7 +30,7 @@ class StatusError(RequestError):
 class NotResponding(RequestError):
     """Raised if the API request timed out."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.code = 504
         self.error = "API request timed out, please be patient."
         super().__init__(self.error)
@@ -32,7 +39,7 @@ class NotResponding(RequestError):
 class NetworkError(RequestError):
     """Raised if there is an issue with the network (i.e. requests.ConnectionError)."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.code = 503
         self.error = "Network down."
         super().__init__(self.error)

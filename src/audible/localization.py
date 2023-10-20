@@ -1,6 +1,5 @@
 import logging
 import re
-from typing import Dict, Optional
 
 import httpx
 from httpcore import ConnectError
@@ -67,7 +66,7 @@ LOCALE_TEMPLATES = {
 }
 
 
-def search_template(key: str, value: str) -> Optional[Dict[str, str]]:
+def search_template(key: str, value: str) -> dict[str, str] | None:
     for country in LOCALE_TEMPLATES:
         locale = LOCALE_TEMPLATES[country]
         if locale[key] == value:
@@ -78,7 +77,7 @@ def search_template(key: str, value: str) -> Optional[Dict[str, str]]:
     return None
 
 
-def autodetect_locale(domain: str) -> Dict[str, str]:
+def autodetect_locale(domain: str) -> dict[str, str]:
     """Try to automatically detect correct settings for marketplace.
 
     Needs the top level domain of the audible page to continue with
@@ -134,11 +133,11 @@ class Locale:
 
     def __init__(
         self,
-        country_code: Optional[str] = None,
-        domain: Optional[str] = None,
-        market_place_id: Optional[str] = None,
+        country_code: str | None = None,
+        domain: str | None = None,
+        market_place_id: str | None = None,
     ) -> None:
-        if not all([country_code, domain, market_place_id]):
+        if country_code is None or domain is None or market_place_id is None:
             locale = None
             if country_code:
                 locale = search_template("country_code", country_code)
@@ -148,17 +147,21 @@ class Locale:
             if locale is None:
                 raise Exception("can't find locale")
 
-        self._country_code = country_code or locale["country_code"]
-        self._domain = domain or locale["domain"]
-        self._market_place_id = market_place_id or locale["market_place_id"]
+            country_code = country_code or locale["country_code"]
+            domain = domain or locale["domain"]
+            market_place_id = market_place_id or locale["market_place_id"]
 
-    def __repr__(self):
+        self._country_code = country_code
+        self._domain = domain
+        self._market_place_id = market_place_id
+
+    def __repr__(self) -> str:
         return (
             f"Locale class for domain: {self.domain}, "
             f"marketplace: {self.market_place_id}"
         )
 
-    def to_dict(self) -> Dict[str, str]:
+    def to_dict(self) -> dict[str, str]:
         return {
             "country_code": self.country_code,
             "domain": self.domain,
