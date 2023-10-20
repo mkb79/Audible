@@ -3,7 +3,7 @@ import hashlib
 import pathlib
 import struct
 import urllib.parse
-from typing import TYPE_CHECKING, Optional, Union
+from typing import TYPE_CHECKING, Literal, overload
 
 import httpx
 
@@ -12,6 +12,8 @@ from .exceptions import AuthFlowError
 
 if TYPE_CHECKING:
     import audible
+
+    from ._types import TrueFalseT
 
 
 def get_player_id() -> str:
@@ -28,25 +30,37 @@ def get_player_token(auth: "audible.Authenticator") -> str:
 
     Returns:
         The player token.
-    """
-    params = {
-        "ipRedirectOverride": True,
-        "playerType": "software",
-        "bp_ua": "y",
-        "playerModel": "Desktop",
-        "playerId": get_player_id(),
-        "playerManufacturer": "Audible",
-        "serial": "",
-    }
 
-    url = f"https://www.audible.{auth.locale.domain}/player-auth-token"
+    Raises:
+        Exception: If `playerToken` not found in response url query.
+    """
+    if auth.locale is None:
+        raise Exception("No locale set on `Authenticator`.")
+
+    player_id = get_player_id()
+    url = httpx.URL(
+        url=f"https://www.audible.{auth.locale.domain}/player-auth-token",
+        params={
+            "ipRedirectOverride": True,
+            "playerType": "software",
+            "bp_ua": "y",
+            "playerModel": "Desktop",
+            "playerId": player_id,
+            "playerManufacturer": "Audible",
+            "serial": "",
+        },
+    )
+
     with httpx.Client(cookies=auth.website_cookies) as session:
-        resp = session.get(url, params=params)
+        resp = session.get(url, follow_redirects=True)
 
     query = resp.url.query.decode()
     parsed_query = urllib.parse.parse_qs(query)
-    player_token = parsed_query.get("playerToken")[0]
-    return player_token
+    player_token = parsed_query.get("playerToken")
+    if player_token is None:
+        raise Exception("No player token found in response url query.")
+
+    return player_token[0]
 
 
 def extract_activation_bytes(data: bytes) -> str:
@@ -89,7 +103,7 @@ def extract_activation_bytes(data: bytes) -> str:
 
 
 def fetch_activation(player_token: str) -> bytes:
-    """Fetches the activation blob with player tokenfrom Audible server.
+    """Fetches the activation blob with player token from Audible server.
 
     Args:
         player_token: A player token returned by ``get_player_token`` function.
@@ -100,26 +114,26 @@ def fetch_activation(player_token: str) -> bytes:
     url = "https://www.audible.com/license/licenseForCustomerToken"
 
     # register params
-    rparams = {"customer_token": player_token}
+    register_params = {"customer_token": player_token}
 
     # deregister params
-    dparams = {"customer_token": player_token, "action": "de-register"}
+    deregister_params = {"customer_token": player_token, "action": "de-register"}
 
     headers = {"User-Agent": "Audible Download Manager"}
     with httpx.Client(headers=headers) as session:
-        session.get(url, params=dparams)
+        session.get(url, params=deregister_params)
         try:
-            resp = session.get(url, params=rparams)
+            resp = session.get(url, params=register_params)
             return resp.content
         finally:
-            session.get(url, params=dparams)
+            session.get(url, params=deregister_params)
 
 
 def fetch_activation_sign_auth(auth: "audible.Authenticator") -> bytes:
     """Fetches the activation blob with sign authentication from Audible server.
 
     Args:
-        auth: A ``Authenticator`` instance with valid `'adp_token`` and
+        auth: A ``Authenticator`` instance with valid ``adp_token`` and
             ``device_private_cert``.
 
     Returns:
@@ -142,11 +156,30 @@ def fetch_activation_sign_auth(auth: "audible.Authenticator") -> bytes:
         return resp.content
 
 
+@overload
 def get_activation_bytes(
     auth: "audible.Authenticator",
-    filename: Optional[Union[str, pathlib.Path]] = None,
-    extract: bool = True,
-) -> Union[str, bytes]:
+    filename: str | pathlib.Path | None = ...,
+    extract: Literal[True] = ...,
+) -> str:
+    ...
+
+
+@overload
+def get_activation_bytes(
+    auth: "audible.Authenticator",
+    filename: str | pathlib.Path | None = ...,
+    *,
+    extract: Literal[False],
+) -> bytes:
+    ...
+
+
+def get_activation_bytes(
+    auth: "audible.Authenticator",
+    filename: str | pathlib.Path | None = None,
+    extract: "TrueFalseT" = True,
+) -> str | bytes:
     """Fetches the activation blob from Audible and extracts the bytes.
 
     Args:
@@ -174,6 +207,6 @@ def get_activation_bytes(
         pathlib.Path(filename).write_bytes(activation)
 
     if extract:
-        activation = extract_activation_bytes(activation)
+        return extract_activation_bytes(activation)
 
     return activation

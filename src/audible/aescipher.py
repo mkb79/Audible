@@ -7,10 +7,14 @@ import pathlib
 import re
 import struct
 from hashlib import sha256
-from typing import TYPE_CHECKING, Dict, Optional, Tuple, Union
+from typing import TYPE_CHECKING, Any, Literal
 
-from pbkdf2 import PBKDF2
-from pyaes import AESModeOfOperationCBC, Decrypter, Encrypter
+from pbkdf2 import PBKDF2  # type: ignore[import-untyped]
+from pyaes import (  # type: ignore[import-untyped]
+    AESModeOfOperationCBC,
+    Decrypter,
+    Encrypter,
+)
 
 
 if TYPE_CHECKING:
@@ -37,7 +41,7 @@ def aes_cbc_encrypt(
         The encrypted data.
     """
     encrypter = Encrypter(AESModeOfOperationCBC(key, iv), padding=padding)
-    encrypted = encrypter.feed(data) + encrypter.feed()
+    encrypted: bytes = encrypter.feed(data) + encrypter.feed()
     return encrypted
 
 
@@ -56,11 +60,11 @@ def aes_cbc_decrypt(
         The decrypted data.
     """
     decrypter = Decrypter(AESModeOfOperationCBC(key, iv), padding=padding)
-    decrypted = decrypter.feed(encrypted_data) + decrypter.feed()
+    decrypted: bytes = decrypter.feed(encrypted_data) + decrypter.feed()
     return decrypted.decode("utf-8")
 
 
-def create_salt(salt_marker: bytes, kdf_iterations: int) -> Tuple[bytes, bytes]:
+def create_salt(salt_marker: bytes, kdf_iterations: int) -> tuple[bytes, bytes]:
     """Creates the header and salt for the :func:`derive_from_pbkdf2` function.
 
     The header consist of the number of KDF iterations encoded as a big-endian
@@ -78,7 +82,7 @@ def pack_salt(header: bytes, salt: bytes) -> bytes:
     return header + salt
 
 
-def unpack_salt(packed_salt: bytes, salt_marker: bytes) -> Tuple[bytes, int]:
+def unpack_salt(packed_salt: bytes, salt_marker: bytes) -> tuple[bytes, int]:
     """Unpack salt and kdf_iterations from previous created and packed salt."""
     mlen = len(salt_marker)
     hlen = mlen * 2 + 2
@@ -94,12 +98,13 @@ def unpack_salt(packed_salt: bytes, salt_marker: bytes) -> Tuple[bytes, int]:
     return salt, kdf_iterations
 
 
-def derive_from_pbkdf2(
+def derive_from_pbkdf2(  # type: ignore[no-untyped-def]
     password: str, *, key_size: int, salt: bytes, kdf_iterations: int, hashmod, mac
 ) -> bytes:
     """Creates an AES key with the :class:`PBKDF2` key derivation class."""
     kdf = PBKDF2(password, salt, min(kdf_iterations, 65535), hashmod, mac)
-    return kdf.read(key_size)
+    key: bytes = kdf.read(key_size)
+    return key
 
 
 class AESCipher:
@@ -153,7 +158,7 @@ class AESCipher:
         TypeError: If type of `salt_marker` is not bytes.
     """
 
-    def __init__(
+    def __init__(  # type: ignore[no-untyped-def]
         self,
         password: str,
         *,
@@ -179,7 +184,7 @@ class AESCipher:
         self.salt_marker = salt_marker
         self.kdf_iterations = kdf_iterations
 
-    def _encrypt(self, data: str) -> Tuple[bytes, bytes, bytes]:
+    def _encrypt(self, data: str) -> tuple[bytes, bytes, bytes]:
         header, salt = create_salt(self.salt_marker, self.kdf_iterations)
         key = derive_from_pbkdf2(
             password=self.password,
@@ -209,7 +214,7 @@ class AESCipher:
         )
         return aes_cbc_decrypt(key, iv, encrypted_data)
 
-    def to_dict(self, data: str) -> Dict[str, str]:
+    def to_dict(self, data: str) -> dict[str, str]:
         """Encrypts data in dict style.
 
         The output dict contains the base64 encoded (packed) salt, iv and
@@ -231,7 +236,7 @@ class AESCipher:
             "info": "base64-encoded AES-CBC-256 of JSON object",
         }
 
-    def from_dict(self, data: dict) -> str:
+    def from_dict(self, data: dict[str, str]) -> str:
         """Decrypts data previously encrypted with :meth:`AESCipher.to_dict`.
 
         Args:
@@ -332,7 +337,9 @@ class AESCipher:
         raise ValueError('encryption must be "json" or "bytes".')
 
 
-def detect_file_encryption(filename: pathlib.Path) -> Optional[str]:
+def detect_file_encryption(
+    filename: pathlib.Path,
+) -> Literal[False, "json", "bytes"] | None:
     """Detect the encryption format from an authentication file.
 
     Args:
@@ -342,13 +349,13 @@ def detect_file_encryption(filename: pathlib.Path) -> Optional[str]:
         ``False`` if file is not encrypted otherwise the encryption format.
     """
     file = filename.read_bytes()
-    encryption = None
+    encryption: Literal[False, "json", "bytes"] | None = None
 
     try:
-        file = json.loads(file)
-        if "adp_token" in file:
+        file_json = json.loads(file)
+        if "adp_token" in file_json:
             encryption = False
-        elif "ciphertext" in file:
+        elif "ciphertext" in file_json:
             encryption = "json"
     except UnicodeDecodeError:
         encryption = "bytes"
@@ -357,10 +364,7 @@ def detect_file_encryption(filename: pathlib.Path) -> Optional[str]:
 
 
 def remove_file_encryption(
-    source: Union[str, pathlib.Path],
-    target: Union[str, pathlib.Path],
-    password: str,
-    **kwargs
+    source: str | pathlib.Path, target: str | pathlib.Path, password: str, **kwargs: Any
 ) -> None:
     """Removes the encryption from an authentication file.
 
@@ -395,10 +399,10 @@ def _decrypt_voucher(
     device_type: str,
     asin: str,
     voucher: str,
-) -> Dict:
+) -> dict[str, Any]:
     # https://github.com/mkb79/Audible/issues/3#issuecomment-705262614
-    buf = device_type + device_serial_number + customer_id + asin
-    buf = buf.encode("ascii")
+    buf_str = device_type + device_serial_number + customer_id + asin
+    buf = buf_str.encode("ascii")
     digest = sha256(buf).digest()
     key = digest[0:16]
     iv = digest[16:]
@@ -408,16 +412,19 @@ def _decrypt_voucher(
     plaintext = aes_cbc_decrypt(key, iv, b64d_voucher, padding="none").rstrip("\x00")
 
     try:
-        return json.loads(plaintext)
+        voucher_dict: dict[str, Any] = json.loads(plaintext)
+        return voucher_dict
     except json.JSONDecodeError:
         fmt = r"^{\"key\":\"(?P<key>.*?)\",\"iv\":\"(?P<iv>.*?)\","
         match = re.match(fmt, plaintext)
+        if match is None:
+            raise Exception("Failed to parse voucher.") from None
         return match.groupdict()
 
 
 def decrypt_voucher_from_licenserequest(
-    auth: "audible.Authenticator", license_response: Dict
-) -> Dict:
+    auth: "audible.Authenticator", license_response: dict[str, Any]
+) -> dict[str, Any]:
     """Decrypt the voucher from license request response.
 
     Args:
@@ -428,17 +435,25 @@ def decrypt_voucher_from_licenserequest(
     Returns:
         The decrypted license voucher with needed key and iv.
 
+    Raises:
+        Exception: If device info or customer info data is missing.
+
     Note:
         A device registration is needed to use the auth instance for a
         license request and to obtain the needed device data
     """
     # device data
     device_info = auth.device_info
+    if device_info is None:
+        raise Exception("Device info data is missing.")
     device_serial_number = device_info["device_serial_number"]
     device_type = device_info["device_type"]
 
     # user data
-    customer_id = auth.customer_info["user_id"]
+    customer_info = auth.customer_info
+    if customer_info is None:
+        raise Exception("Customer info data is missing.")
+    customer_id = customer_info["user_id"]
 
     # book specific data
     asin = license_response["content_license"]["asin"]
