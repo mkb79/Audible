@@ -294,7 +294,7 @@ class Authenticator(httpx.Auth):
         auth = cls()
 
         locale_code: str | None = data.pop("locale_code", None)
-        auth.locale = cast(Locale, locale or locale_code)
+        auth.locale = cast("Locale", locale or locale_code)
 
         if "login_cookies" in data:
             auth.website_cookies = data.pop("login_cookies")
@@ -343,7 +343,7 @@ class Authenticator(httpx.Auth):
             FileEncryptionError: If file ist encrypted without providing a password
         """
         auth = cls()
-        auth.filename = cast(pathlib.Path, filename)
+        auth.filename = cast("pathlib.Path", filename)
         auth.encryption = encryption or detect_file_encryption(auth.filename)
 
         if isinstance(auth.encryption, str):
@@ -360,7 +360,7 @@ class Authenticator(httpx.Auth):
 
         locale_code = json_data.pop("locale_code", None)
         locale = locale or locale_code
-        auth.locale = cast(Locale, locale)
+        auth.locale = cast("Locale", locale)
 
         # login cookies where renamed to website cookies
         # old names must be adjusted
@@ -417,7 +417,7 @@ class Authenticator(httpx.Auth):
             An :class:`~audible.auth.Authenticator` instance.
         """
         auth = cls()
-        auth.locale = cast(Locale, locale)
+        auth.locale = cast("Locale", locale)
 
         login_device = login(
             username=username,
@@ -469,7 +469,7 @@ class Authenticator(httpx.Auth):
             An :class:`~audible.auth.Authenticator` instance.
         """
         auth = cls()
-        auth.locale = cast(Locale, locale)
+        auth.locale = cast("Locale", locale)
 
         login_device = external_login(
             country_code=auth.locale.country_code,
@@ -620,7 +620,7 @@ class Authenticator(httpx.Auth):
             raise ValueError("No filename provided")
 
         if filename:
-            target_file: pathlib.Path = test_convert("filename", filename)
+            target_file: "pathlib.Path" = test_convert("filename", filename)
         elif self.filename:
             target_file = self.filename
         else:
