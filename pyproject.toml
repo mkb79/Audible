@@ -84,19 +84,6 @@ show_error_context = true
 strict = true
 warn_unreachable = true
 
-[[tool.mypy.overrides]]
-module = "audible.auth.*"
-disable_error_code = [
-    "arg-type",
-    "assignment",
-    "no-any-return",
-    "no-untyped-def",
-    "operator",
-    "str-bytes-safe",
-    "type-arg",
-    "union-attr",
-]
-
 [tool.ruff]
 #  missing rst-docstrings check, these should be adding through ruff
 ignore = [
