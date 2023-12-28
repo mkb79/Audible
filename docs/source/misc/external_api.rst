@@ -400,27 +400,48 @@ Content
 
    :param asin: The asin of the book
    :type asin: string
-   :<json string supported_drm_types: [Mpeg, Adrm]
-   :<json string consumption_type: [Streaming, Offline, Download]
-   :<json string drm_type: [Mpeg, PlayReady, Hls, Dash, FairPlay, Widevine, HlsCmaf, Adrm]
+   :<json boolean use_adaptive_bit_rate: [true, false]
    :<json string quality: [High, Normal]
-   :<json integer num_active_offline_licenses: (max: 10)
    :<json string chapter_titles_type: [Tree, Flat]
-   :<json string response_groups: [last_position_heard, pdf_url,
-                                   content_reference, chapter_info]
+   :<json string response_groups: [chapter_info, content_reference,
+                                   last_position_heard, pdf_url,
+                                   ad_insertion, certificate]
+   :<json string consumption_type: [Streaming, Offline, Download]
+   :<json boolean spatial: [true, false]
+   :<json dict supported_media_features: [codecs, drm_types]
+   :<json list codecs: [mp4a.40.2, mp4a.40.42, ec+3, ac-4]
+   :<json list drm_types: [Mpeg, PlayReady, Hls, Dash, Adrm,
+                             FairPlay, Widevine, HlsCmaf]
+   :<json integer num_active_offline_licenses: (max: 10)
 
    **Example request body**
 
    .. code-block:: json
 
        {
-           "supported_drm_types" : [
-               "Mpeg",
-               "Adrm"
-           ],
-           "quality" : "High",
-           "consumption_type" : "Download",
-           "response_groups" : "last_position_heard,pdf_url,content_reference,chapter_info"
+           "quality": "High",
+           "response_groups": "chapter_info,content_reference,last_position_heard,pdf_url, ad_insertion, certificate",
+           "consumption_type": "Download",
+           "supported_media_features": 
+               {
+                   "codecs": [
+                       "mp4a.40.2",
+                       "mp4a.40.42",
+                       "ec+3",
+                       "ac-4"
+                   ],
+                   "drm_types": [
+                       "Mpeg",
+                       "PlayReady",
+                       "Hls",
+                       "Dash", 
+                       "Adrm",
+                       "FairPlay",
+                       "Widevine",
+                       "HlsCmaf",
+                   ]
+               },
+           "spatial": false
        }
 
    For a succesful request, returns JSON body with `content_url`.
