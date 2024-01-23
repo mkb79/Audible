@@ -422,7 +422,7 @@ Content
            "quality": "High",
            "response_groups": "chapter_info,content_reference,last_position_heard,pdf_url, ad_insertion, certificate",
            "consumption_type": "Download",
-           "supported_media_features": 
+           "supported_media_features":
                {
                    "codecs": [
                        "mp4a.40.2",
@@ -434,7 +434,7 @@ Content
                        "Mpeg",
                        "PlayReady",
                        "Hls",
-                       "Dash", 
+                       "Dash",
                        "Adrm",
                        "FairPlay",
                        "Widevine",
