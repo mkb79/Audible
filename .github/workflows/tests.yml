@@ -83,7 +83,7 @@ jobs:
               print(f"result={result}", file=io)
 
       - name: Restore pre-commit cache
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         if: matrix.session == 'pre-commit'
         with:
           path: ~/.cache/pre-commit
