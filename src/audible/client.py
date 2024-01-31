@@ -112,8 +112,7 @@ class BaseClient(Generic[ClientT], metaclass=ABCMeta):
         self._response_callback = response_callback
 
     @abstractmethod
-    def _get_session(self, *args: Any, **kwargs: Any) -> ClientT:
-        ...
+    def _get_session(self, *args: Any, **kwargs: Any) -> ClientT: ...
 
     @abstractmethod
     def _request(
@@ -122,8 +121,7 @@ class BaseClient(Generic[ClientT], metaclass=ABCMeta):
         path: str,
         response_callback: Callable[[httpx.Response], Any] | None = None,
         **kwargs: Any,
-    ) -> Any:
-        ...
+    ) -> Any: ...
 
     def switch_marketplace(self, country_code: str) -> None:
         locale = Locale(country_code.lower())
@@ -199,8 +197,7 @@ class BaseClient(Generic[ClientT], metaclass=ABCMeta):
         apply_auth_flow: bool = ...,
         apply_cookies: bool = ...,
         **kwargs: Any,
-    ) -> httpx.Response:
-        ...
+    ) -> httpx.Response: ...
 
     @overload
     def raw_request(
@@ -212,8 +209,7 @@ class BaseClient(Generic[ClientT], metaclass=ABCMeta):
         apply_auth_flow: bool = ...,
         apply_cookies: bool = ...,
         **kwargs: Any,
-    ) -> AbstractContextManager[httpx.Response]:
-        ...
+    ) -> AbstractContextManager[httpx.Response]: ...
 
     @overload
     def raw_request(
@@ -225,8 +221,7 @@ class BaseClient(Generic[ClientT], metaclass=ABCMeta):
         apply_auth_flow: bool = ...,
         apply_cookies: bool = ...,
         **kwargs: Any,
-    ) -> Coroutine[Any, Any, httpx.Response]:
-        ...
+    ) -> Coroutine[Any, Any, httpx.Response]: ...
 
     @overload
     def raw_request(
@@ -238,8 +233,7 @@ class BaseClient(Generic[ClientT], metaclass=ABCMeta):
         apply_auth_flow: bool = ...,
         apply_cookies: bool = ...,
         **kwargs: Any,
-    ) -> AbstractAsyncContextManager[httpx.Response]:
-        ...
+    ) -> AbstractAsyncContextManager[httpx.Response]: ...
 
     def raw_request(
         self,
@@ -308,8 +302,7 @@ class BaseClient(Generic[ClientT], metaclass=ABCMeta):
         path: str,
         response_callback: Callable[[httpx.Response], Any] | None = None,
         **kwargs: dict[str, Any],
-    ) -> Any:
-        ...
+    ) -> Any: ...
 
     @abstractmethod
     def post(
@@ -318,8 +311,7 @@ class BaseClient(Generic[ClientT], metaclass=ABCMeta):
         body: Any,
         response_callback: Callable[[httpx.Response], Any] | None = None,
         **kwargs: dict[str, Any],
-    ) -> Any:
-        ...
+    ) -> Any: ...
 
     @abstractmethod
     def delete(
@@ -327,8 +319,7 @@ class BaseClient(Generic[ClientT], metaclass=ABCMeta):
         path: str,
         response_callback: Callable[[httpx.Response], Any] | None = None,
         **kwargs: dict[str, Any],
-    ) -> Any:
-        ...
+    ) -> Any: ...
 
     @abstractmethod
     def put(
@@ -337,8 +328,7 @@ class BaseClient(Generic[ClientT], metaclass=ABCMeta):
         body: Any,
         response_callback: Callable[[httpx.Response], Any] | None = None,
         **kwargs: dict[str, Any],
-    ) -> Any:
-        ...
+    ) -> Any: ...
 
 
 class Client(BaseClient[httpx.Client]):

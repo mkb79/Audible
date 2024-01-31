@@ -75,9 +75,9 @@ def get_reading_time_since_signup(client):
         )
         # iterate over each month
         for stat in stats["aggregated_monthly_listening_stats"]:
-            year_aggregate[
-                stat.get("interval_identifier")
-            ] = convert_miliseconds_to_hours_minutes_seconds(stat["aggregated_sum"])
+            year_aggregate[stat.get("interval_identifier")] = (
+                convert_miliseconds_to_hours_minutes_seconds(stat["aggregated_sum"])
+            )
     return year_aggregate
 
 
