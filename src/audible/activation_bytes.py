@@ -161,8 +161,7 @@ def get_activation_bytes(
     auth: "audible.Authenticator",
     filename: str | pathlib.Path | None = ...,
     extract: Literal[True] = ...,
-) -> str:
-    ...
+) -> str: ...
 
 
 @overload
@@ -171,8 +170,7 @@ def get_activation_bytes(
     filename: str | pathlib.Path | None = ...,
     *,
     extract: Literal[False],
-) -> bytes:
-    ...
+) -> bytes: ...
 
 
 def get_activation_bytes(

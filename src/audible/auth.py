@@ -716,8 +716,7 @@ class Authenticator(httpx.Auth):
         filename: Union["pathlib.Path", str] | None = ...,
         extract: Literal[True] = ...,
         force_refresh: bool = ...,
-    ) -> str:
-        ...
+    ) -> str: ...
 
     @overload
     def get_activation_bytes(
@@ -726,8 +725,7 @@ class Authenticator(httpx.Auth):
         *,
         extract: Literal[False],
         force_refresh: bool = ...,
-    ) -> bytes:
-        ...
+    ) -> bytes: ...
 
     def get_activation_bytes(
         self,
