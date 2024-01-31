@@ -152,6 +152,8 @@ jobs:
           nox --session=coverage -- xml
 
       - name: Upload coverage report
-        uses: codecov/codecov-action@v3.1.5
+        uses: codecov/codecov-action@v4.0.0
+        env:
+          token: ${{ secrets.CODECOV_TOKEN }}
         with:
           files: ./coverage.xml,./coverage1.xml,./coverage2.xml
