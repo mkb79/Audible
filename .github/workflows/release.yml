@@ -67,7 +67,7 @@ jobs:
 
       - name: Publish the release notes
         id: create-release
-        uses: release-drafter/release-drafter@v5.25.0
+        uses: release-drafter/release-drafter@v6.0.0
         with:
           publish: ${{ steps.check-version.outputs.tag != '' }}
           tag: ${{ steps.check-version.outputs.tag }}
