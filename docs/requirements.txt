@@ -1,4 +1,4 @@
-sphinx==7.2.6
+sphinx==7.3.5
 sphinx-autobuild==2024.4.13
 sphinx-autodoc-typehints==2.0.1
 sphinx-rtd-theme==2.0.0
