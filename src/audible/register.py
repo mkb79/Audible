@@ -39,19 +39,27 @@ def register(
             "store_authentication_cookie",
         ],
         "cookies": {"website_cookies": [], "domain": f".amazon.{domain}"},
-        "registration_data": {
-            "domain": "Device",
-            "app_version": "3.56.2",
+        "device_metadata": {
+            "device_os_family": "android",
             "device_serial": serial,
-            "device_type": "A2CZJZGLK2JJVM",
+            "device_type": "A10KISP2GWF0E4",
+            "manufacturer": "OnePlus",
+            "model": "IN2013",
+            "os_version": "30",
+            "product": "OnePlus8",
+        },
+        "registration_data": {
+            "domain": "DeviceLegacy",
+            "app_version": "139018",
+            "device_serial": serial,
+            "device_type": "A10KISP2GWF0E4",
             "device_name": (
-                "%FIRST_NAME%%FIRST_NAME_POSSESSIVE_STRING%%DUPE_"
-                "STRATEGY_1ST%Audible for iPhone"
+                "%FIRST_NAME%%FIRST_NAME_POSSESSIVE_STRING%%DUPE_STRATEGY_1ST%Audible for Android"
             ),
-            "os_version": "15.0.0",
-            "software_version": "35602678",
-            "device_model": "iPhone",
-            "app_name": "Audible",
+            "os_version": "OnePlus/OnePlus8/OnePlus8:11/RP1A.201005.001/2110102308:user/release-keys",
+            "software_version": "110090009",
+            "device_model": "IN2013",
+            "app_name": "com.audible.application",
         },
         "auth_data": {
             "client_id": build_client_id(serial),
