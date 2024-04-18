@@ -176,6 +176,32 @@ def user_profile_audible(access_token: str, domain: str) -> dict[str, Any]:
     return profile
 
 
+def base64_der_to_pkcs1(base64_key: str) -> str:
+    from pyasn1.codec.der import decoder
+    from pyasn1.type import univ, namedtype
+
+
+    class PrivateKeyAlgorithm(univ.Sequence):
+        componentType = namedtype.NamedTypes(
+            namedtype.NamedType("algorithm", univ.ObjectIdentifier()),
+            namedtype.NamedType("parameters", univ.Any()),
+        )
+    
+    
+    class PrivateKeyInfo(univ.Sequence):
+        componentType = namedtype.NamedTypes(
+            namedtype.NamedType("version", univ.Integer()),
+            namedtype.NamedType("pkalgo", PrivateKeyAlgorithm()),
+            namedtype.NamedType("key", univ.OctetString()),
+        )
+
+    encoded_key = base64.b64decode(base64_key)
+    (key_info, _) = decoder.decode(encoded_key, asn1Spec=PrivateKeyInfo())
+    key_octet_string = key_info["key"]
+    key = rsa.PrivateKey.load_pkcs1(key_octet_string, format="DER")
+    return key.save_pkcs1().decode("utf-8")
+
+
 def sign_request(
     method: str, path: str, body: bytes, adp_token: str, private_key: str
 ) -> dict[str, str]:
@@ -435,6 +461,10 @@ class Authenticator(httpx.Auth):
         logger.info("logged in to Audible as %s", username)
         register_device = register_(with_username=with_username, **login_device)
 
+        if register_device["device_private_key"].startswith("MII"):
+            pk_der = register_device["device_private_key"]
+            register_device["device_private_key"] = base64_der_to_pkcs1(pk_der)
+
         auth._update_attrs(with_username=with_username, **register_device)
         logger.info("registered Audible device")
 
@@ -482,6 +512,10 @@ class Authenticator(httpx.Auth):
         logger.info("logged in to Audible.")
 
         register_device = register_(with_username=with_username, **login_device)
+
+        if register_device["device_private_key"].startswith("MII"):
+            pk_der = register_device["device_private_key"]
+            register_device["device_private_key"] = base64_der_to_pkcs1(pk_der)
 
         auth._update_attrs(with_username=with_username, **register_device)
         logger.info("registered Audible device")
