@@ -21,8 +21,7 @@ from .metadata import encrypt_metadata, meta_audible_app
 logger = logging.getLogger("audible.login")
 
 USER_AGENT = (
-    "Mozilla/5.0 (iPhone; CPU iPhone OS 15_0 like Mac OS X) "
-    "AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148"
+    "OnePlus/OnePlus8/OnePlus8:11/RP1A.201005.001/2110102308:user/release-keys"
 )
 
 
@@ -220,7 +219,7 @@ def build_device_serial() -> str:
 
 
 def build_client_id(serial: str) -> str:
-    client_id = serial.encode() + b"#A2CZJZGLK2JJVM"
+    client_id = serial.encode() + b"#A10KISP2GWF0E4"
     return client_id.hex()
 
 
@@ -244,8 +243,8 @@ def build_oauth_url(
 
     base_url = f"https://www.amazon.{domain}/ap/signin"
     return_to = f"https://www.amazon.{domain}/ap/maplanding"
-    assoc_handle = f"amzn_audible_ios_{country_code}"
-    page_id = "amzn_audible_ios"
+    assoc_handle = f"amzn_audible_android_aui_{country_code}"
+    page_id = f"amzn_audible_android_aui_{country_code}"
 
     if with_username:
         base_url = f"https://www.audible.{domain}/ap/signin"
