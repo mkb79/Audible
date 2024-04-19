@@ -86,6 +86,12 @@ warn_unreachable = true
 
 [tool.ruff]
 #  missing rst-docstrings check, these should be adding through ruff
+line-length = 80
+src = ["src"]
+target-version = "py310"
+output-format = "grouped"
+
+[tool.ruff.lint]
 ignore = [
     "D10",  # temporarily ignore missing docstrings
     "E501",
@@ -95,7 +101,6 @@ ignore = [
     "PLR0915",  # temporarily
     "PLR2004",  # temporarily
 ]
-line-length = 80
 select=[
     "A",
     "ASYNC",
@@ -116,23 +121,12 @@ select=[
     "UP",
     "W",
 ]
-src = ["src"]
-target-version = "py310"
-output-format = "grouped"
-
-[tool.ruff.per-file-ignores]
-"tests/*" = ["S101"]
-
-[tool.ruff.isort]
-force-single-line = false
-known-first-party = ["audible"]
-lines-after-imports = 2
-
-[tool.ruff.mccabe]
-max-complexity = 21  # temporarily raise complexity, target is 10
-
-[tool.ruff.pydocstyle]
-convention = "google"
+mccabe.max-complexity = 21  # temporarily raise complexity, target is 10
+pydocstyle.convention = "google"
+isort.force-single-line = false
+isort.known-first-party = ["audible"]
+isort.lines-after-imports = 2
+per-file-ignores."tests/*" = ["S101"]
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]
