@@ -178,18 +178,16 @@ def user_profile_audible(access_token: str, domain: str) -> dict[str, Any]:
 
 def base64_der_to_pkcs1(base64_key: str) -> str:
     from pyasn1.codec.der import decoder
-    from pyasn1.type import univ, namedtype
-
+    from pyasn1.type import namedtype, univ
 
     class PrivateKeyAlgorithm(univ.Sequence):
-        componentType = namedtype.NamedTypes(
+        componentType = namedtype.NamedTypes(  # noqa: N815
             namedtype.NamedType("algorithm", univ.ObjectIdentifier()),
             namedtype.NamedType("parameters", univ.Any()),
         )
-    
-    
+
     class PrivateKeyInfo(univ.Sequence):
-        componentType = namedtype.NamedTypes(
+        componentType = namedtype.NamedTypes(  # noqa: N815
             namedtype.NamedType("version", univ.Integer()),
             namedtype.NamedType("pkalgo", PrivateKeyAlgorithm()),
             namedtype.NamedType("key", univ.OctetString()),
