@@ -35,7 +35,7 @@ repos:
         stages: [commit, push, manual]
       - id: ruff
         name: ruff
-        entry: ruff
+        entry: ruff check
         language: system
         types: [python]
         require_serial: true
