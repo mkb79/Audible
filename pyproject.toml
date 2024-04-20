@@ -48,7 +48,7 @@ pre-commit = ">=2.16.0"
 pre-commit-hooks = ">=4.1.0"
 pytest = ">=6.2.5"
 pytest-mock = ">=3.10.0"
-ruff = ">=0.0.254"
+ruff = ">=0.3.7"
 safety = ">=1.10.3"
 sphinx = ">=4.3.2"
 sphinx-autobuild = ">=2021.3.14"
@@ -86,7 +86,7 @@ warn_unreachable = true
 
 [tool.ruff]
 #  missing rst-docstrings check, these should be adding through ruff
-line-length = 80
+line-length = 88
 src = ["src"]
 target-version = "py310"
 output-format = "grouped"
@@ -121,12 +121,20 @@ select=[
     "UP",
     "W",
 ]
-mccabe.max-complexity = 21  # temporarily raise complexity, target is 10
-pydocstyle.convention = "google"
-isort.force-single-line = false
-isort.known-first-party = ["audible"]
-isort.lines-after-imports = 2
-per-file-ignores."tests/*" = ["S101"]
+
+[tool.ruff.lint.mccabe]
+max-complexity = 21  # temporarily raise complexity, target is 10
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
+
+[tool.ruff.lint.isort]
+force-single-line = false
+known-first-party = ["audible"]
+lines-after-imports = 2
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["S101"]
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]
