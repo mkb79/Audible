@@ -39,7 +39,6 @@ rsa = ">=4.9"
 
 [tool.poetry.group.dev.dependencies]
 Pygments = ">=2.10.0"
-black = ">=21.10b0"
 coverage = {extras = ["toml"], version = ">=6.2"}
 darglint = ">=1.8.1"
 mypy = ">=0.930"
