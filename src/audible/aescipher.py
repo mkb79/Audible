@@ -166,7 +166,7 @@ class AESCipher:
         salt_marker: bytes = b"$",
         kdf_iterations: int = 1000,
         hashmod=sha256,
-        mac=hmac
+        mac=hmac,
     ) -> None:
         if not 1 <= len(salt_marker) <= 6:
             raise ValueError("The salt_marker must be one to six bytes long.")
