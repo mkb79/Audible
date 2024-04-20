@@ -1,9 +1,9 @@
 repos:
   - repo: local
     hooks:
-      - id: black
-        name: black
-        entry: black
+      - id: ruff-format
+        name: ruff format
+        entry: ruff format
         language: system
         types: [python]
         require_serial: true
@@ -33,8 +33,8 @@ repos:
         language: system
         types: [text]
         stages: [commit, push, manual]
-      - id: ruff
-        name: ruff
+      - id: ruff-check
+        name: ruff check
         entry: ruff check
         language: system
         types: [python]
