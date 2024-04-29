@@ -10,7 +10,9 @@ auth = Authenticator.from_file(filename="FILENAME", password=password)
 
 # or use LoginAuthenticator (without register)
 auth = Authenticator.from_login(
-    username="USERNAME", password="PASSWORD", locale="YOUR_COUNTRY_CODE"  # noqa: S106
+    username="USERNAME",
+    password="PASSWORD",  # noqa: S106
+    locale="YOUR_COUNTRY_CODE",
 )
 
 
