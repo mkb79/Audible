@@ -2,7 +2,7 @@ import base64
 import json
 import logging
 from collections.abc import Callable, Generator, Iterator
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -72,7 +72,9 @@ def refresh_access_token(
     resp_dict = resp.json()
 
     expires_in_sec = int(resp_dict["expires_in"])
-    expires = (datetime.utcnow() + timedelta(seconds=expires_in_sec)).timestamp()
+    expires = (
+        datetime.now(timezone.utc) + timedelta(seconds=expires_in_sec)
+    ).timestamp()
 
     return {"access_token": resp_dict["access_token"], "expires": expires}
 
@@ -191,7 +193,7 @@ def sign_request(
     Returns:
         A dict with the signed headers.
     """
-    date = datetime.utcnow().isoformat("T") + "Z"
+    date = datetime.now(timezone.utc).isoformat("T") + "Z"
     str_body = body.decode("utf-8")
 
     data = f"{method}\n{path}\n{date}\n{str_body}\n{adp_token}"
@@ -779,10 +781,14 @@ class Authenticator(httpx.Auth):
     def access_token_expires(self) -> timedelta:
         if self.expires is None:
             raise Exception("No expires timestamp found.")
-        return datetime.fromtimestamp(self.expires) - datetime.utcnow()
+        return datetime.fromtimestamp(self.expires, timezone.utc) - datetime.now(
+            timezone.utc
+        )
 
     @property
     def access_token_expired(self) -> bool:
         if self.expires is None:
             raise Exception("No expires timestamp found.")
-        return datetime.fromtimestamp(self.expires) <= datetime.utcnow()
+        return datetime.fromtimestamp(self.expires, timezone.utc) <= datetime.now(
+            timezone.utc
+        )
