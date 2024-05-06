@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Any
 
 import httpx
@@ -80,7 +80,7 @@ def register(
     access_token = tokens["bearer"]["access_token"]
     refresh_token = tokens["bearer"]["refresh_token"]
     expires_s = int(tokens["bearer"]["expires_in"])
-    expires = (datetime.utcnow() + timedelta(seconds=expires_s)).timestamp()
+    expires = (datetime.now(timezone.utc) + timedelta(seconds=expires_s)).timestamp()
 
     extensions = success_response["extensions"]
     device_info = extensions["device_info"]
