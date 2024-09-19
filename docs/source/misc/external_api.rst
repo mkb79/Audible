@@ -554,6 +554,11 @@ Stats
 Misc
 -----
 
+.. http:get:: /1.0/actors
+
+   :query bool include_enrolled: [true, false]
+   :query bool include_suggested: [true, false]
+
 .. http:get:: /1.0/annotations/lastpositions
 
    :query asins: asin (comma-separated), e.g. ?asins=B01LWUJKQ7,B01LWUJKQ7,B01LWUJKQ7
