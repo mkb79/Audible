@@ -654,7 +654,7 @@ class Authenticator(httpx.Auth):
             raise ValueError("No filename provided")
 
         if filename:
-            target_file: "pathlib.Path" = test_convert("filename", filename)
+            target_file: pathlib.Path = test_convert("filename", filename)
         elif self.filename:
             target_file = self.filename
         else:
