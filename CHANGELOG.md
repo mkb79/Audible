@@ -6,6 +6,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## Unreleased
 
+## [0.10.0] - 2024-09-26
+
+### Bugfix
+
+- Fix `autodetect_locale` function
+
 ### Misc
 
 - Drop support for Python 3.8 and 3.9
