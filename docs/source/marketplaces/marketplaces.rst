@@ -48,7 +48,7 @@ country code is associated.
    * - Audible.co.uk
      - UK and Ireland
      - uk
-   * - Audible.co.au
+   * - Audible.com.au
      - Australia and New Zealand
      - au
    * - Audible.fr
