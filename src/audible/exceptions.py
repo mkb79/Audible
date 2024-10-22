@@ -5,8 +5,12 @@ if TYPE_CHECKING:
     import httpx
 
 
-class RequestError(Exception):
+class AudibleError(Exception):
     """Base class for all errors."""
+
+
+class RequestError(AudibleError):
+    """Base class for all request errors."""
 
 
 class StatusError(RequestError):
@@ -72,13 +76,13 @@ class UnexpectedError(StatusError):
     """Raised if the error was not caught."""
 
 
-class AuthFlowError(Exception):
+class AuthFlowError(AudibleError):
     """Raised if no auth method available."""
 
 
-class NoRefreshToken(Exception):
+class NoRefreshToken(AudibleError):
     """Raised if refresh token is needed but not provided."""
 
 
-class FileEncryptionError(Exception):
+class FileEncryptionError(AudibleError):
     """Raised if something is wrong with file encryption."""
