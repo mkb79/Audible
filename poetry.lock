@@ -1537,13 +1537,13 @@ files = [
 
 [[package]]
 name = "safety"
-version = "3.2.7"
+version = "3.2.9"
 description = "Checks installed dependencies for known vulnerabilities and licenses."
 optional = false
 python-versions = ">=3.7"
 files = [
-    {file = "safety-3.2.7-py3-none-any.whl", hash = "sha256:7f111b689901f2e65f7dd524e4c84158c368bcbbdbb38cbbb06ba1249250da11"},
-    {file = "safety-3.2.7.tar.gz", hash = "sha256:cd6093b82d84e85815f037334f1b83ed89d31f767b7b324bfed6228c434f2667"},
+    {file = "safety-3.2.9-py3-none-any.whl", hash = "sha256:5e199c057550dc6146c081084274279dfb98c17735193b028db09a55ea508f1a"},
+    {file = "safety-3.2.9.tar.gz", hash = "sha256:494bea752366161ac9e0742033d2a82e4dc51d7c788be42e0ecf5f3ef36b8071"},
 ]
 
 [package.dependencies]
