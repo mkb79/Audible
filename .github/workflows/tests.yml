@@ -96,12 +96,6 @@ jobs:
         run: |
           nox --python=${{ matrix.python }}
 
-      - name: List all files
-        if: always() && matrix.session == 'tests' && matrix.os == 'ubuntu-latest'
-        run: |
-          pwd
-          ls -la
-
       - name: Upload coverage data
         if: always() && matrix.session == 'tests'
         uses: "actions/upload-artifact@v4"
