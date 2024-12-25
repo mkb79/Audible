@@ -99,6 +99,7 @@ jobs:
       - name: List all files
         if: always() && matrix.session == 'tests' && matrix.os == 'ubuntu-latest'
         run: |
+          pwd
           ls -la
 
       - name: Upload coverage data
@@ -106,7 +107,7 @@ jobs:
         uses: "actions/upload-artifact@v4"
         with:
           name: coverage-data-${{ matrix.python }}-${{ matrix.os }}
-          path: ".coverage*"
+          path: ".coverage.*"
 
       - name: Upload documentation
         if: matrix.session == 'docs-build'
