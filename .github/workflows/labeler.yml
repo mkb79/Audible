@@ -16,4 +16,5 @@ jobs:
       - name: Run Labeler
         uses: crazy-max/ghaction-github-labeler@v5.1.0
         with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
           skip-delete: true

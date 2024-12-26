@@ -67,9 +67,8 @@ LOCALE_TEMPLATES = {
 
 
 def search_template(key: str, value: str) -> dict[str, str] | None:
-    for country in LOCALE_TEMPLATES:
-        locale = LOCALE_TEMPLATES[country]
-        if locale[key] == value:
+    for country, locale in LOCALE_TEMPLATES.items():
+        if locale.get(key, "") == value:
             logger.debug("found locale for %s", country)
             return locale
 
