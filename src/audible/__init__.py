@@ -5,4 +5,4 @@ from .auth import Authenticator
 from .client import AsyncClient, Client
 
 
-__all__ = ["__version__", "Authenticator", "log_helper", "Client", "AsyncClient"]
+__all__ = ["AsyncClient", "Authenticator", "Client", "__version__", "log_helper"]
