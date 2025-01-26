@@ -1,16 +1,14 @@
-[tool.poetry]
+[project]
 name = "audible"
-version = "0.10.0"
 description = "A(Sync) Interface for internal Audible API written in pure Python."
-authors = ["mkb79 <mkb79@hackitall.de>"]
+authors = [
+    {name = "mkb79", email = "mkb79@hackitall.de"}
+]
 license = "AGPL-3.0-only"
 readme = "README.md"
 homepage = "https://github.com/mkb79/Audible"
 repository = "https://github.com/mkb79/Audible"
 documentation = "https://audible.readthedocs.io"
-packages = [
-    { include = "audible", from = "src" },
-]
 keywords = [
     "Audible",
     "API",
@@ -23,26 +21,34 @@ classifiers = [
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12"
-    ]
+]
+requires-python = ">=3.10,<3.13"
+dynamic = [ "dependencies", "version"]
+dependencies = [
+    "Pillow (>=9.4.0)",
+    "beautifulsoup4 (>=4.11.2)",
+    "httpx (>=0.23.3)",
+    "pbkdf2 (>=1.3)",
+    "pyaes (>=1.6.1)",
+    "rsa (>=4.9)"
+]
 
-[tool.poetry.urls]
+[project.urls]
 Changelog = "https://github.com/mkb79/Audible/releases"
 
-[tool.poetry.dependencies]
-python = ">=3.10,<3.13"
-Pillow = ">=9.4.0"
-beautifulsoup4 = ">=4.11.2"
-httpx = ">=0.23.3"
-pbkdf2 = ">=1.3"
-pyaes = ">=1.6.1"
-rsa = ">=4.9"
+[tool.poetry]
+requires-poetry = ">=2.0"
+version = "0.10.0"
+packages = [
+    { include = "audible", from = "src" },
+]
 
 [tool.poetry.group.dev.dependencies]
 Pygments = ">=2.10.0"
-coverage = {extras = ["toml"], version = ">=6.2"}
+coverage = { extras = ["toml"], version = ">=6.2" }
 darglint = ">=1.8.1"
 mypy = ">=0.930"
-myst-parser = {version = ">=0.16.1"}
+myst-parser = { version = ">=0.16.1" }
 pre-commit = ">=2.16.0"
 pre-commit-hooks = ">=4.1.0"
 pytest = ">=6.2.5"
@@ -55,7 +61,11 @@ sphinx-autodoc-typehints = ">=1.22"
 sphinx-rtd-theme = ">=1.2.0"
 sphinxcontrib-httpdomain = ">=1.8.1"
 typeguard = ">=2.13.3"
-xdoctest = {extras = ["colors"], version = ">=0.15.10"}
+xdoctest = { extras = ["colors"], version = ">=0.15.10" }
+
+[tool.poetry.requires-plugins]
+poetry-plugin-export = ">=1.8"
+poetry-bumpversion = ">=0.3.3"
 
 [tool.poetry_bumpversion.file."src/audible/__init__.py"]
 
@@ -136,5 +146,5 @@ lines-after-imports = 2
 "tests/*" = ["S101"]
 
 [build-system]
-requires = ["poetry-core>=1.0.0"]
+requires = ["poetry-core>=2.0"]
 build-backend = "poetry.core.masonry.api"
