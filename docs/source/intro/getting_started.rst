@@ -12,7 +12,7 @@ here, just some important basics.
 First Audible device
 ====================
 
-Before you can communicate with the non-publicly Audible Api, you need to
+Before you can communicate with the non-public Audible Api, you need to
 authorize (login) yourself to Amazon (or Audible) and register a new "virtual"
 Audible device. Please make sure to select the correct Audible marketplace.
 An overview about all known Audible marketplaces and associated country codes
