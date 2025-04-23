@@ -6,7 +6,7 @@ import httpx
 from .login import build_client_id
 
 
-def register(
+async def register(
     authorization_code: str,
     code_verifier: bytes,
     domain: str,
@@ -65,7 +65,11 @@ def register(
 
     target_domain = "audible" if with_username else "amazon"
 
-    resp = httpx.post(f"https://api.{target_domain}.{domain}/auth/register", json=body)
+    async with httpx.AsyncClient() as client:
+        resp = await client.post(
+            f"https://api.{target_domain}.{domain}/auth/register",
+            json=body
+        )
 
     resp_json = resp.json()
     if resp.status_code != 200:

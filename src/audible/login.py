@@ -1,3 +1,4 @@
+import asyncio
 import base64
 import hashlib
 import io
@@ -26,35 +27,36 @@ USER_AGENT = (
 )
 
 
-def default_captcha_callback(captcha_url: str) -> str:
+async def default_captcha_callback(captcha_url: str) -> str:
     """Helper function for handling captcha."""
-    captcha = httpx.get(captcha_url).content
+    async with httpx.AsyncClient() as client:
+        captcha = await client.get(captcha_url).content
     f = io.BytesIO(captcha)
     img = Image.open(f)
     img.show()
-    guess = input("Answer for CAPTCHA: ")
+    guess = await asyncio.to_thread(input, "Answer for CAPTCHA: ")
     return str(guess).strip().lower()
 
 
-def default_otp_callback() -> str:
+async def default_otp_callback() -> str:
     """Helper function for handling 2-factor authentication."""
-    guess = input("OTP Code: ")
+    guess = await asyncio.to_thread(input, "OTP Code: ")
     return str(guess).strip().lower()
 
 
-def default_cvf_callback() -> str:
+async def default_cvf_callback() -> str:
     """Helper function for handling cvf verifys.
 
     Amazon sends a verify code via Mail or SMS.
     """
-    guess = input("CVF Code: ")
+    guess = await asyncio.to_thread(input, "CVF Code: ")
     return str(guess).strip().lower()
 
 
-def default_approval_alert_callback() -> None:
+async def default_approval_alert_callback() -> None:
     """Helper function for handling approval alerts."""
     print("Approval alert detected! Amazon sends you a mail.")
-    input("Please press ENTER when you approve the notification.")
+    await asyncio.to_thread(input, "Please press ENTER when you approve the notification.")
 
 
 def playwright_external_login_url_callback(url: str) -> str:
@@ -350,7 +352,7 @@ def is_valid_email(obj: str) -> bool:
     return False
 
 
-def login(
+async def login(
     username: str,
     password: str,
     country_code: str,
@@ -407,7 +409,7 @@ def login(
     }
     init_cookies = build_init_cookies()
 
-    session = httpx.Client(
+    session = httpx.AsyncClient(
         base_url=base_url,
         headers=default_headers,
         cookies=init_cookies,
@@ -424,7 +426,7 @@ def login(
         with_username=with_username,
     )
 
-    oauth_resp = session.get(oauth_url)
+    oauth_resp = await session.get(oauth_url)
     oauth_soup = get_soup(oauth_resp)
 
     login_inputs = get_inputs_from_soup(oauth_soup)
@@ -436,7 +438,7 @@ def login(
 
     method, url = get_next_action_from_soup(oauth_soup, {"name": "signIn"})
 
-    login_resp = session.request(method, url, data=login_inputs)
+    login_resp = await session.request(method, url, data=login_inputs)
     login_soup = get_soup(login_resp)
 
     # check for captcha
@@ -445,7 +447,7 @@ def login(
         if captcha_callback:
             guess = captcha_callback(captcha_url)
         else:
-            guess = default_captcha_callback(captcha_url)
+            guess = await default_captcha_callback(captcha_url)
 
         inputs = get_inputs_from_soup(login_soup)
         inputs["guess"] = guess
@@ -457,7 +459,7 @@ def login(
 
         method, url = get_next_action_from_soup(login_soup, {"name": "signIn"})
 
-        login_resp = session.request(method, url, data=inputs)
+        login_resp = await session.request(method, url, data=inputs)
         login_soup = get_soup(login_resp)
 
     # check for choice mfa
@@ -477,7 +479,7 @@ def login(
 
         method, url = get_next_action_from_soup(login_soup)
 
-        login_resp = session.request(method, url, data=inputs)
+        login_resp = await session.request(method, url, data=inputs)
         login_soup = get_soup(login_resp)
 
     # check for mfa (otp_code)
@@ -485,7 +487,7 @@ def login(
         if otp_callback:
             otp_code = otp_callback()
         else:
-            otp_code = default_otp_callback()
+            otp_code = await default_otp_callback()
 
         inputs = get_inputs_from_soup(login_soup)
         inputs["otpCode"] = otp_code
@@ -494,7 +496,7 @@ def login(
 
         method, url = get_next_action_from_soup(login_soup)
 
-        login_resp = session.request(method, url, data=inputs)
+        login_resp = await session.request(method, url, data=inputs)
         login_soup = get_soup(login_resp)
 
     # check for cvf
@@ -502,13 +504,13 @@ def login(
         if cvf_callback:
             cvf_code = cvf_callback()
         else:
-            cvf_code = default_cvf_callback()
+            cvf_code = await default_cvf_callback()
 
         inputs = get_inputs_from_soup(login_soup)
 
         method, url = get_next_action_from_soup(login_soup)
 
-        login_resp = session.request(method, url, data=inputs)
+        login_resp = await session.request(method, url, data=inputs)
         login_soup = get_soup(login_resp)
 
         inputs = get_inputs_from_soup(login_soup)
@@ -517,7 +519,7 @@ def login(
 
         method, url = get_next_action_from_soup(login_soup)
 
-        login_resp = session.request(method, url, data=inputs)
+        login_resp = await session.request(method, url, data=inputs)
         login_soup = get_soup(login_resp)
 
     # check for approval alert
@@ -525,22 +527,22 @@ def login(
         if approval_callback:
             approval_callback()
         else:
-            default_approval_alert_callback()
+            await default_approval_alert_callback()
 
         # url = login_soup.find(id="resend-approval-link")["href"]
         url = str(login_resp.url)
 
-        login_resp = session.get(url)
+        login_resp = await session.get(url)
         login_soup = get_soup(login_resp)
 
         while login_soup.find(
             "span", {"class": "transaction-approval-word-break"}
         ):  # a-size-base-plus transaction-approval-word-break a-text-bold
-            login_resp = session.get(url)
+            login_resp = await session.get(url)
             login_soup = get_soup(login_resp)
             logger.info("still waiting for redirect")
 
-    session.close()
+    await session.aclose()
 
     authcode_url = None
     if b"openid.oa2.authorization_code" in login_resp.url.query:

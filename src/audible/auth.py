@@ -379,7 +379,7 @@ class Authenticator(httpx.Auth):
         return auth
 
     @classmethod
-    def from_login(
+    async def from_login(
         cls,
         username: str,
         password: str,
@@ -421,7 +421,7 @@ class Authenticator(httpx.Auth):
         auth = cls()
         auth.locale = cast("Locale", locale)
 
-        login_device = login(
+        login_device = await login(
             username=username,
             password=password,
             country_code=auth.locale.country_code,
@@ -435,7 +435,7 @@ class Authenticator(httpx.Auth):
             approval_callback=approval_callback,
         )
         logger.info("logged in to Audible as %s", username)
-        register_device = register_(with_username=with_username, **login_device)
+        register_device = await register_(with_username=with_username, **login_device)
 
         auth._update_attrs(with_username=with_username, **register_device)
         logger.info("registered Audible device")
