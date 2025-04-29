@@ -59,16 +59,24 @@ def default_approval_alert_callback() -> None:
 
 
 def playwright_external_login_url_callback(url: str) -> str:
-    """Helper function for login using playwright."""
+    """Helper function for login using playwright.
+
+    Install playwright with `pip install playwright` into the same environment
+    Run command: `playwright install chromium`
+    """
     from playwright.sync_api import (  # type: ignore[import-not-found]  # noqa: I001
         sync_playwright,
         Error,
         TimeoutError as PlaywrightTimeoutError,
     )
+    TIMEOUT_SECONDS = 300
+
+    # choose between chromium, webkit and firefox
+    PLAYWRIGHT_BROWSER = "chromium"
 
     with sync_playwright() as p:
         iphone = p.devices["iPhone 15 Pro"]
-        browser = p.chromium.launch(headless=False)
+        browser = p.__getitem__(PLAYWRIGHT_BROWSER).launch(headless=False)
         context = browser.new_context(**iphone)
 
         try:
@@ -81,7 +89,7 @@ def playwright_external_login_url_callback(url: str) -> str:
             page.goto(url)
 
             with page.expect_request(
-                "**/ap/maplanding*", timeout=5 * 1000
+                "**/ap/maplanding*", timeout=TIMEOUT_SECONDS * 1000
             ) as request_info:
                 request = request_info.value
                 if "openid.oa2.authorization_code" in request.url:
