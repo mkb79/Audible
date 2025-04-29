@@ -97,6 +97,6 @@ jobs:
       - name: Publish package on TestPyPI
         continue-on-error: true
         if: "! needs.release.outputs.tag"
-        uses: pypa/gh-action-pypi-publish@v1.10.2
+        uses: pypa/gh-action-pypi-publish@v1.12.4
         with:
           repository-url: https://test.pypi.org/legacy/
