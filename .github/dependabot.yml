@@ -22,4 +22,4 @@ updates:
     versioning-strategy: lockfile-only
     allow:
       - dependency-type: "all"
-     open-pull-requests-limit: 15
+    open-pull-requests-limit: 15
