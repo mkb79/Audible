@@ -1815,14 +1815,14 @@ testing = ["covdefaults (>=2.3)", "coverage (>=7.6.1)", "defusedxml (>=0.7.1)", 
 
 [[package]]
 name = "sphinx-rtd-theme"
-version = "3.0.0rc1"
+version = "3.0.2"
 description = "Read the Docs theme for Sphinx"
 optional = false
 python-versions = ">=3.8"
 groups = ["dev"]
 files = [
-    {file = "sphinx_rtd_theme-3.0.0rc1-py2.py3-none-any.whl", hash = "sha256:5942c963c36525ae25386d22b565dc07daf0862e2757fe83ba679414fabba406"},
-    {file = "sphinx_rtd_theme-3.0.0rc1.tar.gz", hash = "sha256:fa5b5f2fcfa067038d4e362295275d959529bedde94f929d899f88c97f9939fa"},
+    {file = "sphinx_rtd_theme-3.0.2-py2.py3-none-any.whl", hash = "sha256:422ccc750c3a3a311de4ae327e82affdaf59eb695ba4936538552f3b00f4ee13"},
+    {file = "sphinx_rtd_theme-3.0.2.tar.gz", hash = "sha256:b7457bc25dda723b20b086a670b9953c859eab60a2a03ee8eb2bb23e176e5f85"},
 ]
 
 [package.dependencies]
