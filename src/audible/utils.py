@@ -14,9 +14,7 @@ logger = logging.getLogger("audible.utils")
 
 def _check_website_cookies(value: dict[str, str]) -> None:
     if not isinstance(value, dict):
-        raise TypeError(
-            f"website_cookies: Expected dict, " f"got {type(value).__name__}."
-        )
+        raise TypeError(f"website_cookies: Expected dict, got {type(value).__name__}.")
     if not set(map(type, value.values())) == {str}:
         raise TypeError("website_cookies: Value(s) of website_cookies have wrong type.")
 

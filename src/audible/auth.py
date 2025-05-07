@@ -252,9 +252,7 @@ class Authenticator(httpx.Auth):
 
     def __setattr__(self, attr: str, value: Any) -> None:
         if self._forbid_new_attrs and not hasattr(self, attr):
-            msg = (
-                f"{self.__class__.__name__} is frozen, can't " f"add attribute: {attr}."
-            )
+            msg = f"{self.__class__.__name__} is frozen, can't add attribute: {attr}."
             logger.error(msg)
             raise AttributeError(msg)
 
