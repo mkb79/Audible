@@ -33,7 +33,7 @@ def main():
         for i, book in enumerate(books):
             asin = book.get("asin")
             print(
-                f'#{i} Title: {book.get("title")} - time:{book.get("runtime_length_min")} asin:{asin}'
+                f"#{i} Title: {book.get('title')} - time:{book.get('runtime_length_min')} asin:{asin}"
             )
             local_library.append(
                 {

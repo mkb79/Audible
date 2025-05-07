@@ -13,7 +13,7 @@ def _get_download_link(auth, asin, codec="LC_128_44100_stereo"):
 
     try:
         content_url = (
-            "https://cde-ta-g7g.amazon.com/FionaCDEServiceEngine/" "FSDownloadContent"
+            "https://cde-ta-g7g.amazon.com/FionaCDEServiceEngine/FSDownloadContent"
         )
         params = {
             "type": "AUDI",
