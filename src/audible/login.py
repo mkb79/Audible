@@ -260,7 +260,7 @@ def build_oauth_url(
     """Builds the url to login to Amazon as an Audible device."""
     if with_username and domain.lower() not in ("de", "com", "co.uk"):
         raise ValueError(
-            "Login with username is only supported for DE, US " "and UK marketplaces!"
+            "Login with username is only supported for DE, US and UK marketplaces!"
         )
 
     serial = serial or build_device_serial()
@@ -284,10 +284,10 @@ def build_oauth_url(
         "openid.oa2.code_challenge": code_challenge,
         "openid.return_to": return_to,
         "openid.assoc_handle": assoc_handle,
-        "openid.identity": "http://specs.openid.net/auth/2.0/" "identifier_select",
+        "openid.identity": "http://specs.openid.net/auth/2.0/identifier_select",
         "pageId": page_id,
         "accountStatusPolicy": "P1",
-        "openid.claimed_id": "http://specs.openid.net/auth/2.0/" "identifier_select",
+        "openid.claimed_id": "http://specs.openid.net/auth/2.0/identifier_select",
         "openid.mode": "checkid_setup",
         "openid.ns.oa2": "http://www.amazon.com/ap/ext/oauth/2",
         "openid.oa2.client_id": f"device:{client_id}",
