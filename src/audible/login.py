@@ -15,6 +15,7 @@ import httpx
 from bs4 import BeautifulSoup, NavigableString, Tag
 from PIL import Image
 
+from .exceptions import AudibleError
 from .metadata import encrypt_metadata, meta_audible_app
 
 
@@ -58,29 +59,53 @@ def default_approval_alert_callback() -> None:
 
 
 def playwright_external_login_url_callback(url: str) -> str:
-    """Helper function for login using playwright."""
-    from playwright.sync_api import sync_playwright  # type: ignore[import-not-found]  # noqa: I001
+    """Helper function for login using playwright.
+
+    Install playwright with `pip install playwright` into the same environment
+    Run command: `playwright install chromium`
+    """
+    from playwright.sync_api import (  # type: ignore[import-not-found]  # noqa: I001
+        sync_playwright,
+        Error,
+        TimeoutError as PlaywrightTimeoutError,
+    )
+
+    timeout_seconds = 300
+
+    # choose between chromium, webkit and firefox
+    playwright_browser = "chromium"
 
     with sync_playwright() as p:
-        iphone = p.devices["iPhone 12 Pro"]
-        browser = p.webkit.launch(headless=False)
+        iphone = p.devices["iPhone 15 Pro"]
+        browser = p.__getitem__(playwright_browser).launch(headless=False)
         context = browser.new_context(**iphone)
-        cookies = []
-        for name, value in build_init_cookies().items():
-            cookies.append({"name": name, "value": value, "url": url})
-        context.add_cookies(cookies)
-        page = browser.new_page()
-        page.goto(url)
 
-        while True:
-            page.wait_for_timeout(600)
-            if "/ap/maplanding" in page.url:
-                response_url: str = page.url
-                break
+        try:
+            cookies = []
+            for name, value in build_init_cookies().items():
+                cookies.append({"name": name, "value": value, "url": url})
+            context.add_cookies(cookies)
 
-        browser.close()
+            page = browser.new_page()
+            page.goto(url)
 
-    return response_url
+            with page.expect_request(
+                "**/ap/maplanding*", timeout=timeout_seconds * 1000
+            ) as request_info:
+                request = request_info.value
+                if "openid.oa2.authorization_code" in request.url:
+                    request_url: str = request.url
+        except PlaywrightTimeoutError:
+            logger.error("Timeout during login.")
+            raise AudibleError("Timeout during login using playwright.") from None
+        except Error as error:
+            logger.error(error.message)
+            raise AudibleError(error.message) from None
+        finally:
+            context.close()
+            browser.close()
+
+    return request_url
 
 
 def default_login_url_callback(url: str) -> str:
