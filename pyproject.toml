@@ -98,6 +98,9 @@ include = ["src/audible"]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
 
+[tool.uv]
+required-version = ">=0.7.6"
+
 [tool.coverage.paths]
 source = ["src/audible", "*/site-packages"]
 tests = ["tests", "*/tests"]
