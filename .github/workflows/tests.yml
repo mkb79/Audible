@@ -112,17 +112,13 @@ jobs:
           pattern: coverage-data-*
           merge-multiple: true
 
-      - name: Combine coverage data
+      - name: Combine coverage data and display human readable report
         run: |
-          uv run nox --session=coverage -- combine
-
-      - name: Display human readable coverage report
-        run: |
-          uv run nox --session=coverage -- report -i
+          uv run nox --session=coverage
 
       - name: Create coverage report
         run: |
-          uv run nox --session=coverage -- xml -i
+          uv run nox --session=coverage -- xml
 
       - name: Upload coverage report
         uses: codecov/codecov-action@v5.4.3
