@@ -122,7 +122,7 @@ jobs:
 
       - name: Create coverage report
         run: |
-          uv run nox --session=coverage -- xml
+          uv run nox --session=coverage -- xml -i
 
       - name: Upload coverage report
         uses: codecov/codecov-action@v5.4.3
