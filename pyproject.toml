@@ -108,6 +108,7 @@ tests = ["tests", "*/tests"]
 [tool.coverage.run]
 branch = true
 source = ["src/audible", "tests"]
+relative_files = true
 
 [tool.coverage.report]
 show_missing = true
