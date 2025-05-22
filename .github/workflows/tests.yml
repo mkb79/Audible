@@ -112,9 +112,13 @@ jobs:
           pattern: coverage-data-*
           merge-multiple: true
 
-      - name: Combine coverage data and display human readable report
+      - name: Combine coverage data
         run: |
-          uv run nox --session=coverage
+          uv run nox --session=coverage -- combine
+
+      - name: Display human readable coverage report
+        run: |
+          uv run nox --session=coverage -- report -i
 
       - name: Create coverage report
         run: |
