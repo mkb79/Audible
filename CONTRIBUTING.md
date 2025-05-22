@@ -37,48 +37,44 @@ Request features on the [Issue Tracker].
 
 ## How to set up your development environment
 
-You need Python 3.7+ and the following tools:
+You need Python 3.10+ and the following tools:
 
-- [Poetry]
-- [Nox]
-- [nox-poetry]
+- [uv]
 
 Install the package with development requirements:
 
 ```console
-$ poetry install
+$ uv sync
 ```
 
 You can now run an interactive Python session,
 or the command-line interface:
 
 ```console
-$ poetry run python
+$ uv run python
 ```
 
-[poetry]: https://python-poetry.org/
-[nox]: https://nox.thea.codes/
-[nox-poetry]: https://nox-poetry.readthedocs.io/
+[uv]: https://docs.astral.sh/uv/
 
 ## How to test the project
 
 Run the full test suite:
 
 ```console
-$ nox
+$ uv run nox
 ```
 
 List the available Nox sessions:
 
 ```console
-$ nox --list-sessions
+$ uv run nox --list-sessions
 ```
 
 You can also run a specific Nox session.
 For example, invoke the unit test suite like this:
 
 ```console
-$ nox --session=tests
+$ uv run nox --session=tests
 ```
 
 Unit tests are located in the _tests_ directory,
@@ -102,7 +98,7 @@ To run linting and code formatting checks before committing your change, you
 can install pre-commit as a Git hook by running the following command:
 
 ```console
-$ nox --session=pre-commit -- install
+$ uv run nox --session=pre-commit -- install
 ```
 
 It is recommended to open an issue before starting work on anything.

@@ -1,18 +1,15 @@
 [project]
 name = "audible"
+version = "0.10.0"
 description = "A(Sync) Interface for internal Audible API written in pure Python."
-authors = [
-    {name = "mkb79", email = "mkb79@hackitall.de"}
-]
-license = "AGPL-3.0-only"
+authors = [{ name = "mkb79", email = "mkb79@hackitall.de" }]
+requires-python = ">=3.10,<3.13"
 readme = "README.md"
-homepage = "https://github.com/mkb79/Audible"
-repository = "https://github.com/mkb79/Audible"
-documentation = "https://audible.readthedocs.io"
+license = "AGPL-3.0-only"
 keywords = [
     "Audible",
     "API",
-    "async"
+    "async",
 ]
 classifiers = [
     "Development Status :: 4 - Beta",
@@ -20,62 +17,97 @@ classifiers = [
     "License :: OSI Approved :: GNU Affero General Public License v3",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
-    "Programming Language :: Python :: 3.12"
+    "Programming Language :: Python :: 3.12",
 ]
-requires-python = ">=3.10,<3.13"
-dynamic = [ "dependencies", "version"]
 dependencies = [
     "Pillow (>=9.4.0)",
     "beautifulsoup4 (>=4.11.2)",
     "httpx (>=0.23.3)",
     "pbkdf2 (>=1.3)",
     "pyaes (>=1.6.1)",
-    "rsa (>=4.9)"
+    "rsa (>=4.9)",
 ]
+homepage = "https://github.com/mkb79/Audible"
+repository = "https://github.com/mkb79/Audible"
+documentation = "https://audible.readthedocs.io"
 
 [project.urls]
 Changelog = "https://github.com/mkb79/Audible/releases"
 
-[tool.poetry]
-requires-poetry = ">=2.0"
-version = "0.10.0"
-packages = [
-    { include = "audible", from = "src" },
+[dependency-groups]
+dev = [
+    "nox>=2025.5.1",
+    "nox-uv>=0.3.0",
 ]
 
-[tool.poetry.group.dev.dependencies]
-Pygments = ">=2.10.0"
-coverage = { extras = ["toml"], version = ">=6.2" }
-darglint = ">=1.8.1"
-mypy = ">=0.930"
-myst-parser = { version = ">=0.16.1" }
-pre-commit = ">=2.16.0"
-pre-commit-hooks = ">=4.1.0"
-pytest = ">=6.2.5"
-pytest-mock = ">=3.10.0"
-ruff = ">=0.3.7"
-safety = ">=1.10.3"
-sphinx = ">=4.3.2"
-sphinx-autobuild = ">=2021.3.14"
-sphinx-autodoc-typehints = ">=1.22"
-sphinx-rtd-theme = ">=1.2.0"
-sphinxcontrib-httpdomain = ">=1.8.1"
-typeguard = ">=2.13.3"
-xdoctest = { extras = ["colors"], version = ">=0.15.10" }
+docs = [
+    "myst-parser>=0.16.1",
+    "sphinx>=4.3.2",
+    "sphinx-autobuild>=2021.3.14",
+    "sphinx-autodoc-typehints>=1.22",
+    "sphinx-rtd-theme>=1.2.0",
+    "sphinxcontrib-httpdomain>=1.8.1",
+]
 
-[tool.poetry.requires-plugins]
-poetry-plugin-export = ">=1.8"
-poetry-bumpversion = ">=0.3.3"
+mypy = [
+    "mypy>=0.930",
+    "types-beautifulsoup4>=4.12.0.20250516",
+    "types-docutils>=0.21.0.20250516",
+    "types-html5lib>=1.1.11.20250516",
+    "types-pygments>=2.19.0.20250516",
+]
 
-[tool.poetry_bumpversion.file."src/audible/__init__.py"]
+pre-commit = [
+    "darglint>=1.8.1",
+    "nox>=2025.5.1",
+    "pre-commit>=2.16.0",
+    "pre-commit-hooks>=4.1.0",
+    "ruff>=0.3.7",
+]
+
+safety = [
+    "safety>=1.10.3",
+]
+
+tests = [
+    "coverage[toml]>=6.2",
+    "pytest>=6.2.5",
+    "pytest-mock>=3.10.0",
+]
+
+typeguard = [
+    {include-group = "tests"},
+    "Pygments>=2.10.0",
+    "typeguard>=2.13.3",
+]
+
+xdocs = [
+    "xdoctest[colors]>=0.15.10",
+]
+
+[tool.hatch.build.targets.sdist]
+include = ["src/audible"]
+
+[tool.hatch.build.targets.wheel]
+include = ["src/audible"]
+
+[tool.hatch.build.targets.wheel.sources]
+"src/audible" = "audible"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.uv]
+required-version = ">=0.7.6"
 
 [tool.coverage.paths]
-source = ["src", "*/site-packages"]
+source = ["src/audible", "*/site-packages"]
 tests = ["tests", "*/tests"]
 
 [tool.coverage.run]
 branch = true
-source = ["audible", "tests"]
+source = ["src/audible", "tests"]
 
 [tool.coverage.report]
 show_missing = true
@@ -145,6 +177,5 @@ lines-after-imports = 2
 [tool.ruff.lint.per-file-ignores]
 "tests/*" = ["S101"]
 
-[build-system]
-requires = ["poetry-core>=2.0"]
-build-backend = "poetry.core.masonry.api"
+[tool.pytest.ini_options]
+testpaths = ["tests", "src/audible"]

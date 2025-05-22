@@ -31,11 +31,11 @@ copyright = "2020, mkb79"  # noqa: A001
 author = "mkb79"
 
 # The full version, including alpha/beta/rc tags
-info = pathlib.Path("../../src/audible/__init__.py").read_text("utf-8")
+info = pathlib.Path("../../pyproject.toml").read_text("utf-8")
 
-_version = re.search(f"{'__version__'} = ['\"]([^'\"]+)['\"]", info)
+_version = re.search(f"{'version'} = ['\"]([^'\"]+)['\"]", info)
 if _version is None:
-    raise Exception("Could not find version in __init__.py")
+    raise Exception("Could not find version in pyproject.toml")
 version = _version.group(1)
 
 
