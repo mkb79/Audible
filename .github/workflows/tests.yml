@@ -6,7 +6,7 @@ on:
 
 env:
   PYTHON_VERSION: "3.12"
- 
+
 jobs:
   tests:
     name: ${{ matrix.session }} ${{ matrix.python }} / ${{ matrix.os }}
@@ -45,7 +45,7 @@ jobs:
 
       - name: Install uv
         uses: astral-sh/setup-uv@v6
- 
+
       - name: Create uv environment
         run: uv venv
 
@@ -111,7 +111,7 @@ jobs:
 
       - name: Install uv
         uses: astral-sh/setup-uv@v6
- 
+
       - name: Install dependencies
         run: |
           uv sync --group dev
