@@ -46,12 +46,6 @@ jobs:
       - name: Install uv
         uses: astral-sh/setup-uv@v6
 
-      - name: Create uv environment
-        run: uv venv
-
-      - name: Install dependencies
-        run: uv pip install .
-
       - name: Compute pre-commit cache key
         if: matrix.session == 'pre-commit'
         id: pre-commit-cache
@@ -111,12 +105,6 @@ jobs:
 
       - name: Install uv
         uses: astral-sh/setup-uv@v6
-
-      - name: Create uv environment
-        run: uv venv
-
-      - name: Install dependencies
-        run: uv pip install .
 
       - name: Download coverage data
         uses: actions/download-artifact@v4
