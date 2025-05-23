@@ -7,7 +7,7 @@ on:
       - master
 
 env:
-  PYTHON_VERSION: "3.12"
+  PYTHON_VERSION: "3.13"
 
 jobs:
   release:

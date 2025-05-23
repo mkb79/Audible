@@ -3,7 +3,7 @@ name = "audible"
 version = "0.10.0"
 description = "A(Sync) Interface for internal Audible API written in pure Python."
 authors = [{ name = "mkb79", email = "mkb79@hackitall.de" }]
-requires-python = ">=3.10,<3.13"
+requires-python = ">=3.10,<3.14"
 readme = "README.md"
 license = "AGPL-3.0-only"
 keywords = [
@@ -18,6 +18,7 @@ classifiers = [
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
 ]
 dependencies = [
     "Pillow (>=9.4.0)",
