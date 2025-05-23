@@ -5,7 +5,7 @@ on:
   - pull_request
 
 env:
-  PYTHON_VERSION: "3.12"
+  PYTHON_VERSION: "3.13"
 
 jobs:
   tests:
@@ -15,19 +15,21 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - { python: "3.12", os: "ubuntu-latest", session: "pre-commit" }
-          - { python: "3.12", os: "ubuntu-latest", session: "safety" }
+          - { python: "3.13", os: "ubuntu-latest", session: "pre-commit" }
+          - { python: "3.13", os: "ubuntu-latest", session: "safety" }
+          - { python: "3.13", os: "ubuntu-latest", session: "mypy" }
           - { python: "3.12", os: "ubuntu-latest", session: "mypy" }
           - { python: "3.11", os: "ubuntu-latest", session: "mypy" }
           - { python: "3.10", os: "ubuntu-latest", session: "mypy" }
+          - { python: "3.13", os: "ubuntu-latest", session: "tests" }
           - { python: "3.12", os: "ubuntu-latest", session: "tests" }
           - { python: "3.11", os: "ubuntu-latest", session: "tests" }
           - { python: "3.10", os: "ubuntu-latest", session: "tests" }
-          - { python: "3.12", os: "windows-latest", session: "tests" }
-          - { python: "3.12", os: "macos-latest", session: "tests" }
-          - { python: "3.12", os: "ubuntu-latest", session: "typeguard" }
-          - { python: "3.12", os: "ubuntu-latest", session: "xdoctest" }
-          - { python: "3.12", os: "ubuntu-latest", session: "docs-build" }
+          - { python: "3.13", os: "windows-latest", session: "tests" }
+          - { python: "3.13", os: "macos-latest", session: "tests" }
+          - { python: "3.13", os: "ubuntu-latest", session: "typeguard" }
+          - { python: "3.13", os: "ubuntu-latest", session: "xdoctest" }
+          - { python: "3.13", os: "ubuntu-latest", session: "docs-build" }
 
     env:
       NOXSESSION: ${{ matrix.session }}
