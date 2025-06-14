@@ -646,7 +646,7 @@ class Authenticator(httpx.Auth):
                 raise ValueError("No password provided")
 
             crypter.to_file(
-                json_data, filename=target_file, encryption=encryption, indent=indent
+                json_data, filename=target_file, encryption=encryption, indent=indent  # type: ignore
             )
 
         logger.info("saved data to file %s", target_file)
