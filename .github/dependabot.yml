@@ -6,10 +6,9 @@ updates:
       interval: weekly
     open-pull-requests-limit: 15
     groups:
-      groups:
-        github-actions-updates:
-          patterns:
-            - "*"
+      github-actions-updates:
+        patterns:
+          - "*"
   - package-ecosystem: pip
     directory: "/.github/workflows"
     schedule:
