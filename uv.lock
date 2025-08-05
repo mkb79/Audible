@@ -1,5 +1,5 @@
 version = 1
-revision = 2
+revision = 3
 requires-python = ">=3.10, <3.14"
 resolution-markers = [
     "python_full_version >= '3.13'",
@@ -1907,11 +1907,11 @@ wheels = [
 
 [[package]]
 name = "types-html5lib"
-version = "1.1.11.20250516"
+version = "1.1.11.20250708"
 source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/d0/ed/9f092ff479e2b5598941855f314a22953bb04b5fb38bcba3f880feb833ba/types_html5lib-1.1.11.20250516.tar.gz", hash = "sha256:65043a6718c97f7d52567cc0cdf41efbfc33b1f92c6c0c5e19f60a7ec69ae720", size = 16136, upload-time = "2025-05-16T03:07:12.231Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/d4/3b/1f5ba4358cfc1421cced5cdb9d2b08b4b99e4f9a41da88ce079f6d1a7bf1/types_html5lib-1.1.11.20250708.tar.gz", hash = "sha256:24321720fdbac71cee50d5a4bec9b7448495b7217974cffe3fcf1ede4eef7afe", size = 16799, upload-time = "2025-07-08T03:13:53.14Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/cc/3b/cb5b23c7b51bf48b8c9f175abb9dce2f1ecd2d2c25f92ea9f4e3720e9398/types_html5lib-1.1.11.20250516-py3-none-any.whl", hash = "sha256:5e407b14b1bd2b9b1107cbd1e2e19d4a0c46d60febd231c7ab7313d7405663c1", size = 21770, upload-time = "2025-05-16T03:07:11.102Z" },
+    { url = "https://files.pythonhosted.org/packages/a8/50/5fc23cf647eee23acdd337c8150861d39980cf11f33dd87f78e87d2a4bad/types_html5lib-1.1.11.20250708-py3-none-any.whl", hash = "sha256:bb898066b155de7081cb182179e2ded31b9e0e234605e2cb46536894e68a6954", size = 22913, upload-time = "2025-07-08T03:13:52.098Z" },
 ]
 
 [[package]]
