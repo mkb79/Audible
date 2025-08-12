@@ -13,7 +13,7 @@ jobs:
   lock:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           token: ${{ secrets.GH_PAT }}
 
@@ -24,7 +24,7 @@ jobs:
       - name: "Run uv lock command"
         run: uv lock
 
-      - uses: stefanzweifel/git-auto-commit-action@v5
+      - uses: stefanzweifel/git-auto-commit-action@v6
         id: auto-commit-action
         with:
           commit_message: Regenerate uv.lock
