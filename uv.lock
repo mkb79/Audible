@@ -1,5 +1,5 @@
 version = 1
-revision = 2
+revision = 3
 requires-python = ">=3.10, <3.14"
 resolution-markers = [
     "python_full_version >= '3.13'",
@@ -1901,11 +1901,11 @@ wheels = [
 
 [[package]]
 name = "types-docutils"
-version = "0.21.0.20250604"
+version = "0.22.0.20250914"
 source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/ef/d0/d28035370d669f14d4e23bd63d093207331f361afa24d2686d2c3fe6be8d/types_docutils-0.21.0.20250604.tar.gz", hash = "sha256:5a9cc7f5a4c5ef694aa0abc61111e0b1376a53dee90d65757f77f31acfcca8f2", size = 40953, upload-time = "2025-06-04T03:10:27.439Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/4d/72/48cad115dff86755d83bbb37eb70df2d26a1fb2d8b5e1725d6524e0f08a4/types_docutils-0.22.0.20250914.tar.gz", hash = "sha256:0c7f61c90ed2900fa5c8e6cd375222981be1e28240b8c8a67ca4a186e367618d", size = 56496, upload-time = "2025-09-14T02:56:04.766Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/89/91/887e9591c1ee50dfbf7c2fa2f3f51bc6db683013b6d2b0cd3983adf3d502/types_docutils-0.21.0.20250604-py3-none-any.whl", hash = "sha256:bfa8628176c06a80cdd1d6f3fb32e972e042db53538596488dfe0e9c5962b222", size = 65915, upload-time = "2025-06-04T03:10:26.067Z" },
+    { url = "https://files.pythonhosted.org/packages/ec/7b/ddf2a291e5145d8abe3bf8e264b232b8bd9c6865121257dfd43079ce9b6d/types_docutils-0.22.0.20250914-py3-none-any.whl", hash = "sha256:f1eec1a6024feef6560688fd9525ff888b95866cecb685e0a68bd095e817b00a", size = 91784, upload-time = "2025-09-14T02:56:03.449Z" },
 ]
 
 [[package]]
