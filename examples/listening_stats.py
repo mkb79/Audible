@@ -94,7 +94,7 @@ def convert_miliseconds_to_hours_minutes_seconds(milliseconds):
 
 
 def export_to_csv(file_name):
-    import pandas as pd
+    import pandas as pd  # noqa: PLC0415
 
     df = pd.read_json(file_name)  # e.g. stats.json
     df = df.transpose()
@@ -105,7 +105,7 @@ def export_to_csv(file_name):
 
 def analyse_stats(file_name="stats.json"):
     """file_name: json dump of return value of get_reading_time_since_signup."""
-    import statsmodels
+    import statsmodels  # noqa: PLC0415
 
     df = pd.read_json(file_name)  # e.g. stats.json
     df = df.transpose()

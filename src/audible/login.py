@@ -64,7 +64,7 @@ def playwright_external_login_url_callback(url: str) -> str:
     Install playwright with `pip install playwright` into the same environment
     Run command: `playwright install chromium`
     """
-    from playwright.sync_api import (  # type: ignore[import-not-found]  # noqa: I001
+    from playwright.sync_api import (  # type: ignore[import-not-found]  # noqa: I001, PLC0415
         sync_playwright,
         Error,
         TimeoutError as PlaywrightTimeoutError,
