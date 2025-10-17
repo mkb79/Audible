@@ -6,6 +6,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## Unreleased
 
+### Bugfix
+
+- Make register() resilient to missing fields in the registration response:
+  - Use tokens.get("store_authentication_cookie") instead of direct indexing to avoid KeyError when the server does not return this cookie.
+  - Only populate website_cookies when the API includes them; previously code assumed presence and could raise errors.
+
 ## [0.10.0] - 2024-09-26
 
 ### Bugfix
