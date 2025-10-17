@@ -76,7 +76,7 @@ def register(
     tokens = success_response["tokens"]
     adp_token = tokens["mac_dms"]["adp_token"]
     device_private_key = tokens["mac_dms"]["device_private_key"]
-    store_authentication_cookie = tokens["store_authentication_cookie"]
+    store_authentication_cookie = tokens.get("store_authentication_cookie")
     access_token = tokens["bearer"]["access_token"]
     refresh_token = tokens["bearer"]["refresh_token"]
     expires_s = int(tokens["bearer"]["expires_in"])
@@ -86,9 +86,11 @@ def register(
     device_info = extensions["device_info"]
     customer_info = extensions["customer_info"]
 
-    website_cookies = {}
-    for cookie in tokens["website_cookies"]:
-        website_cookies[cookie["Name"]] = cookie["Value"].replace(r'"', r"")
+    website_cookies = None
+    if "website_cookies" in tokens:
+        website_cookies = {}
+        for cookie in tokens["website_cookies"]:
+            website_cookies[cookie["Name"]] = cookie["Value"].replace(r'"', r"")
 
     return {
         "adp_token": adp_token,
