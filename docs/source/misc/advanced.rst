@@ -5,7 +5,7 @@ Advanced Usage
 Client classes
 ==============
 
-Here are some information about the ``Client`` and  the ``AsyncClient`` classes.
+Here is some information about the ``Client`` and the ``AsyncClient`` classes.
 
 Instantiate a client
 --------------------
@@ -14,10 +14,10 @@ A client needs at least an :class:`audible.Authenticator` at instantiation. The
 following args and kwargs can be passed to the client instantiation:
 
 * country_code (overrides the country code set in :class:`audible.Authenticator`)
-* headers (will be bypassed to the underlying httpx client)
-* timeout (will be bypassed to the underlying httpx client)
+* headers (will be passed to the underlying httpx client)
+* timeout (will be passed to the underlying httpx client)
 * response_callback (custom response preparation - read more below)
-* all other kwargs (will be bypassed to the underlying httpx client)
+* all other kwargs (will be passed to the underlying httpx client)
 
 Make API requests
 -----------------
@@ -31,7 +31,7 @@ to the external API:
 - put
 
 The external Audible API offers currently two API versions, `0.0` and
-`1.0`. The Client use the `1.0` by default. So both terms are equal::
+`1.0`. The Client uses `1.0` by default. So both terms are equal::
 
    resp = client.get("library")
    resp = client.get("1.0/library")
@@ -43,12 +43,12 @@ merge them as a dict to the `params` keyword. So both terms are equal::
    resp = client.get(
        "library",
        params={
-           "response_groups"="...",
-           "num_results"=20
+           "response_groups": "...",
+           "num_results": 20
        }
    )
 
-The external Audible API awaits a request body in JSON format. You have to
+The external Audible API expects a request body in JSON format. You have to
 provide the body as a dict to the Client. The Client converts and sends them
 in JSON style to the API. You can send them like so::
 
@@ -57,8 +57,8 @@ in JSON style to the API. You can send them like so::
        body={"asin": ASIN_OF_BOOK_TO_ADD}
    )
 
-The Audible API responses are in JSON format. The client converts them to a
-and output them as a Python dict.
+The Audible API responses are in JSON format. The client converts them to
+and outputs them as a Python dict.
 
 .. note::
 
@@ -83,7 +83,7 @@ If you want to implement your own response preparation, you can do::
 
    client = audible.Client(auth=..., response_callback=own_response_callback)
 
-This will return the unprepared response (include headers).
+This will return the unprepared response (includes headers).
 
 Show/Change Marketplace
 -----------------------
@@ -99,7 +99,7 @@ The marketplace can be changed with::
 Username/Userprofile
 --------------------
 
-To get the profile for the user, which authentication data are used you
+To get the profile for the user whose authentication data is used you
 can do this::
 
    user_profile = client.get_user_profile()
@@ -153,13 +153,13 @@ Audible package.
 
 .. versionadded:: v0.5.0
 
-   The :class:`Authenticator` with the  classmethods ``from_file`` and
+   The :class:`Authenticator` with the classmethods ``from_file`` and
    ``from_login``
 
 The :meth:`Authenticator.from_login` classmethod is used to authorize
-an user and then authenticate requests with the received data. The
+a user and then authenticate requests with the received data. The
 :meth:`Authenticator.from_file` classmethod is used to load
-previous saved authentication data.
+previously saved authentication data.
 
 With an Authenticator you can:
 
@@ -169,7 +169,7 @@ With an Authenticator you can:
   ``auth.refresh_access_token()``.
 - Get user profile with ``auth.user_profile()``. Needs a valid access token.
 
-To check if a access token is expired you can call::
+To check if an access token is expired you can call::
 
    auth.access_token_expired
 
@@ -188,13 +188,13 @@ Activation Bytes
 
    the ``extract`` param
 
-To retrieve activation bytes an authentication :class:`Authenticator` is needed.
+To retrieve activation bytes an :class:`Authenticator` is needed.
 
-The Activation bytes can be obtained like so::
+The activation bytes can be obtained like so::
 
    activation_bytes = auth.get_activation_bytes()
 
-   # the whole activation blob can fetched with
+   # the whole activation blob can be fetched with
    auth.get_activation_bytes(extract=False)
 
 The activation blob can be saved to file too::
@@ -204,17 +204,17 @@ The activation blob can be saved to file too::
 .. attention::
 
    Please only use this for gaining full access to your own audiobooks for
-   archiving / converson / convenience. DeDRMed audiobooks should not be uploaded
+   archiving / conversion / convenience. DeDRMed audiobooks should not be uploaded
    to open servers, torrents, or other methods of mass distribution. No help
    will be given to people doing such things. Authors, retailers, and
    publishers all need to make a living, so that they can continue to produce
-   audiobooks for us to hear, and enjoy. Don't be a parasite.
+   audiobooks for us to hear and enjoy. Don't be a parasite.
 
 PDF Url
 =======
 
-PDF urls received by the Audible API don't work anymore. Authentication data
-are missing in the provided link. As a workaround you can do::
+PDF URLs received by the Audible API don't work anymore. Authentication data
+is missing in the provided link. As a workaround you can do::
 
    import audible
    import httpx
@@ -233,7 +233,7 @@ Decrypting license
 ==================
 
 Responses from the :http:post:`/1.0/content/(string:asin)/licenserequest`
-endpoint contains the encrypted license (voucher).
+endpoint contain the encrypted license (voucher).
 
 To decrypt the license response you can do::
 
@@ -246,8 +246,8 @@ To decrypt the license response you can do::
 .. attention::
 
    Please only use this for gaining full access to your own audiobooks for
-   archiving / converson / convenience. DeDRMed audiobooks should not be uploaded
+   archiving / conversion / convenience. DeDRMed audiobooks should not be uploaded
    to open servers, torrents, or other methods of mass distribution. No help
    will be given to people doing such things. Authors, retailers, and
    publishers all need to make a living, so that they can continue to produce
-   audiobooks for us to hear, and enjoy. Don't be a parasite.
+   audiobooks for us to hear and enjoy. Don't be a parasite.

@@ -5,14 +5,14 @@ Marketplaces
 General Information
 ===================
 
-Audible offers his service on 11 different marketplaces. You can read more about
+Audible offers its service on 11 different marketplaces. You can read more about
 marketplaces
 `here <https://help.audible.com/s/article/what-is-an-audible-marketplace-and-which-is-best-for-me?language=en_US>`_.
 
 .. note::
 
-   Except website cookies, authentication data from device registration are valid
-   for all marketplaces, no matter which marketplace are used.
+   Except for website cookies, authentication data from device registration is valid
+   for all marketplaces, no matter which marketplace is used.
 
 .. note::
 
@@ -23,13 +23,13 @@ marketplaces
 Country Codes
 =============
 
-This app supports all marketplaces provided by Audible. For every marketplace a
-country code is associated.
+This library supports all marketplaces provided by Audible. A
+country code is associated with every marketplace.
 
 .. note::
 
-   The country code of the selected marketplace is stored to file, when you
-   save your authentication data. So, after loading this data from file, the
+   The country code of the selected marketplace is stored to the file when you
+   save your authentication data. So, after loading this data from the file, the
    stored country code is used by default.
 
 .. list-table:: Marketplaces with country codes
@@ -76,12 +76,12 @@ country code is associated.
 The locale argument
 ===================
 
-The locale argument have the same meaning as the country code argument. Because
-of backward compatibility I didn't renamed the locale argument yet. So if you
-are asked for a `locale` than provide a country code from above.
+The locale argument has the same meaning as the country code argument. Because
+of backward compatibility I haven't renamed the locale argument yet. So if you
+are asked for a `locale`, then provide a country code from above.
 
 .. note::
 
-   The country code for the Brazilian marketplace needs Audible > 0.8.2.
-   How to use these marketplace with a previous version read
+   The country code for the Brazilian marketplace requires Audible > 0.8.2.
+   To use this marketplace with a previous version, read
    `this comment <https://github.com/mkb79/Audible/issues/194#issuecomment-1728896926>`_.

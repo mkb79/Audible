@@ -2,8 +2,8 @@
 Examples
 ========
 
-Here are some examples and ideas how to use this app. Everyone who will
-provide some examples are welcome.
+Here are some examples and ideas on how to use this library. Everyone who wants to
+provide examples is welcome.
 
 Print number of books for every marketplace::
 
@@ -20,7 +20,7 @@ Print number of books for every marketplace::
        print(f"Country: {client.marketplace.upper()} | Number of books: {len(asins)}")
        print(34* "-")
 
-Get listening statistics aggragated month-over-month from 2021-03 to 2021-06::
+Get listening statistics aggregated month-over-month from 2021-03 to 2021-06::
 
    import audible
 
@@ -29,6 +29,6 @@ Get listening statistics aggragated month-over-month from 2021-03 to 2021-06::
    with audible.Client(auth=auth) as client:
         stats = client.get(
             "1.0/stats/aggregates",
-            monthly_listening_interval_duration="3", #number of months to aggragate for
-            monthly_listening_interval_start_date="2021-03", #start month for aggragation
+            monthly_listening_interval_duration="3", #number of months to aggregate for
+            monthly_listening_interval_start_date="2021-03", #start month for aggregation
             store="Audible")

@@ -32,7 +32,7 @@ as in `/1.0/catalog/products/B002V02KPU`.
 Each bullet below refers to a parameter for the request with the specified
 method and URL.
 
-Responses will often provide very little info without `response_groups`
+Responses will often provide very little information without `response_groups`
 specified. Multiple response groups can be specified, for example:
 `/1.0/catalog/products/B002V02KPU?response_groups=product_plan_details,media,review_attrs`.
 When providing an invalid response group, the server will return an error
@@ -67,7 +67,7 @@ Library
    :query string purchased_after: [RFC3339](https://tools.ietf.org/html/rfc3339)
                                   (e.g. `2000-01-01T00:00:00Z`)
    :query string title: a title
-   :query string author: a author
+   :query string author: an author
    :query string response_groups: [contributors, customer_rights, media, price,
                                    product_attrs, product_desc, product_details,
                                    product_extended_attrs, product_plan_details,
@@ -444,7 +444,7 @@ Content
            "spatial": false
        }
 
-   For a succesful request, returns JSON body with `content_url`.
+   For a successful request, returns JSON body with `content_url`.
 
 .. http:get:: /1.0/content/(string:asin)/metadata
 

@@ -14,7 +14,7 @@ Once a client has successfully authorized to Amazon, they receive an
 Authorization
 =============
 
-For an example on authorization, please take a look at :ref:`hello_library`.
+For an example on authorization, please take a look at :doc:`../intro/quickstart`.
 
 CAPTCHA
 -------
@@ -24,7 +24,7 @@ CAPTCHA
    Init cookies added to login function to prevent CAPTCHAs in most cases.
 
 Authorization requires answering a CAPTCHA in some cases. By default Pillow is used
-to show captcha and a user prompt will be provided to enter your answer, which
+to show the CAPTCHA and a user prompt will be provided to enter your answer, which
 looks like::
 
    Answer for CAPTCHA:
@@ -49,7 +49,7 @@ external service), like so::
 --------------
 
 If two-factor authentication (2FA) is activated, a user prompt will be provided
-using `input` to enter your one time password (OTP), which looks like::
+using `input` to enter your one-time password (OTP), which looks like::
 
    "OTP Code: "
 
@@ -85,7 +85,7 @@ CVF Code
 
 If 2FA is deactivated and Amazon detects some security risks (too many logins
 in short times, etc.) you will be asked for a verify code (CVF). In that case,
-amazon sends you an email or SMS with a code, which you enter here::
+Amazon sends you an email or SMS with a code, which you enter here::
 
    "CVF Code: "
 
@@ -105,8 +105,8 @@ A custom callback can be provided, like so::
 Approval Alert
 --------------
 
-Some users report that trying to authorize with audible gives them an approval alert and an email from amazon.
-Since audible v0.5 you will get a user prompt which looks like::
+Some users report that trying to authorize with Audible gives them an approval alert and an email from Amazon.
+Since Audible v0.5 you will get a user prompt which looks like::
 
    "Approval alert detected! Amazon sends you a mail."
    "Please press enter when you approve the notification."
@@ -121,7 +121,7 @@ A custom callback can be provided, like so::
 
    def custom_approval_callback():
 
-       # You can let python check for the received Amazon mail and
+       # You can let Python check for the received Amazon mail and
        # open the approval link. The login function waits until
        # the callback function is executed. The returned value will be
        # ignored by the login function.
@@ -139,21 +139,21 @@ Authorization with external browser or program logic
 
    Login with external browser or program logic
 
-To handle the login with a external browser or program logic you can do the following::
+To handle the login with an external browser or program logic you can do the following::
 
    import audible
 
    auth = audible.Authenticator.from_login_external(locale=COUNTRY_CODE)
 
-By default, this code prints out the login url for the selected country code.
-Paste this url into a web browser or use it programatically to authorize yourself.
+By default, this code prints out the login URL for the selected country code.
+Paste this URL into a web browser or use it programmatically to authorize yourself.
 You have to enter your credentials two times (because of missing init cookies).
 First time, the password can be a random one.
-Second time, you have to solve a captcha before you can submit the login form and
+Second time, you have to solve a CAPTCHA before you can submit the login form and
 you must use your correct password.
-After loggin in, you will end in an error page (not found). This is correct.
-Copy the url from the address bar from your browser and paste the url into the input
-field of the python code. It will look something like
+After you log in, you will end in an error page (not found). This is correct.
+Copy the URL from the address bar from your browser and paste the URL into the input
+field of the Python code. It will look something like
 "https://www.amazon.{domain}/ap/maplanding?...&openid.oa2.authorization_code=..."
 
 .. note::
@@ -163,14 +163,14 @@ field of the python code. It will look something like
 
 .. note::
 
-   If you are using MacOS and have trouble insert the login result url, simply import the
+   If you are using MacOS and have trouble inserting the login result URL, simply import the
    readline module in your script. See
    `#34 <https://github.com/mkb79/Audible/issues/34#issuecomment-766408640>`_.
 
 Custom callback
 ---------------
 
-A custom callback can be provided (for example open the url in a webbrowser directly), like so::
+A custom callback can be provided (for example open the URL in a web browser directly), like so::
 
    def custom_login_url_callback(login_url):
 
