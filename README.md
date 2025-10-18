@@ -1,13 +1,14 @@
 # Audible
 
-[![image](https://img.shields.io/pypi/v/audible.svg)](https://pypi.org/project/audible/)
-[![image](https://img.shields.io/pypi/l/audible.svg)](https://pypi.org/project/audible/)
-[![image](https://img.shields.io/pypi/pyversions/audible.svg)](https://pypi.org/project/audible/)
-[![image](https://img.shields.io/pypi/status/audible.svg)](https://pypi.org/project/audible/)
-[![image](https://img.shields.io/pypi/wheel/audible.svg)](https://pypi.org/project/audible/)
-[![Travis](https://img.shields.io/travis/mkb79/audible/master.svg?logo=travis)](https://travis-ci.org/mkb79/audible)
+[![PyPI Version](https://img.shields.io/pypi/v/audible.svg)](https://pypi.org/project/audible/)
+[![License](https://img.shields.io/pypi/l/audible.svg)](https://pypi.org/project/audible/)
+[![Python Versions](https://img.shields.io/pypi/pyversions/audible.svg)](https://pypi.org/project/audible/)
+[![Status](https://img.shields.io/pypi/status/audible.svg)](https://pypi.org/project/audible/)
+[![Wheel](https://img.shields.io/pypi/wheel/audible.svg)](https://pypi.org/project/audible/)
+[![Tests](https://github.com/mkb79/audible/workflows/Tests/badge.svg)](https://github.com/mkb79/audible/actions?workflow=Tests)
+[![Codecov](https://codecov.io/gh/mkb79/audible/branch/master/graph/badge.svg)](https://codecov.io/gh/mkb79/audible)
 [![CodeFactor](https://www.codefactor.io/repository/github/mkb79/audible/badge)](https://www.codefactor.io/repository/github/mkb79/audible)
-[![image](https://img.shields.io/pypi/dm/audible.svg)](https://pypi.org/project/audible/)
+[![Downloads](https://img.shields.io/pypi/dm/audible.svg)](https://pypi.org/project/audible/)
 
 **Audible is a Python low-level interface to communicate with the non-publicly
 [Audible](<https://en.wikipedia.org/wiki/Audible_(service)>) API.**
