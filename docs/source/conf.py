@@ -89,7 +89,7 @@ html_theme = "sphinx_rtd_theme"
 html_static_path = ["_static"]
 
 # =============================================================================
-# Type Hints Configuration - Fix für httpx Headers Warnung
+# Type Hints Configuration - Fix for httpx Headers warning
 # =============================================================================
 
 # Type Aliases für externe Packages
