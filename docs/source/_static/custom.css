@@ -1,0 +1,1010 @@
+/* =============================================================================
+   Audible Documentation - Custom Stylesheet
+
+   Purpose: Enhance Read the Docs Sphinx theme with modern styling
+   Compatibility: Sphinx >= 5.0, Read the Docs theme >= 1.0
+   Accessibility: WCAG 2.1 AA compliant
+   ============================================================================= */
+
+/* -----------------------------------------------------------------------------
+   Copy Button Styling
+   ----------------------------------------------------------------------------- */
+
+/* Base button styling - rectangular with "Copy" text */
+button.copybtn {
+    position: absolute;
+    right: 8px;
+    top: 8px;
+    z-index: 10;
+
+    /* Very compact, subtle button - neutral gray */
+    background-color: #6c757d !important;
+    border: 1px solid #5a6268 !important;
+    border-radius: 2px;
+    padding: 3px 8px;
+    min-width: 42px;
+    height: 22px;
+    font-size: 10px;
+    cursor: pointer;
+    font-weight: 500;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+
+    /* Center text vertically and horizontally */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+
+    /* Smooth transitions */
+    transition: all 0.2s ease-in-out;
+
+    /* Text styling */
+    color: white !important;
+    text-transform: uppercase;
+    letter-spacing: 0.2px;
+    opacity: 0.65;
+    line-height: 1;
+}
+
+/* Ensure "Copy" text is visible and centered */
+button.copybtn::before {
+    content: "Copy";
+    display: inline-block;
+}
+
+/* Hide any other content */
+button.copybtn::after {
+    content: none;
+    display: none;
+}
+
+/* Hover state */
+button.copybtn:hover {
+    background-color: #5a6268 !important;
+    border-color: #4e555b !important;
+    opacity: 1;
+    transform: translateY(-1px);
+    box-shadow: 0 3px 6px rgba(0, 0, 0, 0.2);
+}
+
+/* Active/Click state */
+button.copybtn:active {
+    background-color: #4e555b !important;
+    transform: translateY(0);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+
+/* Success state - GREEN after copying */
+button.copybtn.success {
+    background-color: #27ae60 !important;  /* Bright green */
+    border-color: #229954 !important;
+    opacity: 1;
+}
+
+/* Change text to "Copied" when successful */
+button.copybtn.success::before {
+    content: "Copied ✓";
+}
+
+/* Hover state for success button */
+button.copybtn.success:hover {
+    background-color: #229954 !important;
+    transform: translateY(-1px);
+    box-shadow: 0 3px 6px rgba(39, 174, 96, 0.4);
+}
+
+/* Focus state for keyboard navigation (Accessibility) */
+button.copybtn:focus {
+    outline: 3px solid #3498db;
+    outline-offset: 2px;
+}
+
+/* Ensure button is visible on code blocks */
+.rst-content div.highlight {
+    position: relative;
+}
+
+/* Add padding to code blocks to prevent overlap with button */
+.rst-content div.highlight pre {
+    padding-right: 60px;
+}
+
+/* Dark mode adjustments for copy button */
+[data-theme="dark"] button.copybtn,
+html[data-theme="system"] button.copybtn {
+    background-color: #4a5568 !important;
+    border-color: #2d3748 !important;
+}
+
+[data-theme="dark"] button.copybtn:hover,
+html[data-theme="system"] button.copybtn:hover {
+    background-color: #2d3748 !important;
+    border-color: #1a202c !important;
+}
+
+[data-theme="dark"] button.copybtn.success,
+html[data-theme="system"] button.copybtn.success {
+    background-color: #27ae60 !important;
+    border-color: #229954 !important;
+}
+
+/* -----------------------------------------------------------------------------
+   Typography
+   ----------------------------------------------------------------------------- */
+
+/* Body text improvements */
+.rst-content {
+    font-size: 16px;
+    line-height: 1.6;
+    color: #2c3e50;
+}
+
+/* Headings with better spacing */
+.rst-content h1,
+.rst-content h2,
+.rst-content h3,
+.rst-content h4,
+.rst-content h5,
+.rst-content h6 {
+    font-weight: 600;
+    margin-top: 1.5em;
+    margin-bottom: 0.5em;
+    color: #1a252f;
+}
+
+/* Paragraph spacing */
+.rst-content p {
+    margin-bottom: 1em;
+}
+
+/* Code font improvements */
+.rst-content code,
+.rst-content pre {
+    font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+}
+
+/* Inline code styling */
+.rst-content code.literal {
+    background-color: #f5f7f9;
+    color: #e74c3c;
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-size: 0.9em;
+    border: 1px solid #e1e4e8;
+}
+
+/* -----------------------------------------------------------------------------
+   Code Blocks
+   ----------------------------------------------------------------------------- */
+
+.rst-content div.highlight {
+    background-color: #f6f8fa;
+    border: 1px solid #d0d7de;
+    border-radius: 6px;
+    margin: 1em 0;
+    overflow: hidden;
+}
+
+.rst-content div.highlight pre {
+    background-color: #f6f8fa;
+    color: #24292f;
+    padding: 16px;
+    overflow-x: auto;
+    margin: 0;
+    line-height: 1.45;
+    font-size: 14px;
+}
+
+/* Scrollbar styling for code blocks */
+.rst-content div.highlight pre::-webkit-scrollbar {
+    height: 8px;
+}
+
+.rst-content div.highlight pre::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 4px;
+}
+
+.rst-content div.highlight pre::-webkit-scrollbar-thumb {
+    background: #888;
+    border-radius: 4px;
+}
+
+.rst-content div.highlight pre::-webkit-scrollbar-thumb:hover {
+    background: #555;
+}
+
+/* -----------------------------------------------------------------------------
+   Admonitions (Note, Warning, etc.)
+   ----------------------------------------------------------------------------- */
+
+.rst-content .admonition {
+    padding: 16px;
+    margin: 1.5em 0;
+    border-left: 4px solid #3498db;
+    border-radius: 4px;
+    background-color: #f8f9fa;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.rst-content .admonition-title {
+    font-weight: 600;
+    margin-bottom: 8px;
+    color: #1a252f;
+}
+
+/* Note admonition */
+.rst-content .note {
+    border-left-color: #3498db;
+    background-color: #e8f4f8;
+}
+
+.rst-content .note .admonition-title::before {
+    content: "ℹ️ ";
+}
+
+/* Warning admonition */
+.rst-content .warning {
+    border-left-color: #f39c12;
+    background-color: #fef5e7;
+}
+
+.rst-content .warning .admonition-title::before {
+    content: "⚠️ ";
+}
+
+/* Important/Caution admonition */
+.rst-content .important,
+.rst-content .caution {
+    border-left-color: #e67e22;
+    background-color: #fdeaea;
+}
+
+.rst-content .important .admonition-title::before,
+.rst-content .caution .admonition-title::before {
+    content: "❗ ";
+}
+
+/* Danger admonition */
+.rst-content .danger {
+    border-left-color: #e74c3c;
+    background-color: #fadbd8;
+}
+
+.rst-content .danger .admonition-title::before {
+    content: "🚨 ";
+}
+
+/* Tip admonition */
+.rst-content .tip,
+.rst-content .hint {
+    border-left-color: #27ae60;
+    background-color: #eafaf1;
+}
+
+.rst-content .tip .admonition-title::before,
+.rst-content .hint .admonition-title::before {
+    content: "💡 ";
+}
+
+/* -----------------------------------------------------------------------------
+   Links
+   ----------------------------------------------------------------------------- */
+
+.rst-content a {
+    color: #3498db;
+    text-decoration: none;
+    transition: color 0.2s ease-in-out;
+}
+
+.rst-content a:hover {
+    color: #2980b9;
+    text-decoration: underline;
+}
+
+.rst-content a:visited {
+    color: #8e44ad;
+}
+
+/* External links indicator */
+.rst-content a.reference.external::after {
+    content: " ↗";
+    font-size: 0.8em;
+    vertical-align: super;
+}
+
+/* -----------------------------------------------------------------------------
+   Tables
+   ----------------------------------------------------------------------------- */
+
+.rst-content table.docutils {
+    border-collapse: collapse;
+    width: 100%;
+    margin: 1.5em 0;
+    border: 1px solid #d0d7de;
+    border-radius: 6px;
+    overflow: hidden;
+}
+
+.rst-content table.docutils thead {
+    background-color: #f6f8fa;
+}
+
+.rst-content table.docutils th {
+    padding: 12px;
+    text-align: left;
+    font-weight: 600;
+    border-bottom: 2px solid #d0d7de;
+    color: #1a252f;
+}
+
+.rst-content table.docutils td {
+    padding: 12px;
+    border-bottom: 1px solid #e1e4e8;
+}
+
+.rst-content table.docutils tr:last-child td {
+    border-bottom: none;
+}
+
+.rst-content table.docutils tr:hover {
+    background-color: #f6f8fa;
+}
+
+/* -----------------------------------------------------------------------------
+   Lists
+   ----------------------------------------------------------------------------- */
+
+.rst-content ul,
+.rst-content ol {
+    margin: 1em 0;
+    padding-left: 2em;
+}
+
+.rst-content li {
+    margin: 0.5em 0;
+}
+
+/* Nested lists */
+.rst-content li > ul,
+.rst-content li > ol {
+    margin-top: 0.5em;
+    margin-bottom: 0.5em;
+}
+
+/* Definition lists */
+.rst-content dl {
+    margin: 1em 0;
+}
+
+.rst-content dt {
+    font-weight: 600;
+    margin-top: 1em;
+    color: #1a252f;
+}
+
+.rst-content dd {
+    margin-left: 2em;
+    margin-top: 0.5em;
+}
+
+/* -----------------------------------------------------------------------------
+   API Documentation Improvements
+   ----------------------------------------------------------------------------- */
+
+/* Class/Function signatures */
+.rst-content dl.class > dt,
+.rst-content dl.function > dt,
+.rst-content dl.method > dt {
+    background-color: #f6f8fa;
+    border-left: 3px solid #3498db;
+    padding: 12px;
+    margin-bottom: 12px;
+    font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+    font-size: 14px;
+    border-radius: 4px;
+}
+
+/* HTTP API endpoints */
+.rst-content dl.http > dt,
+.rst-content dl.get > dt,
+.rst-content dl.post > dt,
+.rst-content dl.put > dt,
+.rst-content dl.delete > dt {
+    background-color: #f6f8fa;
+    border-left: 3px solid #27ae60;
+    padding: 12px;
+    margin-bottom: 12px;
+    font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+    font-size: 14px;
+    border-radius: 4px;
+    word-wrap: break-word;
+    word-break: break-all;
+    white-space: normal;
+    overflow-wrap: break-word;
+}
+
+/* HTTP method labels (GET, POST, etc.) */
+.rst-content dl.http .sig-name,
+.rst-content dl.get .sig-name,
+.rst-content dl.post .sig-name,
+.rst-content dl.put .sig-name,
+.rst-content dl.delete .sig-name {
+    word-break: keep-all;
+    white-space: nowrap;
+}
+
+/* API endpoint URLs - allow breaking */
+.rst-content dl.http .sig-name + *,
+.rst-content dl.get .sig-name + *,
+.rst-content dl.post .sig-name + *,
+.rst-content dl.put .sig-name + *,
+.rst-content dl.delete .sig-name + * {
+    word-wrap: break-word;
+    word-break: break-all;
+    overflow-wrap: break-word;
+}
+
+/* Query parameter descriptions */
+.rst-content dl.field-list dd {
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    max-width: 100%;
+}
+
+/* Long parameter values */
+.rst-content dl.field-list dd code,
+.rst-content dl.field-list dd .literal {
+    word-wrap: break-word;
+    word-break: break-all;
+    white-space: pre-wrap;
+    overflow-wrap: break-word;
+}
+
+/* Parameter lists */
+.rst-content dl.field-list {
+    margin: 1em 0;
+}
+
+.rst-content dl.field-list dt {
+    font-weight: 600;
+    margin-top: 0;
+    background-color: #f6f8fa;
+    padding: 4px 8px;
+    border-radius: 3px;
+    display: inline-block;
+}
+
+/* Long text in API documentation */
+.rst-content dl.http dd,
+.rst-content dl.get dd,
+.rst-content dl.post dd,
+.rst-content dl.put dd,
+.rst-content dl.delete dd {
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    white-space: normal;
+}
+
+/* Long inline code/literals in lists */
+.rst-content code,
+.rst-content .literal,
+.rst-content tt {
+    word-wrap: break-word;
+    overflow-wrap: anywhere;
+    white-space: pre-wrap;
+}
+
+/* Ensure table cells can wrap */
+.rst-content table.docutils td code,
+.rst-content table.docutils td .literal {
+    word-break: break-word;
+    white-space: normal;
+}
+
+/* HTTP route table - allow wrapping */
+.rst-content table.routingtable td {
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    max-width: 500px;
+}
+
+.rst-content table.routingtable code {
+    word-break: break-all;
+    white-space: pre-wrap;
+}
+
+/* -----------------------------------------------------------------------------
+   Sidebar Navigation
+   ----------------------------------------------------------------------------- */
+
+.wy-nav-side {
+    background-color: #2c3e50;
+}
+
+.wy-side-nav-search {
+    background-color: #34495e;
+}
+
+.wy-side-nav-search input[type="text"] {
+    border-radius: 4px;
+    border: 1px solid #1a252f;
+}
+
+/* -----------------------------------------------------------------------------
+   Accessibility Improvements
+   ----------------------------------------------------------------------------- */
+
+/* Focus indicators for keyboard navigation */
+a:focus,
+button:focus,
+input:focus,
+select:focus,
+textarea:focus {
+    outline: 3px solid #3498db;
+    outline-offset: 2px;
+}
+
+/* Skip to content link */
+.skip-to-content {
+    position: absolute;
+    top: -40px;
+    left: 0;
+    background: #3498db;
+    color: white;
+    padding: 8px;
+    text-decoration: none;
+    z-index: 100;
+}
+
+.skip-to-content:focus {
+    top: 0;
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: more) {
+    .rst-content {
+        color: #000;
+    }
+
+    .rst-content a {
+        color: #0066cc;
+        text-decoration: underline;
+    }
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+    * {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+    }
+}
+
+/* -----------------------------------------------------------------------------
+   Theme Switcher
+   ----------------------------------------------------------------------------- */
+
+.theme-switcher {
+    margin: 20px 0;
+    padding: 10px;
+    background: rgba(0, 0, 0, 0.1);
+    border-radius: 6px;
+}
+
+.theme-switch-container {
+    display: flex;
+    gap: 8px;
+    justify-content: center;
+    flex-wrap: wrap;
+}
+
+.theme-switch-btn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 12px;
+    background: rgba(255, 255, 255, 0.9);
+    border: 2px solid rgba(52, 152, 219, 0.3);
+    border-radius: 6px;
+    color: #2c3e50;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 500;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+}
+
+.theme-switch-btn:hover {
+    background: rgba(255, 255, 255, 1);
+    border-color: #3498db;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+
+.theme-switch-btn.active {
+    background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);
+    border-color: #2980b9;
+    color: white;
+    box-shadow: 0 2px 8px rgba(52, 152, 219, 0.4);
+}
+
+.theme-switch-btn svg {
+    flex-shrink: 0;
+}
+
+/* Responsive: Hide text on mobile */
+@media screen and (max-width: 768px) {
+    .theme-switch-btn span {
+        display: none;
+    }
+
+    .theme-switch-btn {
+        padding: 8px;
+    }
+}
+
+/* -----------------------------------------------------------------------------
+   Dark Mode Support
+   ----------------------------------------------------------------------------- */
+
+/* CSS Variables for dark mode */
+[data-theme="dark"] {
+    --bg-color: #0d1117;
+    --text-color: #e1e4e8;
+    --code-bg: #161b22;
+    --code-color: #ff7b72;
+    --border-color: #30363d;
+    --link-color: #58a6ff;
+}
+
+/* System theme variables */
+@media (prefers-color-scheme: dark) {
+    html[data-theme="system"] {
+        --bg-color: #0d1117;
+        --text-color: #e1e4e8;
+        --code-bg: #161b22;
+        --code-color: #ff7b72;
+        --border-color: #30363d;
+        --link-color: #58a6ff;
+    }
+}
+
+/* Dark mode styles */
+[data-theme="dark"] .rst-content,
+html[data-theme="system"] .rst-content {
+    color: #e1e4e8;
+}
+
+[data-theme="dark"] body,
+[data-theme="dark"] .wy-nav-content,
+html[data-theme="system"] body,
+html[data-theme="system"] .wy-nav-content {
+    background-color: #0d1117;
+}
+
+[data-theme="dark"] .rst-content,
+html[data-theme="system"] .rst-content {
+    background-color: #0d1117;
+}
+
+[data-theme="dark"] .rst-content code.literal,
+html[data-theme="system"] .rst-content code.literal {
+    background-color: #161b22;
+    color: #ff7b72;
+    border-color: #30363d;
+}
+
+[data-theme="dark"] .rst-content div.highlight,
+html[data-theme="system"] .rst-content div.highlight {
+    background-color: #161b22;
+    border-color: #30363d;
+}
+
+[data-theme="dark"] .rst-content div.highlight pre,
+html[data-theme="system"] .rst-content div.highlight pre {
+    background-color: #161b22;
+    color: #e1e4e8;
+}
+
+[data-theme="dark"] .rst-content table.docutils,
+html[data-theme="system"] .rst-content table.docutils {
+    border-color: #30363d;
+}
+
+[data-theme="dark"] .rst-content table.docutils th,
+html[data-theme="system"] .rst-content table.docutils th {
+    background-color: #161b22;
+    border-color: #30363d;
+    color: #e1e4e8;
+}
+
+[data-theme="dark"] .rst-content table.docutils td,
+html[data-theme="system"] .rst-content table.docutils td {
+    border-color: #30363d;
+}
+
+[data-theme="dark"] .rst-content h1,
+[data-theme="dark"] .rst-content h2,
+[data-theme="dark"] .rst-content h3,
+[data-theme="dark"] .rst-content h4,
+[data-theme="dark"] .rst-content h5,
+[data-theme="dark"] .rst-content h6,
+html[data-theme="system"] .rst-content h1,
+html[data-theme="system"] .rst-content h2,
+html[data-theme="system"] .rst-content h3,
+html[data-theme="system"] .rst-content h4,
+html[data-theme="system"] .rst-content h5,
+html[data-theme="system"] .rst-content h6 {
+    color: #f0f6fc;
+}
+
+[data-theme="dark"] .rst-content a,
+html[data-theme="system"] .rst-content a {
+    color: #58a6ff;
+}
+
+[data-theme="dark"] .rst-content a:visited,
+html[data-theme="system"] .rst-content a:visited {
+    color: #bc8cff;
+}
+
+/* Sidebar dark mode */
+[data-theme="dark"] .wy-nav-side,
+html[data-theme="system"] .wy-nav-side {
+    background-color: #161b22;
+}
+
+[data-theme="dark"] .wy-side-nav-search,
+html[data-theme="system"] .wy-side-nav-search {
+    background-color: #0d1117;
+}
+
+[data-theme="dark"] .wy-menu-vertical a,
+html[data-theme="system"] .wy-menu-vertical a {
+    color: #e1e4e8;
+}
+
+[data-theme="dark"] .wy-menu-vertical a:hover,
+html[data-theme="system"] .wy-menu-vertical a:hover {
+    background-color: #1c2128;
+}
+
+/* Admonitions in dark mode */
+[data-theme="dark"] .rst-content .admonition,
+html[data-theme="system"] .rst-content .admonition {
+    background-color: #161b22;
+    border-left-color: #58a6ff;
+}
+
+[data-theme="dark"] .rst-content .note,
+html[data-theme="system"] .rst-content .note {
+    background-color: #1c2d3f;
+}
+
+[data-theme="dark"] .rst-content .warning,
+html[data-theme="system"] .rst-content .warning {
+    background-color: #3d2f1f;
+}
+
+/* Theme switcher in dark mode */
+[data-theme="dark"] .theme-switcher,
+html[data-theme="system"] .theme-switcher {
+    background: rgba(255, 255, 255, 0.05);
+}
+
+[data-theme="dark"] .theme-switch-btn,
+html[data-theme="system"] .theme-switch-btn {
+    background: rgba(255, 255, 255, 0.1);
+    color: #e1e4e8;
+    border-color: rgba(88, 166, 255, 0.3);
+}
+
+[data-theme="dark"] .theme-switch-btn:hover,
+html[data-theme="system"] .theme-switch-btn:hover {
+    background: rgba(255, 255, 255, 0.15);
+}
+
+[data-theme="dark"] .theme-switch-btn.active,
+html[data-theme="system"] .theme-switch-btn.active {
+    background: linear-gradient(135deg, #58a6ff 0%, #3a89e0 100%);
+    border-color: #58a6ff;
+    color: #ffffff;
+}
+
+/* -----------------------------------------------------------------------------
+   Responsive Design
+   ----------------------------------------------------------------------------- */
+
+@media screen and (max-width: 768px) {
+    .rst-content {
+        font-size: 15px;
+    }
+
+    .rst-content h1 {
+        font-size: 1.75em;
+    }
+
+    .rst-content h2 {
+        font-size: 1.5em;
+    }
+
+    .rst-content h3 {
+        font-size: 1.25em;
+    }
+
+    .rst-content pre {
+        font-size: 13px;
+        padding: 12px;
+        overflow-x: auto;
+    }
+
+    /* Smaller copy button on mobile */
+    button.copybtn {
+        padding: 3px 6px;
+        font-size: 11px;
+    }
+
+    /* Touch-friendly tap targets */
+    .rst-content a,
+    .rst-content button {
+        min-height: 44px;
+        min-width: 44px;
+        display: inline-block;
+        padding: 8px 12px;
+    }
+}
+
+/* -----------------------------------------------------------------------------
+   Skill Level Badges
+   ----------------------------------------------------------------------------- */
+
+/* Container for skill level and reading time */
+.skill-level-container {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+}
+
+/* Base badge styling */
+.skill-level-badge,
+.reading-time-badge {
+    display: inline-block;
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    transition: transform 0.2s ease-in-out;
+}
+
+.skill-level-badge:hover,
+.reading-time-badge:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+
+/* Beginner badge - Green */
+.skill-level-beginner {
+    background: linear-gradient(135deg, #27ae60 0%, #229954 100%);
+    color: white;
+    border: 2px solid #1e8449;
+}
+
+.skill-level-beginner::before {
+    content: "🌱 ";
+}
+
+/* Intermediate badge - Blue */
+.skill-level-intermediate {
+    background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);
+    color: white;
+    border: 2px solid #21618c;
+}
+
+.skill-level-intermediate::before {
+    content: "📚 ";
+}
+
+/* Advanced badge - Purple */
+.skill-level-advanced {
+    background: linear-gradient(135deg, #9b59b6 0%, #8e44ad 100%);
+    color: white;
+    border: 2px solid #7d3c98;
+}
+
+.skill-level-advanced::before {
+    content: "🚀 ";
+}
+
+/* Expert badge - Red/Orange */
+.skill-level-expert {
+    background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);
+    color: white;
+    border: 2px solid #a93226;
+}
+
+.skill-level-expert::before {
+    content: "⚡ ";
+}
+
+/* All Levels badge - Gray */
+.skill-level-all {
+    background: linear-gradient(135deg, #95a5a6 0%, #7f8c8d 100%);
+    color: white;
+    border: 2px solid #707b7c;
+}
+
+.skill-level-all::before {
+    content: "👥 ";
+}
+
+/* Reading time badge */
+.reading-time-badge {
+    background: linear-gradient(135deg, #f39c12 0%, #e67e22 100%);
+    color: white;
+    border: 2px solid #d68910;
+}
+
+.reading-time-badge::before {
+    content: "⏱️ ";
+}
+
+/* Responsive design for badges */
+@media screen and (max-width: 768px) {
+    .skill-level-container {
+        flex-direction: column;
+        gap: 8px;
+    }
+
+    .skill-level-badge,
+    .reading-time-badge {
+        font-size: 12px;
+        padding: 5px 10px;
+    }
+}
+
+/* Print styles for badges */
+@media print {
+    .skill-level-badge,
+    .reading-time-badge {
+        border: 1px solid #000;
+        background: white !important;
+        color: #000 !important;
+        box-shadow: none;
+    }
+}
+
+/* -----------------------------------------------------------------------------
+   Print Styles
+   ----------------------------------------------------------------------------- */
+
+@media print {
+    .rst-content {
+        max-width: 100%;
+    }
+
+    .rst-content pre {
+        border: 1px solid #000;
+        page-break-inside: avoid;
+    }
+
+    .rst-content a {
+        text-decoration: underline;
+        color: #000;
+    }
+
+    .rst-content a::after {
+        content: " (" attr(href) ")";
+        font-size: 0.8em;
+    }
+
+    /* Hide copy button in print */
+    button.copybtn {
+        display: none !important;
+    }
+}
