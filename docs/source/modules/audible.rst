@@ -2,6 +2,13 @@
 Modules Documentation
 =====================
 
+.. raw:: html
+
+   <div class="skill-level-container">
+       <span class="skill-level-badge skill-level-expert">Expert</span>
+       <span class="reading-time-badge">API Reference</span>
+   </div>
+
 audible package
 ===============
 

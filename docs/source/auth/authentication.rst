@@ -2,6 +2,13 @@
 Authentication
 ==============
 
+.. raw:: html
+
+   <div class="skill-level-container">
+       <span class="skill-level-badge skill-level-intermediate">Intermediate</span>
+       <span class="reading-time-badge">15 min read</span>
+   </div>
+
 This page covers the technical details of API authentication methods. For conceptual understanding, see :doc:`../intro/understanding`.
 
 .. tip::
@@ -15,7 +22,7 @@ Audible uses two methods to authenticate API requests. The library automatically
 .. code-block:: python
 
    # Authentication is automatic
-   auth = audible.Authenticator.from_file("auth.txt")
+   auth = audible.Authenticator.from_file("audible-auth.json")
    client = audible.Client(auth=auth)
    
    # The Authenticator handles everything
@@ -25,8 +32,8 @@ The library tries request signing first, then falls back to bearer tokens if sig
 Request Signing Method
 ======================
 
-Overview
---------
+Request Signing Overview
+------------------------
 
 Request signing provides unrestricted access to the Audible API. Each request is cryptographically signed using your device's RSA private key.
 
@@ -74,8 +81,8 @@ Example Headers
 Bearer Token Method
 ===================
 
-Overview
---------
+Bearer Token Overview
+---------------------
 
 Bearer tokens are simpler but more limited. The access token is included in the Authorization header.
 
@@ -158,7 +165,7 @@ Token Refresh Example
    import audible
    
    # Load saved credentials
-   auth = audible.Authenticator.from_file("auth.txt")
+   auth = audible.Authenticator.from_file("audible-auth.json")
    
    # Check token status
    if auth.access_token_expired:
@@ -183,7 +190,7 @@ Using Website Cookies
    import audible
    import httpx
    
-   auth = audible.Authenticator.from_file("auth.txt")
+   auth = audible.Authenticator.from_file("audible-auth.json")
    
    # Use cookies with httpx
    with httpx.Client(cookies=auth.website_cookies) as client:
@@ -281,7 +288,7 @@ If you see ``NoRefreshToken`` error:
        password="...",
        locale="us"
    )
-   auth.to_file("auth.txt")
+   auth.to_file("audible-auth.json")
 
 401/403 Unauthorized Errors
 ----------------------------
@@ -324,7 +331,7 @@ Best Practices
    .. code-block:: python
 
       # Use encryption
-      auth.to_file("auth.txt", password="strong-password", encryption="json")
+      auth.to_file("audible-auth.json", password="strong-password", encryption="json")
 
 2. **Reuse authentication data**
 
@@ -332,7 +339,7 @@ Best Practices
 
    .. code-block:: python
 
-      auth = audible.Authenticator.from_file("auth.txt")
+      auth = audible.Authenticator.from_file("audible-auth.json")
 
 3. **Handle token refresh gracefully**
 
@@ -359,5 +366,5 @@ See Also
 - :doc:`../intro/understanding` - Conceptual overview
 - :doc:`authorization` - Login and callbacks
 - :doc:`register` - Device registration
-- :doc:`../misc/load_save` - Save/load credentials
+- :doc:`../core/load_save` - Save/load credentials
 - :doc:`../intro/quickstart` - Working examples

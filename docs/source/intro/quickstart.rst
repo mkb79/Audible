@@ -2,6 +2,13 @@
 Quickstart
 ==========
 
+.. raw:: html
+
+   <div class="skill-level-container">
+       <span class="skill-level-badge skill-level-beginner">Beginner</span>
+       <span class="reading-time-badge">5 min read</span>
+   </div>
+
 Get up and running with Audible in 5 minutes! This guide will take you from installation to seeing your audiobook library.
 
 .. note::
@@ -46,13 +53,13 @@ Basic Authentication
    )
 
    # Save credentials for reuse
-   auth.to_file("audible_auth.txt")
+   auth.to_file("audible-auth.json")
    
    print("✓ Successfully authenticated!")
 
 .. important::
    **Keep your auth file secure!** It contains your credentials.
-   Add ``audible_auth.txt`` to your ``.gitignore`` if using version control.
+   Add ``audible-auth.json`` to your ``.gitignore`` if using version control.
 
 Common Authentication Scenarios
 --------------------------------
@@ -112,7 +119,7 @@ Complete Example
    import audible
 
    # Load your saved authentication
-   auth = audible.Authenticator.from_file("audible_auth.txt")
+   auth = audible.Authenticator.from_file("audible-auth.json")
 
    # Create a client and fetch your library
    with audible.Client(auth=auth) as client:
@@ -312,17 +319,18 @@ Where to Go from Here
 
 - :doc:`understanding` - Detailed concepts and architecture
 - :doc:`../auth/authorization` - Advanced authentication options
-- :doc:`../misc/advanced` - Advanced features and patterns
-- :doc:`../misc/examples` - More code examples
+- :doc:`../advanced/client_api` - Advanced features and patterns
+- :doc:`../help/examples` - More code examples
 
 **API Documentation:**
 
 - :doc:`../modules/audible` - Complete API reference
-- :doc:`../misc/external_api` - Audible API endpoints
+- :doc:`../help/external_api` - Audible API endpoints
 
 **Need Help?**
 
-- :doc:`../misc/logging` - Enable debug logging
+- :doc:`../help/faq` - Frequently Asked Questions
+- :doc:`../advanced/logging` - Enable debug logging
 - `GitHub Issues <https://github.com/mkb79/audible/issues>`_ - Report bugs
 - `GitHub Discussions <https://github.com/mkb79/audible/discussions>`_ - Ask questions
 
@@ -354,7 +362,7 @@ Common Next Tasks
 
 .. code-block:: python
 
-   auth = audible.Authenticator.from_file("audible_auth.txt")
+   auth = audible.Authenticator.from_file("audible-auth.json")
    activation_bytes = auth.get_activation_bytes()
    print(f"Your activation bytes: {activation_bytes}")
 
@@ -369,7 +377,7 @@ Common Next Tasks
    import audible
 
    async def get_library():
-       auth = audible.Authenticator.from_file("audible_auth.txt")
+       auth = audible.Authenticator.from_file("audible-auth.json")
        
        async with audible.AsyncClient(auth=auth) as client:
            library = await client.get("1.0/library", num_results=999)

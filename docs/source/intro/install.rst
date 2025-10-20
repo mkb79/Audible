@@ -2,6 +2,13 @@
 Installation Guide
 ==================
 
+.. raw:: html
+
+   <div class="skill-level-container">
+       <span class="skill-level-badge skill-level-beginner">Beginner</span>
+       <span class="reading-time-badge">3 min read</span>
+   </div>
+
 Requirements / Dependencies
 ===========================
 

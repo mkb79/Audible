@@ -2,6 +2,13 @@
 Marketplaces
 ============
 
+.. raw:: html
+
+   <div class="skill-level-container">
+       <span class="skill-level-badge skill-level-intermediate">Intermediate</span>
+       <span class="reading-time-badge">6 min read</span>
+   </div>
+
 General Information
 ===================
 

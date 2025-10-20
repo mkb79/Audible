@@ -2,6 +2,13 @@
 Register an Audible Device
 ==========================
 
+.. raw:: html
+
+   <div class="skill-level-container">
+       <span class="skill-level-badge skill-level-intermediate">Intermediate</span>
+       <span class="reading-time-badge">10 min read</span>
+   </div>
+
 This page covers device registration and deregistration. For conceptual understanding, see :doc:`../intro/understanding`.
 
 .. tip::
@@ -42,7 +49,7 @@ Registration happens automatically with ``from_login()``:
    )
 
    # Save credentials for reuse
-   auth.to_file("audible_auth.txt")
+   auth.to_file("audible-auth.json")
    
    print("✓ Device registered successfully")
 
@@ -60,10 +67,10 @@ Best Practices
 
    # First time: register
    auth = audible.Authenticator.from_login(...)
-   auth.to_file("auth.txt")
+   auth.to_file("audible-auth.json")
    
    # Later: reuse
-   auth = audible.Authenticator.from_file("auth.txt")
+   auth = audible.Authenticator.from_file("audible-auth.json")
 
 **Don't create unnecessary registrations.** Each one appears in your device list.
 
@@ -80,7 +87,7 @@ To deregister the device you're currently using:
    import audible
 
    # Load credentials
-   auth = audible.Authenticator.from_file("auth.txt")
+   auth = audible.Authenticator.from_file("audible-auth.json")
    
    # Ensure token is valid
    auth.refresh_access_token()
@@ -136,7 +143,7 @@ If Your Token is Expired
 
    import audible
 
-   auth = audible.Authenticator.from_file("auth.txt")
+   auth = audible.Authenticator.from_file("audible-auth.json")
    
    # Refresh token first
    if auth.access_token_expired:
@@ -202,7 +209,7 @@ Complete Registration Flow
    )
    
    # Save credentials
-   auth.to_file("auth.txt", encryption=False)
+   auth.to_file("audible-auth.json", encryption=False)
    
    # Use the API
    with audible.Client(auth=auth) as client:
@@ -221,7 +228,7 @@ Reuse Existing Registration
    import audible
 
    # Load existing credentials (no re-registration)
-   auth = audible.Authenticator.from_file("auth.txt")
+   auth = audible.Authenticator.from_file("audible-auth.json")
    
    # Use immediately
    with audible.Client(auth=auth) as client:
@@ -234,7 +241,7 @@ Handle Expired Tokens
 
    import audible
 
-   auth = audible.Authenticator.from_file("auth.txt")
+   auth = audible.Authenticator.from_file("audible-auth.json")
    
    # Token might be expired
    if auth.access_token_expired:
@@ -287,4 +294,4 @@ See Also
 - :doc:`authorization` - Login with callbacks
 - :doc:`authentication` - Token management
 - :doc:`../intro/quickstart` - Complete examples
-- :doc:`../misc/load_save` - Save/load credentials
+- :doc:`../core/load_save` - Save/load credentials

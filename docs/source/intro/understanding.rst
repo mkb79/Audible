@@ -2,6 +2,13 @@
 Understanding Audible
 =====================
 
+.. raw:: html
+
+   <div class="skill-level-container">
+       <span class="skill-level-badge skill-level-beginner">Beginner</span>
+       <span class="reading-time-badge">10 min read</span>
+   </div>
+
 This guide explains the core concepts behind the Audible library and how it interacts with Amazon's authentication system.
 
 .. tip::
@@ -190,7 +197,7 @@ Control response detail level:
 **Important:** More data = slower responses. Request only what you need.
 
 .. seealso::
-   For complete API reference, see :doc:`../misc/external_api`
+   For complete API reference, see :doc:`../help/external_api`
 
 Security Considerations
 =======================
@@ -247,7 +254,7 @@ The library provides both interfaces:
 Both share the same authentication system.
 
 .. seealso::
-   For async examples, see :doc:`../misc/async`
+   For async examples, see :doc:`../core/async`
 
 Next Steps
 ==========
@@ -261,11 +268,11 @@ Now that you understand the concepts:
 
 **Deep Dives:**
    - :doc:`../auth/register` - Device registration
-   - :doc:`../misc/load_save` - Save/load credentials
-   - :doc:`../misc/advanced` - Advanced patterns
+   - :doc:`../core/load_save` - Save/load credentials
+   - :doc:`../advanced/client_api` - Advanced patterns
 
 **Reference:**
-   - :doc:`../misc/external_api` - Available endpoints
+   - :doc:`../help/external_api` - Available endpoints
    - :doc:`../modules/audible` - Complete API docs
 
 Common Questions

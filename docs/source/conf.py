@@ -55,6 +55,9 @@ extensions = [
     "sphinxcontrib.httpdomain",
     "sphinx_autodoc_typehints",
     "sphinx.ext.autosummary",
+    "sphinx.ext.intersphinx",  # Links to other documentation
+    "sphinx_copybutton",        # Copy button for code blocks
+    "sphinx.ext.autosectionlabel",  # Reference sections by title
 ]
 
 # Napoleon
@@ -96,4 +99,77 @@ html_static_path = ["_static"]
 autodoc_type_aliases = {
     'Headers': 'httpx.Headers',
     'HeaderTypes': 'httpx._types.HeaderTypes',
+}
+
+# =============================================================================
+# Intersphinx Configuration - Links to external documentation
+# =============================================================================
+intersphinx_mapping = {
+    'python': ('https://docs.python.org/3', None),
+    # httpx doesn't provide a stable objects.inv, so we skip it
+    # Users can still use httpx classes directly without intersphinx
+}
+
+# =============================================================================
+# Copy Button Configuration
+# =============================================================================
+copybutton_prompt_text = r">>> |\.\.\. |\$ "
+copybutton_prompt_is_regexp = True
+copybutton_only_copy_prompt_lines = True
+
+# Customize button text and behavior
+copybutton_selector = "div.highlight pre"
+copybutton_copy_empty_lines = False
+copybutton_line_continuation_character = "\\"
+copybutton_here_doc_delimiter = "EOF"
+
+# Button text labels
+copybutton_format_func = None  # Use default formatting
+
+# =============================================================================
+# Auto Section Label Configuration
+# =============================================================================
+autosectionlabel_prefix_document = True
+autosectionlabel_maxdepth = 3
+
+# Suppress duplicate label warnings only for CHANGELOG
+# (has multiple "Bugfix", "Added", "Changed" sections per version)
+suppress_warnings = [
+    'autosectionlabel.help/changelog',  # Suppress only CHANGELOG label warnings
+]
+
+# =============================================================================
+# HTML Theme Options
+# =============================================================================
+html_theme_options = {
+    'navigation_depth': 4,
+    'collapse_navigation': False,
+    'sticky_navigation': True,
+    'includehidden': True,
+    'titles_only': False,
+    'style_nav_header_background': '#2980b9',
+}
+
+# =============================================================================
+# Custom CSS & JavaScript
+# =============================================================================
+html_css_files = [
+    'custom.css',
+]
+
+html_js_files = [
+    'custom.js',
+]
+
+# =============================================================================
+# SEO and Metadata
+# =============================================================================
+html_baseurl = 'https://audible.readthedocs.io/'
+
+html_context = {
+    'display_github': True,
+    'github_user': 'mkb79',
+    'github_repo': 'Audible',
+    'github_version': 'master',
+    'conf_py_path': '/docs/source/',
 }
