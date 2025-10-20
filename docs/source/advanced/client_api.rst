@@ -2,6 +2,13 @@
 Advanced Usage
 ==============
 
+.. raw:: html
+
+   <div class="skill-level-container">
+       <span class="skill-level-badge skill-level-advanced">Advanced</span>
+       <span class="reading-time-badge">20 min read</span>
+   </div>
+
 Client classes
 ==============
 
@@ -199,7 +206,7 @@ The activation bytes can be obtained like so::
 
 The activation blob can be saved to file too::
 
-   activation_bytes = auth.get_activation_bytes(FILENAME)
+   activation_bytes = auth.get_activation_bytes("audible-activation-bytes.txt")
 
 .. attention::
 

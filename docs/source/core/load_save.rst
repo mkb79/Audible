@@ -2,6 +2,13 @@
 Load and Save authentication data
 =================================
 
+.. raw:: html
+
+   <div class="skill-level-container">
+       <span class="skill-level-badge skill-level-intermediate">Intermediate</span>
+       <span class="reading-time-badge">7 min read</span>
+   </div>
+
 Unencrypted Load/Save
 =====================
 

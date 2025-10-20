@@ -2,6 +2,13 @@
 Examples
 ========
 
+.. raw:: html
+
+   <div class="skill-level-container">
+       <span class="skill-level-badge skill-level-all">All Levels</span>
+       <span class="reading-time-badge">10 min read</span>
+   </div>
+
 Here are some examples and ideas on how to use this library. Everyone who wants to
 provide examples is welcome.
 

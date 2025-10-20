@@ -2,6 +2,13 @@
 External Audible API
 ====================
 
+.. raw:: html
+
+   <div class="skill-level-container">
+       <span class="skill-level-badge skill-level-advanced">Advanced</span>
+       <span class="reading-time-badge">25 min read</span>
+   </div>
+
 Documentation
 =============
 

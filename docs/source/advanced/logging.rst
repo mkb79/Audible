@@ -2,6 +2,13 @@
 Logging
 =======
 
+.. raw:: html
+
+   <div class="skill-level-container">
+       <span class="skill-level-badge skill-level-advanced">Advanced</span>
+       <span class="reading-time-badge">8 min read</span>
+   </div>
+
 You can use the Python logging module to log the output. You can get the logger
 with ``logger = logging.getLogger("audible")``.
 
