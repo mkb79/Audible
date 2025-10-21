@@ -3,52 +3,54 @@
  * Enhances the copy button behavior and adds theme switcher
  */
 
-document.addEventListener('DOMContentLoaded', function() {
-    // ==========================================================================
-    // Theme Switcher
-    // ==========================================================================
+document.addEventListener("DOMContentLoaded", function () {
+  // ==========================================================================
+  // Theme Switcher
+  // ==========================================================================
 
-    // Get saved theme or default to 'system'
-    function getTheme() {
-        return localStorage.getItem('audible-docs-theme') || 'system';
-    }
+  // Get saved theme or default to 'system'
+  function getTheme() {
+    return localStorage.getItem("audible-docs-theme") || "system";
+  }
 
-    // Save theme preference
-    function saveTheme(theme) {
-        localStorage.setItem('audible-docs-theme', theme);
-    }
+  // Save theme preference
+  function saveTheme(theme) {
+    localStorage.setItem("audible-docs-theme", theme);
+  }
 
-    // Apply theme to document
-    function applyTheme(theme) {
-        document.documentElement.setAttribute('data-theme', theme);
+  // Apply theme to document
+  function applyTheme(theme) {
+    document.documentElement.setAttribute("data-theme", theme);
 
-        // Update active button state
-        const buttons = document.querySelectorAll('.theme-switch-btn');
-        buttons.forEach(btn => {
-            btn.classList.remove('active');
-            if (btn.dataset.theme === theme) {
-                btn.classList.add('active');
-            }
-        });
-    }
+    // Update active button state
+    const buttons = document.querySelectorAll(".theme-switch-btn");
+    buttons.forEach((btn) => {
+      btn.classList.remove("active");
+      if (btn.dataset.theme === theme) {
+        btn.classList.add("active");
+      }
+    });
+  }
 
-    // Get system preference
-    function getSystemTheme() {
-        return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-    }
+  // Get system preference
+  function getSystemTheme() {
+    return window.matchMedia("(prefers-color-scheme: dark)").matches
+      ? "dark"
+      : "light";
+  }
 
-    // Apply theme based on preference
-    function updateTheme() {
-        const savedTheme = getTheme();
-        const actualTheme = savedTheme === 'system' ? getSystemTheme() : savedTheme;
-        applyTheme(actualTheme);
-    }
+  // Apply theme based on preference
+  function updateTheme() {
+    const savedTheme = getTheme();
+    const actualTheme = savedTheme === "system" ? getSystemTheme() : savedTheme;
+    applyTheme(actualTheme);
+  }
 
-    // Create theme switcher HTML
-    function createThemeSwitcher() {
-        const themeSwitcher = document.createElement('div');
-        themeSwitcher.className = 'theme-switcher';
-        themeSwitcher.innerHTML = `
+  // Create theme switcher HTML
+  function createThemeSwitcher() {
+    const themeSwitcher = document.createElement("div");
+    themeSwitcher.className = "theme-switcher";
+    themeSwitcher.innerHTML = `
             <div class="theme-switch-container">
                 <button class="theme-switch-btn" data-theme="light" title="Light Mode" aria-label="Switch to light mode">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -81,64 +83,66 @@ document.addEventListener('DOMContentLoaded', function() {
             </div>
         `;
 
-        // Insert after the search box or at top of sidebar
-        const sidebar = document.querySelector('.wy-side-nav-search');
-        if (sidebar) {
-            sidebar.appendChild(themeSwitcher);
-        }
-
-        // Add click handlers
-        const buttons = themeSwitcher.querySelectorAll('.theme-switch-btn');
-        buttons.forEach(button => {
-            button.addEventListener('click', function() {
-                const theme = this.dataset.theme;
-                saveTheme(theme);
-                updateTheme();
-            });
-        });
+    // Insert after the search box or at top of sidebar
+    const sidebar = document.querySelector(".wy-side-nav-search");
+    if (sidebar) {
+      sidebar.appendChild(themeSwitcher);
     }
 
-    // Initialize theme
-    createThemeSwitcher();
-    updateTheme();
+    // Add click handlers
+    const buttons = themeSwitcher.querySelectorAll(".theme-switch-btn");
+    buttons.forEach((button) => {
+      button.addEventListener("click", function () {
+        const theme = this.dataset.theme;
+        saveTheme(theme);
+        updateTheme();
+      });
+    });
+  }
 
-    // Listen for system theme changes
-    window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', function() {
-        if (getTheme() === 'system') {
-            updateTheme();
-        }
+  // Initialize theme
+  createThemeSwitcher();
+  updateTheme();
+
+  // Listen for system theme changes
+  window
+    .matchMedia("(prefers-color-scheme: dark)")
+    .addEventListener("change", function () {
+      if (getTheme() === "system") {
+        updateTheme();
+      }
     });
 
-    // ==========================================================================
-    // Copy Button Enhancement
-    // ==========================================================================
+  // ==========================================================================
+  // Copy Button Enhancement
+  // ==========================================================================
 
-    const copyButtons = document.querySelectorAll('button.copybtn');
+  const copyButtons = document.querySelectorAll("button.copybtn");
 
-    copyButtons.forEach(function(button) {
-        // Store original text
-        const originalHTML = button.innerHTML;
+  copyButtons.forEach(function (button) {
+    // Store original text
+    const originalHTML = button.innerHTML;
 
-        // Add "Copy" text if not present
-        if (!button.textContent || button.textContent.trim() === '') {
-            button.textContent = 'Copy';
-        }
+    // Add "Copy" text if not present
+    if (!button.textContent || button.textContent.trim() === "") {
+      button.textContent = "Copy";
+    }
 
-        // Handle click events for better feedback
-        button.addEventListener('click', function() {
-            // Change button appearance on click
-            button.classList.add('success');
-            button.textContent = '✓ Copied!';
+    // Handle click events for better feedback
+    button.addEventListener("click", function () {
+      // Change button appearance on click
+      button.classList.add("success");
+      button.textContent = "✓ Copied!";
 
-            // Reset after 2 seconds
-            setTimeout(function() {
-                button.classList.remove('success');
-                button.innerHTML = originalHTML || '📋 Copy';
-            }, 2000);
-        });
-
-        // Add hover title for accessibility
-        button.setAttribute('title', 'Copy code to clipboard');
-        button.setAttribute('aria-label', 'Copy code to clipboard');
+      // Reset after 2 seconds
+      setTimeout(function () {
+        button.classList.remove("success");
+        button.innerHTML = originalHTML || "📋 Copy";
+      }, 2000);
     });
+
+    // Add hover title for accessibility
+    button.setAttribute("title", "Copy code to clipboard");
+    button.setAttribute("aria-label", "Copy code to clipboard");
+  });
 });

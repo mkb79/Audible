@@ -50,7 +50,7 @@ Registration happens automatically with ``from_login()``:
 
    # Save credentials for reuse
    auth.to_file("audible-auth.json")
-   
+
    print("✓ Device registered successfully")
 
 This combines authorization (login) and registration in one step.
@@ -68,7 +68,7 @@ Best Practices
    # First time: register
    auth = audible.Authenticator.from_login(...)
    auth.to_file("audible-auth.json")
-   
+
    # Later: reuse
    auth = audible.Authenticator.from_file("audible-auth.json")
 
@@ -88,13 +88,13 @@ To deregister the device you're currently using:
 
    # Load credentials
    auth = audible.Authenticator.from_file("audible-auth.json")
-   
+
    # Ensure token is valid
    auth.refresh_access_token()
-   
+
    # Deregister this device
    auth.deregister_device()
-   
+
    print("✓ Device deregistered")
 
 .. important::
@@ -111,7 +111,7 @@ To deregister **ALL** Audible devices (including official apps):
 
 .. warning::
    This deregisters **every** Audible device on your account, including:
-   
+
    - Your Python applications
    - Audible mobile apps
    - Echo devices
@@ -144,11 +144,11 @@ If Your Token is Expired
    import audible
 
    auth = audible.Authenticator.from_file("audible-auth.json")
-   
+
    # Refresh token first
    if auth.access_token_expired:
        auth.refresh_access_token()
-   
+
    # Now deregister
    auth.deregister_device()
 
@@ -207,15 +207,15 @@ Complete Registration Flow
        password="password123",
        locale="us"
    )
-   
+
    # Save credentials
    auth.to_file("audible-auth.json", encryption=False)
-   
+
    # Use the API
    with audible.Client(auth=auth) as client:
        library = client.get("1.0/library", num_results=50)
        print(f"Found {library['total_results']} books")
-   
+
    # Deregister when done (optional)
    auth.deregister_device()
    print("Device deregistered")
@@ -229,7 +229,7 @@ Reuse Existing Registration
 
    # Load existing credentials (no re-registration)
    auth = audible.Authenticator.from_file("audible-auth.json")
-   
+
    # Use immediately
    with audible.Client(auth=auth) as client:
        library = client.get("1.0/library", num_results=999)
@@ -242,13 +242,13 @@ Handle Expired Tokens
    import audible
 
    auth = audible.Authenticator.from_file("audible-auth.json")
-   
+
    # Token might be expired
    if auth.access_token_expired:
        print("Refreshing expired token...")
        auth.refresh_access_token()
        auth.to_file()  # Save new token
-   
+
    # Continue normally
    with audible.Client(auth=auth) as client:
        library = client.get("1.0/library")
@@ -282,7 +282,7 @@ Can't Find Device in Amazon List
 Your device might appear as:
 
 - "Audible for iPhone"
-- "Audible for Android" 
+- "Audible for Android"
 - Similar mobile device names
 
 Look for the registration timestamp to identify your Python app.

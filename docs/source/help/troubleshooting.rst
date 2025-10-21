@@ -21,7 +21,7 @@ Invalid Credentials Error
 
 .. tip::
    **Quick fixes to try first:**
-   
+
    1. Verify your email and password are correct
    2. Try logging in on the Audible website first
    3. Check if you need 2FA/OTP authentication
@@ -33,7 +33,7 @@ Invalid Credentials Error
 
    def handle_otp():
        return input("Enter your OTP code: ")
-   
+
    auth = audible.Authenticator.from_login(
        username="your-email@example.com",
        password="your-password",
@@ -59,7 +59,7 @@ CAPTCHA Loop
 
 .. warning::
    This typically happens when Amazon flags your IP as suspicious due to:
-   
+
    - Too many failed login attempts
    - Unusual geographic location
    - Using a VPN or proxy
@@ -85,7 +85,7 @@ CAPTCHA Loop
    def handle_captcha(captcha_url):
        print(f"Solve CAPTCHA at: {captcha_url}")
        return input("Enter CAPTCHA solution: ")
-   
+
    auth = audible.Authenticator.from_login(
        username="your-email@example.com",
        password="your-password",
@@ -110,14 +110,14 @@ Access Token Expired
    except audible.exceptions.NotAuthenticatedError:
        # Option 1: Refresh the token
        auth.refresh_access_token()
-       
+
        # Option 2: Re-authenticate completely
        auth = audible.Authenticator.from_login(
            username="your-email@example.com",
            password="your-password",
            locale="us"
        )
-       
+
        # Try again
        library = client.get("1.0/library")
 
@@ -135,18 +135,18 @@ Corrupted Auth File
 .. code-block:: python
 
    import os
-   
+
    # Delete old corrupted file
    if os.path.exists("audible-auth.json"):
        os.remove("audible-auth.json")
-   
+
    # Create new authentication
    auth = audible.Authenticator.from_login(
        username="your-email@example.com",
        password="your-password",
        locale="us"
    )
-   
+
    # Save to new file
    auth.to_file("audible-auth.json")
 
@@ -168,7 +168,7 @@ Rate Limit Exceeded (429 Error)
 
    import time
    from audible.exceptions import RateLimitError
-   
+
    def make_request_with_retry(client, endpoint, max_retries=3):
        """Make API request with automatic retry on rate limit."""
        for attempt in range(max_retries):
@@ -182,13 +182,13 @@ Rate Limit Exceeded (429 Error)
                else:
                    print("Max retries reached. Rate limit still active.")
                    raise
-   
+
    # Usage
    library = make_request_with_retry(client, "1.0/library")
 
 .. tip::
    **Best practices to avoid rate limiting:**
-   
+
    - Add 1-2 second delays between requests
    - Batch your operations when possible
    - Use ``num_results`` to get more data per request
@@ -207,7 +207,7 @@ Empty or Missing Data
 
    # Verify you're using the correct marketplace
    print(f"Current locale: {auth.locale}")
-   
+
    # Switch if needed
    auth.switch_marketplace("uk")  # or "us", "de", "fr", etc.
 
@@ -231,21 +231,21 @@ Empty or Missing Data
    # Get all items with pagination
    all_items = []
    page = 1
-   
+
    while True:
        response = client.get(
            "1.0/library",
            num_results=50,
            page=page
        )
-       
+
        items = response.get("items", [])
        if not items:
            break
-           
+
        all_items.extend(items)
        page += 1
-       
+
        # Safety check
        if page > 100:
            break
@@ -259,7 +259,7 @@ Connection Errors
 
    from audible.exceptions import NetworkError
    import time
-   
+
    def robust_request(client, endpoint, max_attempts=3):
        """Make request with connection error handling."""
        for attempt in range(max_attempts):
@@ -287,7 +287,7 @@ Import Errors
 
    # Ensure audible is installed
    pip install --upgrade audible
-   
+
    # Verify installation
    python -c "import audible; print(audible.__version__)"
 
@@ -299,13 +299,13 @@ Import Errors
 
    # Create virtual environment
    python -m venv venv
-   
+
    # Activate it
    # On Windows:
    venv\\Scripts\\activate
    # On macOS/Linux:
    source venv/bin/activate
-   
+
    # Install audible in isolated environment
    pip install audible
 
@@ -337,7 +337,7 @@ Type Checking Issues
 
    # Install type stubs
    pip install types-requests
-   
+
    # Audible includes full type hints by default
    # Ensure you're using a recent version
    pip install --upgrade audible
@@ -358,11 +358,11 @@ This commonly happens in Jupyter notebooks or when nesting async calls.
 
    # Install nest_asyncio
    pip install nest_asyncio
-   
+
    # In your code
    import nest_asyncio
    nest_asyncio.apply()
-   
+
    # Now async code works in Jupyter
    library = await client.get("1.0/library")
 
@@ -371,12 +371,12 @@ This commonly happens in Jupyter notebooks or when nesting async calls.
 .. code-block:: python
 
    import asyncio
-   
+
    async def main():
        async with audible.AsyncClient(auth=auth) as client:
            library = await client.get("1.0/library")
            return library
-   
+
    # Don't nest asyncio.run() calls
    if __name__ == "__main__":
        result = asyncio.run(main())
@@ -392,7 +392,7 @@ AsyncClient Not Closing
    async with audible.AsyncClient(auth=auth) as client:
        library = await client.get("1.0/library")
    # Client automatically closed here
-   
+
    # Or manually close
    client = audible.AsyncClient(auth=auth)
    try:
@@ -418,11 +418,11 @@ Wrong Marketplace
    # Check current marketplace
    print(f"Current: {auth.locale.country_code}")
    print(f"Domain: {auth.locale.domain}")
-   
+
    # Switch to different marketplace
    auth.switch_marketplace("de")  # Germany
    # or "uk", "fr", "ca", "au", "in", "jp", "it", "es"
-   
+
    # Fetch library from new marketplace
    with audible.Client(auth=auth) as client:
        library = client.get("1.0/library")
@@ -469,14 +469,14 @@ Can't Get Activation Bytes
 
    # Ensure you're authenticated properly
    auth = audible.Authenticator.from_file("audible-auth.json")
-   
+
    # Method 1: Via auth object
    activation_bytes = auth.get_activation_bytes()
-   
+
    # Method 2: Via separate function
    from audible import activation_bytes as ab
    bytes_value = ab.get_activation_bytes(auth)
-   
+
    print(f"Activation bytes: {bytes_value}")
 
 .. important::
@@ -566,7 +566,7 @@ If your issue isn't covered here:
 
 .. tip::
    **When reporting issues, always include:**
-   
+
    - Python version (``python --version``)
    - Audible version (``pip show audible``)
    - Full error traceback

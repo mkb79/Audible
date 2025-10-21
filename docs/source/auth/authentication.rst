@@ -24,7 +24,7 @@ Audible uses two methods to authenticate API requests. The library automatically
    # Authentication is automatic
    auth = audible.Authenticator.from_file("audible-auth.json")
    client = audible.Client(auth=auth)
-   
+
    # The Authenticator handles everything
 
 The library tries request signing first, then falls back to bearer tokens if signing credentials aren't available.
@@ -137,7 +137,7 @@ Checking Token Status
    # Check if token is expired
    if auth.access_token_expired:
        print("Token has expired")
-   
+
    # Check time remaining
    print(f"Time remaining: {auth.access_token_expires}")
 
@@ -150,7 +150,7 @@ The library refreshes automatically, but you can force it:
 
    # Force refresh
    auth.refresh_access_token(force=True)
-   
+
    # Save updated credentials
    auth.to_file()
 
@@ -163,16 +163,16 @@ Token Refresh Example
 .. code-block:: python
 
    import audible
-   
+
    # Load saved credentials
    auth = audible.Authenticator.from_file("audible-auth.json")
-   
+
    # Check token status
    if auth.access_token_expired:
        print("Access token expired, refreshing...")
        auth.refresh_access_token()
        auth.to_file()  # Save new token
-   
+
    # Use the client normally
    with audible.Client(auth=auth) as client:
        library = client.get("1.0/library", num_results=50)
@@ -189,9 +189,9 @@ Using Website Cookies
 
    import audible
    import httpx
-   
+
    auth = audible.Authenticator.from_file("audible-auth.json")
-   
+
    # Use cookies with httpx
    with httpx.Client(cookies=auth.website_cookies) as client:
        resp = client.get("https://www.amazon.com/cpe/yourpayments/wallet")
@@ -213,7 +213,7 @@ Setting Cookies for Different Countries
    # Get cookies for Germany
    auth.set_website_cookies_for_country("de")
    auth.to_file()  # Save new cookies
-   
+
    # Now cookies work for amazon.de and audible.de
 
 .. warning::
@@ -314,7 +314,7 @@ If you get ``RatelimitError``:
 .. code-block:: python
 
    import time
-   
+
    for item in large_list:
        try:
            result = client.get(f"1.0/catalog/products/{item}")

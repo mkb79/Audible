@@ -13,12 +13,12 @@ This guide explains the core concepts behind the Audible library and how it inte
 
 .. tip::
    **Want to start coding immediately?** Jump to :doc:`quickstart`
-   
+
    **Need technical details?** See :doc:`../auth/authentication` and :doc:`../auth/authorization`
 
 .. note::
    **What you'll learn:**
-   
+
    - How Audible authentication works
    - What device registration means
    - The authentication architecture

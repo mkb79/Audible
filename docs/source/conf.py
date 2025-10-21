@@ -56,7 +56,7 @@ extensions = [
     "sphinx_autodoc_typehints",
     "sphinx.ext.autosummary",
     "sphinx.ext.intersphinx",  # Links to other documentation
-    "sphinx_copybutton",        # Copy button for code blocks
+    "sphinx_copybutton",  # Copy button for code blocks
     "sphinx.ext.autosectionlabel",  # Reference sections by title
 ]
 
@@ -97,15 +97,15 @@ html_static_path = ["_static"]
 
 # Type Aliases für externe Packages
 autodoc_type_aliases = {
-    'Headers': 'httpx.Headers',
-    'HeaderTypes': 'httpx._types.HeaderTypes',
+    "Headers": "httpx.Headers",
+    "HeaderTypes": "httpx._types.HeaderTypes",
 }
 
 # =============================================================================
 # Intersphinx Configuration - Links to external documentation
 # =============================================================================
 intersphinx_mapping = {
-    'python': ('https://docs.python.org/3', None),
+    "python": ("https://docs.python.org/3", None),
     # httpx doesn't provide a stable objects.inv, so we skip it
     # Users can still use httpx classes directly without intersphinx
 }
@@ -135,41 +135,41 @@ autosectionlabel_maxdepth = 3
 # Suppress duplicate label warnings only for CHANGELOG
 # (has multiple "Bugfix", "Added", "Changed" sections per version)
 suppress_warnings = [
-    'autosectionlabel.help/changelog',  # Suppress only CHANGELOG label warnings
+    "autosectionlabel.help/changelog",  # Suppress only CHANGELOG label warnings
 ]
 
 # =============================================================================
 # HTML Theme Options
 # =============================================================================
 html_theme_options = {
-    'navigation_depth': 4,
-    'collapse_navigation': False,
-    'sticky_navigation': True,
-    'includehidden': True,
-    'titles_only': False,
-    'style_nav_header_background': '#2980b9',
+    "navigation_depth": 4,
+    "collapse_navigation": False,
+    "sticky_navigation": True,
+    "includehidden": True,
+    "titles_only": False,
+    "style_nav_header_background": "#2980b9",
 }
 
 # =============================================================================
 # Custom CSS & JavaScript
 # =============================================================================
 html_css_files = [
-    'custom.css',
+    "custom.css",
 ]
 
 html_js_files = [
-    'custom.js',
+    "custom.js",
 ]
 
 # =============================================================================
 # SEO and Metadata
 # =============================================================================
-html_baseurl = 'https://audible.readthedocs.io/'
+html_baseurl = "https://audible.readthedocs.io/"
 
 html_context = {
-    'display_github': True,
-    'github_user': 'mkb79',
-    'github_repo': 'Audible',
-    'github_version': 'master',
-    'conf_py_path': '/docs/source/',
+    "display_github": True,
+    "github_user": "mkb79",
+    "github_repo": "Audible",
+    "github_version": "master",
+    "conf_py_path": "/docs/source/",
 }

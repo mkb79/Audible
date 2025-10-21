@@ -13,7 +13,7 @@ Get up and running with Audible in 5 minutes! This guide will take you from inst
 
 .. note::
    **What you'll learn:**
-   
+
    - Install the library (30 seconds)
    - Authenticate with your Audible account (2 minutes)
    - Fetch your audiobook library (2 minutes)
@@ -54,7 +54,7 @@ Basic Authentication
 
    # Save credentials for reuse
    auth.to_file("audible-auth.json")
-   
+
    print("✓ Successfully authenticated!")
 
 .. important::
@@ -129,14 +129,14 @@ Complete Example
            response_groups="product_desc, product_attrs",
            sort_by="-PurchaseDate"  # Most recent first
        )
-       
+
        # Display your books
        print(f"\n📚 Found {library['total_results']} audiobooks!\n")
-       
+
        for i, book in enumerate(library["items"][:10], 1):
            title = book.get("title", "Unknown")
            authors = ", ".join([a["name"] for a in book.get("authors", [])])
-           
+
            print(f"{i}. {title}")
            print(f"   by {authors}")
            print(f"   ASIN: {book.get('asin')}\n")
@@ -158,7 +158,7 @@ Complete Example
    3. Atomic Habits
       by James Clear
       ASIN: B07RFSSYBH
-   
+
    ...
 
 .. tip::
@@ -221,7 +221,7 @@ Get Detailed Information
                "series, rating, reviews, media"
            )
        )
-       
+
        for book in library["items"]:
            print(f"Title: {book['title']}")
            print(f"Runtime: {book.get('runtime_length_min', 0)} minutes")
@@ -240,11 +240,11 @@ Access your books from different Audible marketplaces:
        # Switch to UK marketplace
        client.switch_marketplace("uk")
        uk_library = client.get("1.0/library", num_results=50)
-       
+
        # Switch to DE marketplace
        client.switch_marketplace("de")
        de_library = client.get("1.0/library", num_results=50)
-       
+
        print(f"UK books: {uk_library['total_results']}")
        print(f"DE books: {de_library['total_results']}")
 
@@ -278,7 +278,7 @@ You're making requests too quickly. Add a small delay:
 .. code-block:: python
 
    import time
-   
+
    # Between requests
    time.sleep(1)  # Wait 1 second
 
@@ -342,20 +342,20 @@ Common Next Tasks
 .. code-block:: python
 
    import csv
-   
+
    with audible.Client(auth=auth) as client:
        library = client.get("1.0/library", num_results=999)
-       
+
        with open("my_audiobooks.csv", "w", newline="", encoding="utf-8") as f:
            writer = csv.writer(f)
            writer.writerow(["Title", "Author", "ASIN", "Purchase Date"])
-           
+
            for book in library["items"]:
                title = book.get("title", "")
                authors = ", ".join([a["name"] for a in book.get("authors", [])])
                asin = book.get("asin", "")
                purchase_date = book.get("purchase_date", "")
-               
+
                writer.writerow([title, authors, asin, purchase_date])
 
 **Get activation bytes** (for DRM removal):
@@ -378,7 +378,7 @@ Common Next Tasks
 
    async def get_library():
        auth = audible.Authenticator.from_file("audible-auth.json")
-       
+
        async with audible.AsyncClient(auth=auth) as client:
            library = await client.get("1.0/library", num_results=999)
            return library
