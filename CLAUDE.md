@@ -194,3 +194,180 @@ Requires Python 3.10-3.13 (3.14 not yet supported per pyproject.toml)
 - **rsa**: RSA encryption (API authentication)
 - **pyaes**: AES encryption (credential storage)
 - **pbkdf2**: Key derivation (password-based encryption)
+
+## Claude Code Integration
+
+This repository is configured for use with [Claude Code](https://claude.ai/code), an AI-powered development assistant. The configuration enables Claude to assist with code reviews, pull request management, CI/CD monitoring, and repository analysis.
+
+### Configuration File
+
+The Claude Code configuration is stored in `.claude/settings.json` and defines permissions for GitHub CLI operations:
+
+```json
+{
+  "permissions": {
+    "allow": [...],  // Automatically permitted operations
+    "ask": [...],    // Operations requiring user confirmation
+    "deny": [...]    // Blocked operations
+  }
+}
+```
+
+### Prerequisites
+
+Before using Claude Code with GitHub CLI integration:
+
+1. **Install GitHub CLI**: Download and install from [cli.github.com](https://cli.github.com/)
+2. **Authenticate**: Run `gh auth login` to authenticate with your GitHub account
+3. **Verify Access**: Test with `gh repo view` to ensure proper authentication
+4. **Claude Code**: Ensure you're running a recent version of Claude Code
+
+### Rate Limits
+
+GitHub CLI operations are subject to GitHub API rate limits:
+
+- **Authenticated requests**: 5,000 requests per hour
+- **Search API**: 30 requests per minute
+- Rate limit status: Check with `gh api rate_limit`
+- Most read operations count against your API quota
+
+If you encounter rate limit errors, Claude Code will inform you and suggest waiting before retrying.
+
+### Troubleshooting
+
+**Common Issues:**
+
+**`gh: command not found`**
+
+- Install GitHub CLI from [cli.github.com](https://cli.github.com/)
+- Verify installation: `gh --version`
+
+**`gh: authentication required`**
+
+- Run `gh auth login` and follow the prompts
+- Verify authentication: `gh auth status`
+
+**Permission denied errors**
+
+- Check that your GitHub token has appropriate scopes
+- Re-authenticate if necessary: `gh auth login --force`
+
+**Claude Code not using settings**
+
+- Verify settings file location: `.claude/settings.json`
+- Check JSON syntax: `cat .claude/settings.json | jq .`
+- Restart Claude Code session to reload settings
+
+### Configured Permissions
+
+#### Pull Request Operations
+
+- **Read access (automatic)**:
+  - `gh pr view` - View PR details and metadata
+  - `gh pr list` - List all pull requests
+  - `gh pr diff` - View code changes in PRs
+  - `gh pr files` - **List modified files in PRs** (enables focused reviews and impact analysis)
+  - `gh pr checks` - View CI/CD check status
+  - `gh pr status` - View PR merge readiness
+  - `gh pr reviews` - Read review comments and feedback
+- **Write access (requires confirmation)**:
+  - `gh pr create` - Create new pull requests
+  - `gh pr comment` - Add comments to PRs
+
+#### Issue Management
+
+- **Read access**:
+  - `gh issue view` - View issue details and discussions
+  - `gh issue list` - List all issues with filtering options
+
+#### CI/CD & Workflows
+
+- **Read access**:
+  - `gh run list` - List workflow runs with status
+  - `gh run view` - View detailed workflow run logs and results
+  - `gh workflow list` - List all workflows in the repository
+  - `gh workflow view` - View workflow definitions and triggers
+  - Enables Claude to analyze failed tests and CI/CD issues
+
+#### Repository Information
+
+- **Read access**:
+  - `gh repo view` - View repository metadata and information
+  - `gh release list` - List all releases and tags
+  - `gh release view` - View release notes and assets
+  - `gh search` - Search across repositories, code, issues, and PRs
+
+#### API & Monitoring
+
+- **Read access**:
+  - `gh api rate_limit` - **Monitor GitHub API rate limits** (tracks remaining quota and prevents hitting limits during intensive operations)
+
+### Security Model
+
+The configuration follows the principle of least privilege:
+
+- **Primarily read-only**: Most operations are for information gathering
+- **Limited write access**: Only PR creation and commenting permitted
+- **No destructive operations**: No force push, delete, merge, or branch manipulation
+- **Auditable**: All GitHub CLI operations are logged in GitHub's audit trail
+
+### Usage
+
+Claude Code uses these permissions to:
+
+1. **Automated Code Reviews**:
+
+   - Analyze PRs and provide feedback
+   - Use `gh pr files` to identify changed files for focused review
+   - Check `gh pr checks` status to ensure tests pass
+   - Read existing reviews with `gh pr reviews`
+
+2. **CI/CD Monitoring**:
+
+   - Check workflow status with `gh run view` and investigate failures
+   - View workflow definitions with `gh workflow view`
+   - Analyze test results and error logs
+
+3. **Repository Analysis**:
+
+   - Understand project structure and history
+   - Browse releases with `gh release list`
+   - Search codebase with `gh search`
+
+4. **Issue Triage**:
+
+   - Read and analyze issues for context
+   - Identify patterns in bug reports
+   - Understand feature requests
+
+5. **Rate Limit Management**:
+   - Monitor API usage with `gh api rate_limit`
+   - Proactively prevent hitting GitHub API limits
+   - Optimize operation frequency during intensive tasks
+
+### Modifying Permissions
+
+To adjust Claude Code permissions, edit `.claude/settings.json`:
+
+1. **Choose permission level**:
+   - `allow`: Operations run automatically without confirmation
+   - `ask`: Operations require user confirmation before execution
+   - `deny`: Operations are blocked entirely
+2. **Add or remove entries** from the appropriate array
+3. **Use glob patterns** for fine-grained control: `Bash(gh pr view:*)`
+4. **Commit changes** to share with the team
+5. **Restart Claude Code session** for changes to take effect
+
+**Example:**
+
+```json
+{
+  "permissions": {
+    "allow": ["Bash(gh pr view:*)"], // Auto-approved
+    "ask": ["Bash(gh pr create:*)"], // Requires confirmation
+    "deny": ["Bash(gh repo delete:*)"] // Blocked
+  }
+}
+```
+
+For more information, see the [Claude Code documentation](https://docs.claude.com/en/docs/claude-code/settings).
