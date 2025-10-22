@@ -214,17 +214,21 @@ The Claude Code configuration is stored in `.claude/settings.json` and defines p
 ### Configured Permissions
 
 #### Pull Request Operations
+
 - **Read access**: View PRs, diffs, checks, status, and reviews
 - **Write access**: Create PRs and add comments (for automated reviews)
 
 #### Issue Management
+
 - **Read access**: View and list issues
 
 #### CI/CD & Workflows
+
 - **Read access**: View workflow runs and definitions
 - Enables Claude to analyze failed tests and CI/CD issues
 
 #### Repository Information
+
 - **Read access**: Repository metadata, releases, and search
 
 ### Security Model
