@@ -262,25 +262,45 @@ If you encounter rate limit errors, Claude Code will inform you and suggest wait
 
 #### Pull Request Operations
 
-- **Read access (automatic)**: View PRs, diffs, files, checks, status, and reviews
-- **Write access (requires confirmation)**: Create PRs and add comments
+- **Read access (automatic)**:
+  - `gh pr view` - View PR details and metadata
+  - `gh pr list` - List all pull requests
+  - `gh pr diff` - View code changes in PRs
+  - `gh pr files` - **List modified files in PRs** (enables focused reviews and impact analysis)
+  - `gh pr checks` - View CI/CD check status
+  - `gh pr status` - View PR merge readiness
+  - `gh pr reviews` - Read review comments and feedback
+- **Write access (requires confirmation)**:
+  - `gh pr create` - Create new pull requests
+  - `gh pr comment` - Add comments to PRs
 
 #### Issue Management
 
-- **Read access**: View and list issues
+- **Read access**:
+  - `gh issue view` - View issue details and discussions
+  - `gh issue list` - List all issues with filtering options
 
 #### CI/CD & Workflows
 
-- **Read access**: View workflow runs and definitions
-- Enables Claude to analyze failed tests and CI/CD issues
+- **Read access**:
+  - `gh run list` - List workflow runs with status
+  - `gh run view` - View detailed workflow run logs and results
+  - `gh workflow list` - List all workflows in the repository
+  - `gh workflow view` - View workflow definitions and triggers
+  - Enables Claude to analyze failed tests and CI/CD issues
 
 #### Repository Information
 
-- **Read access**: Repository metadata, releases, and search
+- **Read access**:
+  - `gh repo view` - View repository metadata and information
+  - `gh release list` - List all releases and tags
+  - `gh release view` - View release notes and assets
+  - `gh search` - Search across repositories, code, issues, and PRs
 
 #### API & Monitoring
 
-- **Read access**: Monitor GitHub API rate limits
+- **Read access**:
+  - `gh api rate_limit` - **Monitor GitHub API rate limits** (tracks remaining quota and prevents hitting limits during intensive operations)
 
 ### Security Model
 
@@ -295,10 +315,35 @@ The configuration follows the principle of least privilege:
 
 Claude Code uses these permissions to:
 
-1. **Automated Code Reviews**: Analyze PRs and provide feedback
-2. **CI/CD Monitoring**: Check workflow status and investigate failures
-3. **Repository Analysis**: Understand project structure and history
-4. **Issue Triage**: Read and analyze issues for context
+1. **Automated Code Reviews**:
+
+   - Analyze PRs and provide feedback
+   - Use `gh pr files` to identify changed files for focused review
+   - Check `gh pr checks` status to ensure tests pass
+   - Read existing reviews with `gh pr reviews`
+
+2. **CI/CD Monitoring**:
+
+   - Check workflow status with `gh run view` and investigate failures
+   - View workflow definitions with `gh workflow view`
+   - Analyze test results and error logs
+
+3. **Repository Analysis**:
+
+   - Understand project structure and history
+   - Browse releases with `gh release list`
+   - Search codebase with `gh search`
+
+4. **Issue Triage**:
+
+   - Read and analyze issues for context
+   - Identify patterns in bug reports
+   - Understand feature requests
+
+5. **Rate Limit Management**:
+   - Monitor API usage with `gh api rate_limit`
+   - Proactively prevent hitting GitHub API limits
+   - Optimize operation frequency during intensive tasks
 
 ### Modifying Permissions
 
