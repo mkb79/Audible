@@ -262,7 +262,7 @@ If you encounter rate limit errors, Claude Code will inform you and suggest wait
 
 #### Pull Request Operations
 
-- **Read access (automatic)**: View PRs, diffs, checks, status, and reviews
+- **Read access (automatic)**: View PRs, diffs, files, checks, status, and reviews
 - **Write access (requires confirmation)**: Create PRs and add comments
 
 #### Issue Management
@@ -277,6 +277,10 @@ If you encounter rate limit errors, Claude Code will inform you and suggest wait
 #### Repository Information
 
 - **Read access**: Repository metadata, releases, and search
+
+#### API & Monitoring
+
+- **Read access**: Monitor GitHub API rate limits
 
 ### Security Model
 

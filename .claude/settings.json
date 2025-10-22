@@ -7,6 +7,7 @@
       "Bash(gh pr checks:*)",
       "Bash(gh pr status:*)",
       "Bash(gh pr reviews:*)",
+      "Bash(gh pr files:*)",
       "Bash(gh issue view:*)",
       "Bash(gh issue list:*)",
       "Bash(gh search:*)",
@@ -16,7 +17,8 @@
       "Bash(gh workflow view:*)",
       "Bash(gh repo view:*)",
       "Bash(gh release list:*)",
-      "Bash(gh release view:*)"
+      "Bash(gh release view:*)",
+      "Bash(gh api rate_limit:*)"
     ],
     "ask": ["Bash(gh pr create:*)", "Bash(gh pr comment:*)"]
   }
