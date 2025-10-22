@@ -206,17 +206,64 @@ The Claude Code configuration is stored in `.claude/settings.json` and defines p
 ```json
 {
   "permissions": {
-    "allowedTools": [...]
+    "allow": [...],  // Automatically permitted operations
+    "ask": [...],    // Operations requiring user confirmation
+    "deny": [...]    // Blocked operations
   }
 }
 ```
+
+### Prerequisites
+
+Before using Claude Code with GitHub CLI integration:
+
+1. **Install GitHub CLI**: Download and install from [cli.github.com](https://cli.github.com/)
+2. **Authenticate**: Run `gh auth login` to authenticate with your GitHub account
+3. **Verify Access**: Test with `gh repo view` to ensure proper authentication
+4. **Claude Code**: Ensure you're running a recent version of Claude Code
+
+### Rate Limits
+
+GitHub CLI operations are subject to GitHub API rate limits:
+
+- **Authenticated requests**: 5,000 requests per hour
+- **Search API**: 30 requests per minute
+- Rate limit status: Check with `gh api rate_limit`
+- Most read operations count against your API quota
+
+If you encounter rate limit errors, Claude Code will inform you and suggest waiting before retrying.
+
+### Troubleshooting
+
+**Common Issues:**
+
+**`gh: command not found`**
+
+- Install GitHub CLI from [cli.github.com](https://cli.github.com/)
+- Verify installation: `gh --version`
+
+**`gh: authentication required`**
+
+- Run `gh auth login` and follow the prompts
+- Verify authentication: `gh auth status`
+
+**Permission denied errors**
+
+- Check that your GitHub token has appropriate scopes
+- Re-authenticate if necessary: `gh auth login --force`
+
+**Claude Code not using settings**
+
+- Verify settings file location: `.claude/settings.json`
+- Check JSON syntax: `cat .claude/settings.json | jq .`
+- Restart Claude Code session to reload settings
 
 ### Configured Permissions
 
 #### Pull Request Operations
 
-- **Read access**: View PRs, diffs, checks, status, and reviews
-- **Write access**: Create PRs and add comments (for automated reviews)
+- **Read access (automatic)**: View PRs, diffs, checks, status, and reviews
+- **Write access (requires confirmation)**: Create PRs and add comments
 
 #### Issue Management
 
@@ -253,9 +300,25 @@ Claude Code uses these permissions to:
 
 To adjust Claude Code permissions, edit `.claude/settings.json`:
 
-1. Add or remove entries from the `allowedTools` array
-2. Use glob patterns for fine-grained control: `Bash(gh pr view:*)`
-3. Commit changes to share with the team
-4. Restart Claude Code session for changes to take effect
+1. **Choose permission level**:
+   - `allow`: Operations run automatically without confirmation
+   - `ask`: Operations require user confirmation before execution
+   - `deny`: Operations are blocked entirely
+2. **Add or remove entries** from the appropriate array
+3. **Use glob patterns** for fine-grained control: `Bash(gh pr view:*)`
+4. **Commit changes** to share with the team
+5. **Restart Claude Code session** for changes to take effect
+
+**Example:**
+
+```json
+{
+  "permissions": {
+    "allow": ["Bash(gh pr view:*)"], // Auto-approved
+    "ask": ["Bash(gh pr create:*)"], // Requires confirmation
+    "deny": ["Bash(gh repo delete:*)"] // Blocked
+  }
+}
+```
 
 For more information, see the [Claude Code documentation](https://docs.claude.com/en/docs/claude-code/settings).
