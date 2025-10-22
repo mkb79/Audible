@@ -194,3 +194,64 @@ Requires Python 3.10-3.13 (3.14 not yet supported per pyproject.toml)
 - **rsa**: RSA encryption (API authentication)
 - **pyaes**: AES encryption (credential storage)
 - **pbkdf2**: Key derivation (password-based encryption)
+
+## Claude Code Integration
+
+This repository is configured for use with [Claude Code](https://claude.ai/code), an AI-powered development assistant. The configuration enables Claude to assist with code reviews, pull request management, CI/CD monitoring, and repository analysis.
+
+### Configuration File
+
+The Claude Code configuration is stored in `.claude/settings.json` and defines permissions for GitHub CLI operations:
+
+```json
+{
+  "permissions": {
+    "allowedTools": [...]
+  }
+}
+```
+
+### Configured Permissions
+
+#### Pull Request Operations
+- **Read access**: View PRs, diffs, checks, status, and reviews
+- **Write access**: Create PRs and add comments (for automated reviews)
+
+#### Issue Management
+- **Read access**: View and list issues
+
+#### CI/CD & Workflows
+- **Read access**: View workflow runs and definitions
+- Enables Claude to analyze failed tests and CI/CD issues
+
+#### Repository Information
+- **Read access**: Repository metadata, releases, and search
+
+### Security Model
+
+The configuration follows the principle of least privilege:
+
+- **Primarily read-only**: Most operations are for information gathering
+- **Limited write access**: Only PR creation and commenting permitted
+- **No destructive operations**: No force push, delete, merge, or branch manipulation
+- **Auditable**: All GitHub CLI operations are logged in GitHub's audit trail
+
+### Usage
+
+Claude Code uses these permissions to:
+
+1. **Automated Code Reviews**: Analyze PRs and provide feedback
+2. **CI/CD Monitoring**: Check workflow status and investigate failures
+3. **Repository Analysis**: Understand project structure and history
+4. **Issue Triage**: Read and analyze issues for context
+
+### Modifying Permissions
+
+To adjust Claude Code permissions, edit `.claude/settings.json`:
+
+1. Add or remove entries from the `allowedTools` array
+2. Use glob patterns for fine-grained control: `Bash(gh pr view:*)`
+3. Commit changes to share with the team
+4. Restart Claude Code session for changes to take effect
+
+For more information, see the [Claude Code documentation](https://docs.claude.com/en/docs/claude-code/settings).
