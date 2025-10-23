@@ -49,6 +49,7 @@ repos:
     rev: v3.0.3
     hooks:
       - id: prettier
+        exclude: '^renovate\.json5$'
   - repo: https://github.com/astral-sh/uv-pre-commit
     # uv version.
     rev: 0.7.6
