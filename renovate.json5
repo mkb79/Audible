@@ -1,0 +1,89 @@
+{
+  $schema: "https://docs.renovatebot.com/renovate-schema.json",
+  enabledManagers: ["github-actions", "uv", "pep621", "pip_requirements"],
+  prConcurrentLimit: 15,
+  timezone: "Europe/Berlin",
+  schedule: ["every week on monday"],
+  constraints: { python: ">=3.10" },
+
+  packageRules: [
+    /* GitHub Actions */
+    {
+      matchManagers: ["github-actions"],
+      groupName: "github-actions-updates",
+      matchPackagePatterns: [".*"],
+    },
+
+    /* Workflows: constraints.txt */
+    {
+      matchManagers: ["pip_requirements"],
+      matchFileNames: [".github/workflows/constraints.txt"],
+      groupName: "workflow-updates",
+    },
+
+    /* Docs: requirements.txt */
+    {
+      matchManagers: ["pip_requirements"],
+      matchFileNames: ["docs/requirements.txt"],
+      groupName: "doc-updates",
+    },
+
+    /* ============ Lockfile maintenance ============ */
+
+    // Dev lockfile-only, grouped
+    {
+      matchManagers: ["uv"],
+      rangeStrategy: "update-lockfile",
+      matchDepTypes: [
+        "dev",
+        "docs",
+        "mypy",
+        "pre-commit",
+        "safety",
+        "tests",
+        "typeguard",
+        "xdocs",
+      ],
+      groupName: "uv-updates-lockfile-dev",
+    },
+
+    // Prod lockfile-only, NOT grouped (one PR per package)
+    {
+      matchManagers: ["uv"],
+      rangeStrategy: "update-lockfile",
+      matchDepTypes: ["dependencies"],
+      // no groupName -> separate PRs
+    },
+
+    /* =============== Security updates =============== */
+
+    // Dev security-only, grouped
+    {
+      matchManagers: ["uv", "pep621"],
+      matchCategories: ["security"],
+      matchDepTypes: [
+        "dev",
+        "docs",
+        "mypy",
+        "pre-commit",
+        "safety",
+        "tests",
+        "typeguard",
+        "xdocs",
+      ],
+      groupName: "uv-security-updates-dev",
+      labels: ["security", "uv", "dev"],
+      prPriority: 1,
+    },
+
+    // Prod security-only, grouped
+    {
+      matchManagers: ["uv", "pep621"],
+      matchCategories: ["security"],
+      matchDepTypes: ["dependencies"],
+      groupName: "uv-security-updates-prod",
+      labels: ["security", "uv", "production"],
+      prPriority: 1,
+    },
+  ],
+}
