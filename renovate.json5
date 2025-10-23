@@ -1,10 +1,20 @@
 {
   $schema: "https://docs.renovatebot.com/renovate-schema.json",
-  enabledManagers: ["github-actions", "uv", "pep621", "pip_requirements"],
+  extends: ["config:recommended"],
+
+  enabledManagers: ["github-actions", "pep621", "pip_requirements"],
   prConcurrentLimit: 15,
   timezone: "Europe/Berlin",
-  schedule: ["every week on monday"],
+  schedule: ["before 4am on monday"],
   constraints: { python: ">=3.10" },
+  semanticCommits: "enabled",
+
+  /* ===== Lockfile Maintenance (global, für alle Lockfiles) ===== */
+  lockFileMaintenance: {
+    enabled: true,
+    automerge: true,
+    automergeType: "pr",
+  },
 
   packageRules: [
     /* GitHub Actions */
@@ -28,59 +38,44 @@
       groupName: "doc-updates",
     },
 
-    /* ============ Lockfile maintenance ============ */
-
-    // Dev lockfile-only, grouped
+    /* ===== Customize lockFileMaintenance PRs ===== */
     {
-      matchManagers: ["uv"],
-      rangeStrategy: "update-lockfile",
-      matchDepTypes: [
-        "dev",
-        "docs",
-        "mypy",
-        "pre-commit",
-        "safety",
-        "tests",
-        "typeguard",
-        "xdocs",
+      description: "Customize lockFileMaintenance PR labels/grouping",
+      matchUpdateTypes: ["lockFileMaintenance"],
+      labels: ["dependencies", "lock-file"],
+      groupName: "lock-file-maintenance",
+    },
+
+    /* ===== Dev Dependencies: Automerge minor/patch ===== */
+    {
+      description: "Dev dependency groups: automerge minor and patch",
+      matchManagers: ["pep621"],
+      matchJsonata: [
+        "depType = 'dependency-groups' and managerData.depGroup in ['dev','docs','mypy','pre-commit','safety','tests','typeguard','xdocs']",
       ],
-      groupName: "uv-updates-lockfile-dev",
+      matchUpdateTypes: ["minor", "patch"],
+      groupName: "uv-updates-dev",
+      automerge: true,
+      automergeType: "pr",
     },
 
-    // Prod lockfile-only, NOT grouped (one PR per package)
+    /* ===== Security Updates ===== */
     {
-      matchManagers: ["uv"],
-      rangeStrategy: "update-lockfile",
-      matchDepTypes: ["dependencies"],
-      // no groupName -> separate PRs
-    },
-
-    /* =============== Security updates =============== */
-
-    // Dev security-only, grouped
-    {
-      matchManagers: ["uv", "pep621"],
+      description: "Dev security updates",
+      matchManagers: ["pep621"],
       matchCategories: ["security"],
-      matchDepTypes: [
-        "dev",
-        "docs",
-        "mypy",
-        "pre-commit",
-        "safety",
-        "tests",
-        "typeguard",
-        "xdocs",
+      matchJsonata: [
+        "depType = 'dependency-groups' and managerData.depGroup in ['dev','docs','mypy','pre-commit','safety','tests','typeguard','xdocs']",
       ],
       groupName: "uv-security-updates-dev",
       labels: ["security", "uv", "dev"],
       prPriority: 1,
     },
-
-    // Prod security-only, grouped
     {
-      matchManagers: ["uv", "pep621"],
+      description: "Production security updates",
+      matchManagers: ["pep621"],
       matchCategories: ["security"],
-      matchDepTypes: ["dependencies"],
+      matchDepTypes: ["project.dependencies"],
       groupName: "uv-security-updates-prod",
       labels: ["security", "uv", "production"],
       prPriority: 1,
