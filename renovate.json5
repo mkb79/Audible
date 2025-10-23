@@ -1,83 +1,118 @@
 {
-  $schema: "https://docs.renovatebot.com/renovate-schema.json",
-  extends: ["config:recommended"],
-
-  enabledManagers: ["github-actions", "pep621", "pip_requirements"],
+  $schema: 'https://docs.renovatebot.com/renovate-schema.json',
+  extends: [
+    'config:recommended',
+  ],
+  enabledManagers: [
+    'github-actions',
+    'pep621',
+    'pip_requirements',
+  ],
   prConcurrentLimit: 15,
-  timezone: "Europe/Berlin",
-  schedule: ["before 4am on monday"],
-  constraints: { python: ">=3.10" },
-  semanticCommits: "enabled",
-
-  /* ===== Lockfile Maintenance (global, für alle Lockfiles) ===== */
+  timezone: 'Europe/Berlin',
+  schedule: [
+    'before 4am on monday',
+  ],
+  constraints: {
+    python: '>=3.10',
+  },
+  semanticCommits: 'enabled',
   lockFileMaintenance: {
     enabled: true,
     automerge: true,
-    automergeType: "pr",
+    automergeType: 'pr',
   },
-
   packageRules: [
-    /* GitHub Actions */
     {
-      matchManagers: ["github-actions"],
-      groupName: "github-actions-updates",
-      matchPackagePatterns: [".*"],
+      matchManagers: [
+        'github-actions',
+      ],
+      groupName: 'github-actions-updates',
+      matchPackageNames: [
+        '/.*/',
+      ],
     },
-
-    /* Workflows: constraints.txt */
     {
-      matchManagers: ["pip_requirements"],
-      matchFileNames: [".github/workflows/constraints.txt"],
-      groupName: "workflow-updates",
+      matchManagers: [
+        'pip_requirements',
+      ],
+      matchFileNames: [
+        '.github/workflows/constraints.txt',
+      ],
+      groupName: 'workflow-updates',
     },
-
-    /* Docs: requirements.txt */
     {
-      matchManagers: ["pip_requirements"],
-      matchFileNames: ["docs/requirements.txt"],
-      groupName: "doc-updates",
+      matchManagers: [
+        'pip_requirements',
+      ],
+      matchFileNames: [
+        'docs/requirements.txt',
+      ],
+      groupName: 'doc-updates',
     },
-
-    /* ===== Customize lockFileMaintenance PRs ===== */
     {
-      description: "Customize lockFileMaintenance PR labels/grouping",
-      matchUpdateTypes: ["lockFileMaintenance"],
-      labels: ["dependencies", "lock-file"],
-      groupName: "lock-file-maintenance",
+      description: 'Customize lockFileMaintenance PR labels/grouping',
+      matchUpdateTypes: [
+        'lockFileMaintenance',
+      ],
+      labels: [
+        'dependencies',
+        'lock-file',
+      ],
+      groupName: 'lock-file-maintenance',
     },
-
-    /* ===== Dev Dependencies: Automerge minor/patch ===== */
     {
-      description: "Dev dependency groups: automerge minor and patch",
-      matchManagers: ["pep621"],
+      description: 'Dev dependency groups: automerge minor and patch',
+      matchManagers: [
+        'pep621',
+      ],
       matchJsonata: [
         "depType = 'dependency-groups' and managerData.depGroup in ['dev','docs','mypy','pre-commit','safety','tests','typeguard','xdocs']",
       ],
-      matchUpdateTypes: ["minor", "patch"],
-      groupName: "uv-updates-dev",
+      matchUpdateTypes: [
+        'minor',
+        'patch',
+      ],
+      groupName: 'uv-updates-dev',
       automerge: true,
-      automergeType: "pr",
+      automergeType: 'pr',
     },
-
-    /* ===== Security Updates ===== */
     {
-      description: "Dev security updates",
-      matchManagers: ["pep621"],
-      matchCategories: ["security"],
+      description: 'Dev security updates',
+      matchManagers: [
+        'pep621',
+      ],
+      matchCategories: [
+        'security',
+      ],
       matchJsonata: [
         "depType = 'dependency-groups' and managerData.depGroup in ['dev','docs','mypy','pre-commit','safety','tests','typeguard','xdocs']",
       ],
-      groupName: "uv-security-updates-dev",
-      labels: ["security", "uv", "dev"],
+      groupName: 'uv-security-updates-dev',
+      labels: [
+        'security',
+        'uv',
+        'dev',
+      ],
       prPriority: 1,
     },
     {
-      description: "Production security updates",
-      matchManagers: ["pep621"],
-      matchCategories: ["security"],
-      matchDepTypes: ["project.dependencies"],
-      groupName: "uv-security-updates-prod",
-      labels: ["security", "uv", "production"],
+      description: 'Production security updates',
+      matchManagers: [
+        'pep621',
+      ],
+      matchCategories: [
+        'security',
+      ],
+      matchDepTypes: [
+        'project.dependencies',
+      ],
+      groupName: 'uv-security-updates-prod',
+      labels: [
+        'security',
+        'uv',
+        'production',
+      ],
       prPriority: 1,
     },
   ],
