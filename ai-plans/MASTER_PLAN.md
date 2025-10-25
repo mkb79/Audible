@@ -3,15 +3,40 @@
 **Project Goal:** Increase code coverage from 21% to near 100%
 
 **Created:** October 25, 2025  
-**Status:** In Planning  
-**Branch:** `feat/coverage-improvement`
+**Status:** Ready to Start  
+**Branch:** `feat/coverage-improvement` ✅
+
+---
+
+## 🎯 Quick Reference
+
+### Current Branch
+```bash
+git branch
+# * feat/coverage-improvement  ← You are here!
+```
+
+### Coverage Target Progression
+```
+21% (Now) → 46% (Phase 1) → 71% (Phase 2) → 85-90% (Phase 3)
+```
+
+### Dynamic Threshold Updates
+After each phase, automatically update `pyproject.toml`:
+```bash
+# Run this after completing a phase:
+python ai-plans/scripts/update_coverage_threshold.py
+
+# Then commit:
+git commit -m "chore: update fail_under to XX% after Phase Y"
+```
 
 ---
 
 ## 📊 Current Status
 
-| Module | Current Coverage | Target | Priority |
-|--------|-----------------|--------|----------|
+| Module | Current | Target | Priority |
+|--------|---------|--------|----------|
 | `__init__.py` | 100% ✅ | 100% | - |
 | `_types.py` | 100% ✅ | 100% | - |
 | `exceptions.py` | 46% | 100% | **PHASE 1** |
@@ -65,11 +90,13 @@
 
 ## 🔄 Git Workflow
 
-### Branch Strategy
+### Branch Strategy ✅
 - **Base Branch:** `master`
-- **Feature Branch:** `feat/coverage-improvement`
+- **Feature Branch:** `feat/coverage-improvement` ← **Currently active**
 - **All commits** happen in feature branch
 - **Merge to master** after Phase 3 completion
+
+**IMPORTANT:** All work is done in the `feat/coverage-improvement` branch that was created from `master`.
 
 ### Commit Strategy
 ```bash
@@ -79,7 +106,7 @@ git commit -m "test: add tests for localization module (95% coverage)"
 git commit -m "test: add tests for logging module (90% coverage)"
 git commit -m "chore: update fail_under to 46% after Phase 1"
 
-# Phase 2 commits
+# Phase 2 commits  
 git commit -m "test: add tests for utils module (90% coverage)"
 git commit -m "test: add comprehensive client tests (85% coverage)"
 git commit -m "test: add auth module tests (80% coverage)"
@@ -96,7 +123,10 @@ git commit -m "chore: update fail_under to 85% after Phase 3"
 
 ---
 
-## 📈 Dynamic Coverage Threshold Updates
+## 📈 Dynamic Coverage Threshold Updates ⚡
+
+### Why Dynamic Thresholds?
+The `fail_under` value in `pyproject.toml` ensures CI/CD fails if coverage drops. By updating it after each phase, we prevent coverage regression.
 
 ### Current Configuration
 ```toml
@@ -106,99 +136,71 @@ fail_under = 10  # Current threshold
 
 ### Update Strategy
 
-After each phase, update `pyproject.toml`:
-
-**After Phase 1 (Target: 46%):**
+**After Phase 1 (Target: ~46%):**
 ```toml
 fail_under = 46  # Increased from 10
 ```
 
-**After Phase 2 (Target: 71%):**
+**After Phase 2 (Target: ~71%):**
 ```toml
 fail_under = 71  # Increased from 46
 ```
 
-**After Phase 3 (Target: 85%):**
+**After Phase 3 (Target: ~85%):**
 ```toml
 fail_under = 85  # Increased from 71
 ```
 
-### Automation Script
-Create `scripts/update_coverage_threshold.py`:
+### Automation Script 🤖
+**Location:** `ai-plans/scripts/update_coverage_threshold.py`
 
-```python
-#!/usr/bin/env python3
-"""Update coverage threshold in pyproject.toml based on actual coverage."""
+**How it works:**
+1. Reads current coverage from coverage report
+2. Rounds down to nearest integer
+3. Updates `fail_under` in `pyproject.toml`
+4. Prints confirmation
 
-import re
-import subprocess
-from pathlib import Path
-
-
-def get_current_coverage() -> float:
-    """Get current coverage percentage from coverage report."""
-    result = subprocess.run(
-        ["coverage", "report", "--precision=2"],
-        capture_output=True,
-        text=True
-    )
-    # Parse TOTAL line: TOTAL  1417   1042    408     16    21.23%
-    for line in result.stdout.split("\n"):
-        if line.startswith("TOTAL"):
-            coverage_str = line.split()[-1].rstrip("%")
-            return float(coverage_str)
-    return 0.0
-
-
-def update_fail_under(new_threshold: int) -> None:
-    """Update fail_under in pyproject.toml."""
-    pyproject_path = Path("pyproject.toml")
-    content = pyproject_path.read_text()
-    
-    # Update fail_under value
-    pattern = r'fail_under = \d+'
-    replacement = f'fail_under = {new_threshold}'
-    new_content = re.sub(pattern, replacement, content)
-    
-    pyproject_path.write_text(new_content)
-    print(f"✅ Updated fail_under to {new_threshold}%")
-
-
-def main():
-    current = get_current_coverage()
-    # Round down to nearest integer
-    new_threshold = int(current)
-    
-    print(f"Current coverage: {current:.2f}%")
-    print(f"Setting fail_under to: {new_threshold}%")
-    
-    update_fail_under(new_threshold)
-
-
-if __name__ == "__main__":
-    main()
-```
-
-Usage after each phase:
+**Usage after each phase:**
 ```bash
-# Run tests and generate coverage
+# Step 1: Run tests and generate coverage
 uv run nox --session=coverage
 
-# Update threshold automatically
-python scripts/update_coverage_threshold.py
+# Step 2: Update threshold automatically  
+python ai-plans/scripts/update_coverage_threshold.py
 
-# Commit the change
+# Step 3: Commit the change
 git add pyproject.toml
 git commit -m "chore: update fail_under to XX% after Phase Y"
+```
+
+**Example output:**
+```
+📊 Current coverage: 46.25%
+🎯 Setting fail_under to: 46%
+✅ Updated fail_under to 46% in pyproject.toml
+
+✨ Success! Don't forget to commit the change:
+   git add pyproject.toml
+   git commit -m "chore: update fail_under to 46%"
 ```
 
 ---
 
 ## 🛠️ Test Infrastructure
 
-### New Test Structure
+### Project Structure
 ```
-tests/
+ai-plans/                          # All plans and scripts
+├── scripts/
+│   └── update_coverage_threshold.py  # Threshold automation
+├── MASTER_PLAN.md                 # This file
+├── PHASE_1_QUICK_WINS.md
+├── PHASE_2_CORE.md
+├── PHASE_3_COMPLEX.md
+├── README.md
+└── EXECUTIVE_SUMMARY.md
+
+tests/                             # Test directory (to be created)
 ├── __init__.py
 ├── conftest.py                    # Fixtures and helpers
 ├── unit/
@@ -216,12 +218,10 @@ tests/
 ├── integration/
 │   ├── test_auth_flow.py
 │   └── test_api_client.py
-├── fixtures/
-│   ├── sample_responses.json
-│   ├── test_credentials.json
-│   └── mock_data.py
-└── scripts/
-    └── update_coverage_threshold.py
+└── fixtures/
+    ├── sample_responses.json
+    ├── test_credentials.json
+    └── mock_data.py
 ```
 
 ### Required Tools & Dependencies
@@ -230,86 +230,71 @@ tests/
 - ✅ coverage (already present)
 - ➕ pytest-httpx (for HTTP mocking)
 - ➕ pytest-asyncio (for async tests)
-- ➕ freezegun (for time-based tests)
-
-### Common Test Fixtures (conftest.py)
-- Mock HTTP responses
-- Sample credentials
-- Locale templates
-- Mock file system
-- Logger capture
-- Encrypted/decrypted test files
 
 ---
 
 ## 📈 Milestones
 
 ### Milestone 1: Phase 1 Complete
-- **Criteria:**
-  - `exceptions.py`: 100% coverage
-  - `localization.py`: 95% coverage
-  - `_logging.py`: 90% coverage
-  - Overall coverage: ≥45%
-  - `fail_under` updated to 46
+- `exceptions.py`: 100% coverage
+- `localization.py`: 95% coverage
+- `_logging.py`: 90% coverage
+- Overall coverage: ≥46%
+- `fail_under` updated to 46
 
 ### Milestone 2: Phase 2 Complete
-- **Criteria:**
-  - `utils.py`: 90% coverage
-  - `client.py`: 85% coverage
-  - `auth.py`: 80% coverage
-  - Overall coverage: ≥70%
-  - `fail_under` updated to 71
+- `utils.py`: 90% coverage
+- `client.py`: 85% coverage
+- `auth.py`: 80% coverage
+- Overall coverage: ≥71%
+- `fail_under` updated to 71
 
 ### Milestone 3: Phase 3 Complete
-- **Criteria:**
-  - All complex modules: ≥70% coverage
-  - Overall coverage: ≥85%
-  - `fail_under` updated to 85
-  - CI/CD pipeline green
+- All complex modules: ≥70% coverage
+- Overall coverage: ≥85%
+- `fail_under` updated to 85
+- CI/CD pipeline green
 
-### Milestone 4: Maintenance & Documentation
-- **Criteria:**
-  - Test documentation created
-  - CI/CD coverage reporting active
-  - Coverage badge in README
-  - PR ready for review
+### Milestone 4: Merge to Master
+- Test documentation created
+- CI/CD coverage reporting active
+- Coverage badge in README
+- PR reviewed and approved
 
 ---
 
 ## 🚀 Implementation Order
 
 ### Week 1: Quick Wins + Setup
-1. ✅ Create feature branch
-2. ✅ Set up test infrastructure (conftest.py)
-3. ✅ Phase 1: Exceptions
-4. ✅ Phase 1: Localization
-5. ✅ Phase 1: Logging
-6. ✅ Update fail_under to 46%
-7. ✅ Add dependencies (pytest-httpx, etc.)
+1. ✅ Create feature branch `feat/coverage-improvement`
+2. Set up test infrastructure (conftest.py)
+3. Phase 1: Exceptions
+4. Phase 1: Localization
+5. Phase 1: Logging
+6. Update `fail_under` to 46%
+7. Add dependencies (pytest-asyncio)
 
 ### Week 2: Core Modules
-8. ✅ Phase 2: Utils
-9. ✅ Phase 2: Client (sync)
-10. ✅ Phase 2: Client (async)
-11. ✅ Phase 2: Auth (Basics)
-12. ✅ Phase 2: Auth (Advanced)
-13. ✅ Update fail_under to 71%
+8. Phase 2: Utils
+9. Phase 2: Client (sync & async)
+10. Phase 2: Auth
+11. Update `fail_under` to 71%
 
 ### Week 3-4: Complex Modules
-14. ✅ Phase 3: AESCipher
-15. ✅ Phase 3: Metadata
-16. ✅ Phase 3: Activation Bytes
-17. ✅ Phase 3: Register
-18. ✅ Phase 3: Login (OAuth flow)
-19. ✅ Update fail_under to 85%
+12. Phase 3: AESCipher
+13. Phase 3: Metadata
+14. Phase 3: Activation Bytes
+15. Phase 3: Register
+16. Phase 3: Login (OAuth flow)
+17. Update `fail_under` to 85%
 
 ### Week 5: Integration & Polish
-20. ✅ Integration tests
-21. ✅ Cover edge cases
-22. ✅ Configure CI/CD
-23. ✅ Documentation
-24. ✅ Code review & refactoring
-25. ✅ Merge to master
+18. Integration tests
+19. Cover edge cases
+20. Configure CI/CD
+21. Documentation
+22. Code review & refactoring
+23. Merge to master
 
 ---
 
@@ -321,6 +306,7 @@ tests/
 - ✅ CI/CD pipeline works
 - ✅ No failing tests
 - ✅ `fail_under` reflects actual coverage
+- ✅ All commits in `feat/coverage-improvement` branch
 
 ### Desired Goals (Should-Have)
 - ✅ Coverage ≥90%
@@ -328,125 +314,32 @@ tests/
 - ✅ Edge cases covered
 - ✅ Test documentation complete
 
-### Stretch Goals (Nice-to-Have)
-- ✅ Coverage ≥95%
-- ✅ Property-based testing (hypothesis)
-- ✅ Performance tests
-- ✅ Mutation testing (mutmut)
-
 ---
 
-## 🔍 Quality Assurance
+## 🔄 Language Requirements
 
-### Coverage Monitoring
-- Run coverage report after each phase
-- Stop and analyze if coverage drops >2%
-- All new features must include tests
-
-### Code Review Checklist
-- [ ] Tests follow AAA pattern (Arrange-Act-Assert)
-- [ ] Fixtures are reused
-- [ ] Mocks are minimal and precise
-- [ ] Test names are descriptive
-- [ ] Edge cases are covered
-- [ ] Async tests use pytest-asyncio
-- [ ] No flaky tests
-- [ ] All test code in English
-- [ ] All docstrings in English
-
-### Performance Targets
-- Total test runtime: <30 seconds
-- Single test: <100ms (except integration)
-- CI/CD pipeline: <5 minutes
-
----
-
-## 📚 Resources & References
-
-### Documentation
-- [pytest Best Practices](https://docs.pytest.org/en/latest/goodpractices.html)
-- [Coverage.py Docs](https://coverage.readthedocs.io/)
-- [pytest-mock](https://pytest-mock.readthedocs.io/)
-- [pytest-httpx](https://colin-b.github.io/pytest_httpx/)
-
-### Project-Specific Docs
-- `CLAUDE.md` - Project setup and conventions
-- `CONTRIBUTING.md` - Contribution guidelines
-- Individual phase plans in this folder
-
----
-
-## ⚠️ Risks & Mitigation
-
-### Risk 1: OAuth Flow Complexity
-**Probability:** High  
-**Impact:** Medium  
-**Mitigation:** Extensive mocking, incremental tests
-
-### Risk 2: Async Test Complexity
-**Probability:** Medium  
-**Impact:** Medium  
-**Mitigation:** Use pytest-asyncio, write sync tests first
-
-### Risk 3: File Encryption Tests
-**Probability:** Medium  
-**Impact:** Low  
-**Mitigation:** Test fixtures with known encrypted files
-
-### Risk 4: Flaky HTTP Tests
-**Probability:** Medium  
-**Impact:** High  
-**Mitigation:** No real HTTP calls, only mocks
+### All Documentation & Code in English
+- ✅ Plans written in **English**
+- ✅ Test code in **English**
+- ✅ Docstrings in **English**
+- ✅ Comments in **English**
+- ✅ Variable names in **English**
+- ✅ Commit messages in **English**
 
 ---
 
 ## 📞 Next Steps
 
-1. ✅ Review this master plan
-2. ✅ Read `PHASE_1_QUICK_WINS.md`
-3. ✅ Set up test infrastructure in `conftest.py`
-4. ✅ Implement first tests
-5. ✅ Measure and document coverage
-6. ✅ Update `fail_under` after each phase
+1. ✅ Branch created: `feat/coverage-improvement`
+2. ✅ Plans documented
+3. ✅ Automation script ready
+4. **→ Ready to start Phase 1!**
 
----
-
-## 🔄 Language Requirements
-
-### All Documentation
-- ✅ Plans written in **English**
-- ✅ Comments in **English**
-- ✅ Commit messages in **English**
-
-### All Code
-- ✅ Test code in **English**
-- ✅ Variable names in **English**
-- ✅ Function names in **English**
-- ✅ Docstrings in **English**
-- ✅ Error messages in **English**
-
-Example:
-```python
-def test_authenticator_refreshes_token_on_expiry():
-    """Test that authenticator automatically refreshes expired tokens.
-    
-    Given an authenticator with an expired access token,
-    When making an API request,
-    Then the token should be refreshed automatically.
-    """
-    # Arrange
-    mock_auth = Mock()
-    mock_auth.access_token = "expired_token"
-    
-    # Act
-    result = mock_auth.refresh_access_token()
-    
-    # Assert
-    assert result is not None
-```
+Read `PHASE_1_QUICK_WINS.md` and begin implementation.
 
 ---
 
 **Author:** Claude (AI Assistant)  
 **Project:** Audible Python Library  
-**Version:** 2.0 (English)
+**Version:** 2.1 (Updated with correct paths and branch info)  
+**Branch:** `feat/coverage-improvement`
