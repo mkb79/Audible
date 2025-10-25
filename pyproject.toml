@@ -127,6 +127,10 @@ show_error_context = true
 strict = true
 warn_unreachable = true
 
+[[tool.mypy.overrides]]
+module = "tests.*"
+ignore_errors = true
+
 [tool.ruff]
 #  missing rst-docstrings check, these should be adding through ruff
 line-length = 88
