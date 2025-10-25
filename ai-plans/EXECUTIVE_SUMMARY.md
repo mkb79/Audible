@@ -6,33 +6,40 @@
 
 ## 📊 Current Situation
 
-| Metric | Value |
-|--------|-------|
-| **Current Coverage** | 21% |
-| **Target Coverage** | 85-90% |
-| **Number of Modules** | 15 |
-| **Fully Tested** | 2 (13%) |
-| **Critical Modules Without Tests** | 5 |
+| Metric                             | Value                              |
+| ---------------------------------- | ---------------------------------- |
+| **Current Coverage**               | 50% (combined on October 25, 2025) |
+| **Target Coverage**                | 85-90%                             |
+| **Number of Modules**              | 15                                 |
+| **Fully Tested**                   | 5 (33%)                            |
+| **Critical Modules Without Tests** | 5                                  |
 
-**Problem:** Only one test exists (`test_main.py`) that merely checks if the Client class exists.
+**Problem:** Historically only `tests/test_main.py` existed; Phase 1 now covers exceptions,
+localization, logging, and selected helpers (utils/client) to hit 50%, yet core authentication
+and client flows remain largely untested.
 
 ---
 
 ## 🎯 Solution: 3-Phase Plan
 
 ### Phase 1: Quick Wins (2-3 hours)
-**Goal:** 21% → ~46% Coverage  
-**Modules:** exceptions, localization, logging  
+
+**Goal:** 21% → ~46% Coverage
+**Modules:** exceptions, localization, logging
 **Strategy:** Simple modules first for quick wins
+**Progress (October 25, 2025):** Tests in place for all Phase 1 modules plus targeted helpers;
+combined coverage now sits at 50%, leaving only the `fail_under` update and commit workflow.
 
 ### Phase 2: Core Functionality (5-7 hours)
-**Goal:** ~46% → ~71% Coverage  
-**Modules:** utils, client, auth  
+
+**Goal:** ~46% → ~71% Coverage
+**Modules:** utils, client, auth
 **Strategy:** Secure business-critical components
 
 ### Phase 3: Complex Modules (8-12 hours)
-**Goal:** ~71% → 85-90% Coverage  
-**Modules:** aescipher, metadata, activation_bytes, register, login  
+
+**Goal:** ~71% → 85-90% Coverage
+**Modules:** aescipher, metadata, activation_bytes, register, login
 **Strategy:** Completeness with realistic targets
 
 ---
@@ -40,42 +47,43 @@
 ## 📈 Expected Results
 
 ### Coverage Progression
+
 ```
-21% (Start) ──→ 46% (Phase 1) ──→ 71% (Phase 2) ──→ 85-90% (Phase 3)
-     ↑             ↑                 ↑                    ↑
-   Now        Quick Wins        Core Features     Completeness
+50% (Current) ──→ 71% (Phase 2 target) ──→ 85-90% (Phase 3)
+      ↑                  ↑                     ↑
+    Now         Core Features          Completeness
 ```
 
 ### Module Coverage Targets
 
-| Module | Current | Target | Priority |
-|--------|---------|--------|----------|
-| `__init__.py` | 100% ✅ | 100% | - |
-| `_types.py` | 100% ✅ | 100% | - |
-| `exceptions.py` | 46% | **100%** | P1 |
-| `localization.py` | 23% | **95%** | P1 |
-| `_logging.py` | 41% | **90%** | P1 |
-| `utils.py` | 20% | **90%** | P2 |
-| `client.py` | 31% | **85%** | P2 |
-| `auth.py` | 21% | **80%** | P2 |
-| `aescipher.py` | 19% | **85%** | P3 |
-| `metadata.py` | 20% | **80%** | P3 |
-| `activation_bytes.py` | 21% | **75%** | P3 |
-| `register.py` | 13% | **75%** | P3 |
-| `login.py` | 12% | **70%** | P3 |
+| Module                | Current              | Target   | Priority |
+| --------------------- | -------------------- | -------- | -------- |
+| `__init__.py`         | 100% ✅              | 100%     | -        |
+| `_types.py`           | 100% ✅              | 100%     | -        |
+| `exceptions.py`       | 100% ✅ (↑ from 46%) | **100%** | P1       |
+| `localization.py`     | 99% ✅ (↑ from 23%)  | **95%**  | P1       |
+| `_logging.py`         | 100% ✅ (↑ from 41%) | **90%**  | P1       |
+| `utils.py`            | 88% (partial)        | **90%**  | P2       |
+| `client.py`           | 42% (partial)        | **85%**  | P2       |
+| `auth.py`             | 21%                  | **80%**  | P2       |
+| `aescipher.py`        | 19%                  | **85%**  | P3       |
+| `metadata.py`         | 20%                  | **80%**  | P3       |
+| `activation_bytes.py` | 21%                  | **75%**  | P3       |
+| `register.py`         | 13%                  | **75%**  | P3       |
+| `login.py`            | 12%                  | **70%**  | P3       |
 
 ---
 
 ## ⏱️ Timeline
 
-| Phase | Duration | Cumulative |
-|-------|----------|------------|
-| Setup & Planning | 1h | 1h |
-| **Phase 1** | 2-3h | 3-4h |
-| **Phase 2** | 5-7h | 8-11h |
-| **Phase 3** | 8-12h | 16-23h |
-| Integration & Polish | 2-3h | 18-26h |
-| **TOTAL** | **18-26h** | - |
+| Phase                | Duration   | Cumulative |
+| -------------------- | ---------- | ---------- |
+| Setup & Planning     | 1h         | 1h         |
+| **Phase 1**          | 2-3h       | 3-4h       |
+| **Phase 2**          | 5-7h       | 8-11h      |
+| **Phase 3**          | 8-12h      | 16-23h     |
+| Integration & Polish | 2-3h       | 18-26h     |
+| **TOTAL**            | **18-26h** | -          |
 
 **Recommendation:** Distribute 1-2 hours per day over 2-3 weeks
 
@@ -84,6 +92,7 @@
 ## 🔄 Git Workflow
 
 ### Branch Strategy
+
 - **Base:** `master`
 - **Feature Branch:** `feat/coverage-improvement`
 - **All commits** in feature branch
@@ -98,7 +107,7 @@ After each phase, `pyproject.toml` is automatically updated:
 fail_under = 10  # Start
 
 # After Phase 1
-fail_under = 46  # +36 points
+fail_under = 50  # actual Phase 1 coverage (target ≥46)
 
 # After Phase 2
 fail_under = 71  # +25 points
@@ -108,9 +117,10 @@ fail_under = 85  # +14 points
 ```
 
 ### Automation Script
+
 ```bash
 # Run after each phase
-python scripts/update_coverage_threshold.py
+python ai-plans/scripts/update_coverage_threshold.py
 
 # Automatically updates pyproject.toml
 # Commit with:
@@ -122,15 +132,18 @@ git commit -m "chore: update fail_under to XX% after Phase Y"
 ## 🛠️ Required Resources
 
 ### Tools (already present)
+
 - ✅ pytest
 - ✅ pytest-mock
 - ✅ coverage
 
 ### Additional Dependencies
+
 - ➕ pytest-asyncio (for async tests)
 - ➕ pytest-httpx (optional, for HTTP mocking)
 
 ### Test Structure
+
 ```
 tests/
 ├── unit/              # Unit tests per module
@@ -157,6 +170,7 @@ tests/
 ## ✅ Success Criteria
 
 ### Minimum (Must-Have)
+
 - ✅ Overall coverage ≥85%
 - ✅ All critical paths tested
 - ✅ CI/CD pipeline works
@@ -164,12 +178,14 @@ tests/
 - ✅ `fail_under` reflects actual coverage
 
 ### Desired (Should-Have)
+
 - ✅ Coverage ≥90%
 - ✅ Integration tests present
 - ✅ Edge cases covered
 - ✅ Test documentation complete
 
 ### Stretch (Nice-to-Have)
+
 - ✅ Coverage ≥95%
 - ✅ Property-based testing
 - ✅ Mutation testing
@@ -180,18 +196,22 @@ tests/
 ## ⚠️ Risks & Challenges
 
 ### High Complexity
+
 - **login.py:** OAuth2 flow with CAPTCHA & 2FA
 - **Mitigation:** Extensive mocking, realistic target 70%
 
 ### Async Testing
+
 - **client.py:** Sync and async clients
 - **Mitigation:** pytest-asyncio, separate test classes
 
 ### Encryption
+
 - **aescipher.py:** Cryptography tests
 - **Mitigation:** Focus on functionality, not security audit
 
 ### Interactive Components
+
 - **login.py:** Browser, user input
 - **Mitigation:** Mock instead of real browser integration
 
@@ -200,6 +220,7 @@ tests/
 ## 🔑 Language Requirements
 
 ### All Code and Documentation
+
 - ✅ Plans in **English**
 - ✅ Test code in **English**
 - ✅ Docstrings in **English**
@@ -208,10 +229,11 @@ tests/
 - ✅ Commit messages in **English**
 
 **Example:**
+
 ```python
 def test_client_handles_expired_token_with_auto_refresh():
     """Test that client automatically refreshes expired access tokens.
-    
+
     Scenario:
         Given a client with an expired access token
         When making an API request
@@ -221,10 +243,10 @@ def test_client_handles_expired_token_with_auto_refresh():
     # Arrange
     mock_auth = create_mock_authenticator(token_expired=True)
     client = Client(auth=mock_auth)
-    
+
     # Act
     response = client.get("library")
-    
+
     # Assert
     assert response.status_code == 200
     assert mock_auth.refresh_called
@@ -235,35 +257,40 @@ def test_client_handles_expired_token_with_auto_refresh():
 ## 🚀 Next Steps
 
 ### Immediately
+
 1. ✅ Review plan documents
 2. ✅ Create feature branch: `git checkout -b feat/coverage-improvement`
 3. ✅ Set up test infrastructure
 4. ✅ Start with Phase 1
 
 ### This Week
-1. ✅ Complete Phase 1 (Quick Wins)
-2. ✅ Increase coverage to ~46%
-3. ✅ Update `fail_under` to 46
-4. ✅ Document lessons learned
+
+1. ⏳ Complete Phase 1 (tests merged; wrap-up tasks still open)
+2. ✅ Raise overall coverage to ≥46% (currently 50%)
+3. ✅ Update `fail_under` to 50 following Phase 1 completion
+4. ⬜ Document lessons learned after closing Phase 1
 
 ### Next Week
-1. ✅ Start Phase 2 (Core)
-2. ✅ Client & Auth tests
-3. ✅ Increase coverage to ~71%
-4. ✅ Update `fail_under` to 71
+
+1. ⬜ Start Phase 2 (Core modules)
+2. ⬜ Implement client and auth test suites
+3. ⬜ Lift coverage toward ~71%
+4. ⬜ Update `fail_under` to 71 following Phase 2
 
 ### Week After
-1. ✅ Start Phase 3 (Complex)
-2. ✅ Login flow tests
-3. ✅ Final coverage ≥85%
-4. ✅ Update `fail_under` to 85
-5. ✅ Create PR for review
+
+1. ⬜ Start Phase 3 (Complex modules)
+2. ⬜ Finish login flow tests
+3. ⬜ Push final coverage to ≥85%
+4. ⬜ Update `fail_under` to 85
+5. ⬜ Prepare PR for review
 
 ---
 
 ## 📚 Documentation
 
 ### For Details See:
+
 - **`MASTER_PLAN.md`** - Complete project plan
 - **`PHASE_1_QUICK_WINS.md`** - Detailed Phase 1 guide
 - **`PHASE_2_CORE.md`** - Detailed Phase 2 guide
@@ -284,7 +311,7 @@ def test_client_handles_expired_token_with_auto_refresh():
 
 ---
 
-**Status:** ✅ Planning Complete - Ready for Implementation  
-**Created:** October 25, 2025  
-**Version:** 2.0 (English)  
+**Status:** 🚧 Phase 1 in progress — 50% coverage after quick-win tests
+**Created:** October 25, 2025
+**Version:** 2.2 (English)
 **Branch:** `feat/coverage-improvement`

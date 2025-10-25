@@ -113,7 +113,7 @@ relative_files = true
 
 [tool.coverage.report]
 show_missing = true
-fail_under = 10  # temporarily drop complexity, target is 100
+fail_under = 50  # temporarily drop complexity, target is 100
 exclude_lines = [
     "pragma: no cover",
     "if TYPE_CHECKING:"
