@@ -14,11 +14,11 @@ from typing import (
 )
 
 import httpx
-import rsa
 from httpx import Cookies
 
 from .activation_bytes import get_activation_bytes as get_ab
 from .aescipher import AESCipher, detect_file_encryption
+from .crypto import get_crypto_providers
 from .exceptions import AuthFlowError, FileEncryptionError, NoRefreshToken
 from .login import external_login, login
 from .register import deregister as deregister_
@@ -179,7 +179,12 @@ def user_profile_audible(access_token: str, domain: str) -> dict[str, Any]:
 
 
 def sign_request(
-    method: str, path: str, body: bytes, adp_token: str, private_key: str
+    method: str,
+    path: str,
+    body: bytes,
+    adp_token: str,
+    private_key: str,
+    cached_key: Any = None,
 ) -> dict[str, str]:
     """Helper function who creates signed headers for http requests.
 
@@ -189,6 +194,8 @@ def sign_request(
         body: The http message body.
         adp_token: The adp token obtained after a device registration.
         private_key: The rsa key obtained after device registration.
+        cached_key: Optional pre-loaded RSA key object for performance.
+            If provided, private_key parsing is skipped.
 
     Returns:
         A dict with the signed headers.
@@ -198,8 +205,15 @@ def sign_request(
 
     data = f"{method}\n{path}\n{date}\n{str_body}\n{adp_token}"
 
-    key = rsa.PrivateKey.load_pkcs1(private_key.encode("utf-8"))
-    cipher = rsa.pkcs1.sign(data.encode(), key, "SHA-256")
+    providers = get_crypto_providers()
+
+    # Use cached key if provided, otherwise load from PEM
+    if cached_key is None:
+        key = providers.rsa.load_private_key(private_key)
+    else:
+        key = cached_key
+
+    cipher = providers.rsa.sign(key, data.encode(), "SHA-256")
     signed_encoded = base64.b64encode(cipher)
 
     signature = f"{signed_encoded.decode()}:{date}"
@@ -229,6 +243,16 @@ class Authenticator(httpx.Auth):
         save the data again. After this deregistration, refreshing access
         tokens and requesting cookies for another domain will work for
         pre-Amazon accounts.
+
+    Thread Safety:
+        Authenticator instances are **not thread-safe** and should not be
+        shared across threads. The internal state (access tokens, RSA key cache)
+        can be modified during request signing and token refresh operations,
+        leading to race conditions.
+
+        For multi-threaded applications, create separate Authenticator instances
+        per thread, or use appropriate locking mechanisms around Authenticator
+        usage.
     """
 
     access_token: str | None = None
@@ -249,6 +273,7 @@ class Authenticator(httpx.Auth):
     requires_request_body: bool = True
     _forbid_new_attrs: bool = True
     _apply_test_convert: bool = True
+    _cached_rsa_key: Any = None
 
     def __setattr__(self, attr: str, value: Any) -> None:
         if self._forbid_new_attrs and not hasattr(self, attr):
@@ -519,12 +544,21 @@ class Authenticator(httpx.Auth):
         if self.adp_token is None or self.device_private_key is None:
             raise Exception("No signing data found.")
 
+        # Load and cache RSA key on first use for performance
+        if self._cached_rsa_key is None:
+            providers = get_crypto_providers()
+            self._cached_rsa_key = providers.rsa.load_private_key(
+                self.device_private_key
+            )
+            logger.debug("Loaded and cached RSA private key")
+
         headers = sign_request(
             method=request.method,
             path=request.url.raw_path.decode(),
             body=request.content,
             adp_token=self.adp_token,
             private_key=self.device_private_key,
+            cached_key=self._cached_rsa_key,
         )
 
         request.headers.update(headers)
