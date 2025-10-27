@@ -21,7 +21,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      pull-requests: write # Required for gh pr comment
+      pull-requests: read
       issues: read
       id-token: write
 
