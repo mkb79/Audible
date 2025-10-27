@@ -253,6 +253,12 @@ class Authenticator(httpx.Auth):
         For multi-threaded applications, create separate Authenticator instances
         per thread, or use appropriate locking mechanisms around Authenticator
         usage.
+
+    Note:
+        The ``device_private_key`` attribute should be treated as immutable
+        once the authenticator has been used for signing requests. Mutating
+        the value leaves the cached RSA key out of sync. Create a new
+        :class:`Authenticator` instance if you need to swap keys.
     """
 
     access_token: str | None = None

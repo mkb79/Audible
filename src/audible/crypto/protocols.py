@@ -99,7 +99,8 @@ class RSAProvider(Protocol):
         Args:
             key: A parsed RSA private key (from load_private_key).
             data: The data to sign.
-            algorithm: The hash algorithm to use (default: "SHA-256").
+            algorithm: The hash algorithm to use. Currently only "SHA-256"
+                is supported to match Audible API requirements (SHA256withRSA).
         """
         ...
 

@@ -363,3 +363,62 @@ def test_registry_hash_operations() -> None:
 
     assert len(sha256_digest) == 32
     assert len(sha1_digest) == 20
+
+
+def test_registry_provider_selection() -> None:
+    """Test that registry selects appropriate provider based on availability."""
+    registry = get_crypto_providers()
+
+    # Verify provider is selected (either pycryptodome or legacy)
+    provider_name = registry.provider_name
+    assert provider_name in ("legacy", "pycryptodome")
+
+    # Verify all required providers are initialized correctly
+    assert registry.aes is not None
+    assert registry.pbkdf2 is not None
+    assert registry.rsa is not None
+    assert registry.hash is not None
+
+    # Test that operations work regardless of which provider is selected
+    # This ensures fallback to legacy works if pycryptodome is unavailable
+
+    # Test AES
+    key = b"sixteen byte key"
+    iv = b"sixteen byte iv!"
+    plaintext = "test data"
+    ciphertext = registry.aes.encrypt(key, iv, plaintext)
+    assert registry.aes.decrypt(key, iv, ciphertext) == plaintext
+
+    # Test PBKDF2
+    derived_key = registry.pbkdf2.derive_key(
+        "password",
+        b"salt",
+        1000,
+        32,
+        hashlib.sha256,
+    )
+    assert len(derived_key) == 32
+
+    # Test Hash
+    assert len(registry.hash.sha256(b"test")) == 32
+    assert len(registry.hash.sha1(b"test")) == 20
+
+    # Test RSA
+    rsa_key = """-----BEGIN RSA PRIVATE KEY-----
+MIICXAIBAAKBgQCckEdw6Hd8Pwm1YRtinw2UQkTmRM5QQcfsUxi86w6mxXRomETI
+FPZaFS6q9D1x1Zgzhk+tXS6MBl8tJrDjaAUROeoajdNylvunvdyLNQhoaGOcbRSr
+0DFV/an6oKv6IsLQzI7UP91ZSbg4fDb5/LqqD4devp5QpShJMEtw2OUUzwIDAQAB
+AoGAdqJtQAUm5SLvPF2E3sofBATjKIlivDXcRBsDV8PVqlFc0BTxqZsYwVHjtu6z
+0JpFZmWT4o4FQ11gqVn0F50umJuPoS/slfBGiV3TE2b3o+uLy6EcVDoOtH7cUO6l
+gTvejvv6rCpuvHHLkDf8mUEtN+WJDGwYamyHfCIChSAIrMECQQDMIdhGmNg7ckpb
+KnrJ2rAj38QrUO0t1m/t+i/76vyvPN65o6lnvI/SHNXUf/asQbmHeUT3b75ApqoV
+BLSGWG15AkEAxFg++zayNfGHl99xYpB0g4gom/UqGC87hiVJYXpoXCld4kmguW4j
+ov3rRDKQGZwh/DQyX0BvxDHmfGzTXNmqhwJAS+m6OGbW4ySZqlWd3DtLjcvFdCZg
+Tc+VSHbmKVU2KyUD3x2R/lYNViILEz+TSHQYvtzGXQ5dPkW8spxRVjTEYQJAGowH
+7/VkQRDoEWu/q+D2L/aP7w5F48E3HhsagdiIFbXuILNtzMSMgvQsBCuF+kB3A9+W
+0/QlaHSKwlYAefRgLwJBAMQc+jY9eymjJ08KVZrVC8NhYEliWTPkpfjeh4CTTfNY
+Ho8KYXsQV2M4btI7FJO1CMb2SV5sP09IRvBdX1hEqzY=
+-----END RSA PRIVATE KEY-----"""
+    key_obj = registry.rsa.load_private_key(rsa_key)
+    signature = registry.rsa.sign(key_obj, b"test data")
+    assert len(signature) > 0

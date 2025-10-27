@@ -94,14 +94,23 @@ class PycryptodomeAESProvider:
 
         Returns:
             The decrypted plaintext as a string.
+
+        Raises:
+            ValueError: If PKCS7 padding is invalid (wrong key/IV or corrupted data).
         """
         cipher = AES.new(key, AES.MODE_CBC, iv)
         decrypted = cipher.decrypt(encrypted_data)
 
         if padding == "default":
             # Remove PKCS7 padding using pycryptodome's built-in function
-            # This includes validation and raises ValueError if padding is invalid
-            decrypted = unpad(decrypted, AES.block_size, style="pkcs7")
+            try:
+                decrypted = unpad(decrypted, AES.block_size, style="pkcs7")
+            except ValueError as e:
+                msg = (
+                    "Invalid PKCS7 padding - possible decryption key/IV mismatch or "
+                    "corrupted ciphertext"
+                )
+                raise ValueError(msg) from e
 
         return decrypted.decode("utf-8")  # type: ignore[no-any-return]
 
@@ -205,13 +214,13 @@ class PycryptodomeRSAProvider:
         Args:
             key: A parsed RSA.RsaKey object.
             data: The data to sign.
-            algorithm: The hash algorithm (default: "SHA-256").
+            algorithm: The hash algorithm. Only "SHA-256" is supported.
 
         Returns:
             The signature bytes.
 
         Raises:
-            ValueError: If algorithm is not supported.
+            ValueError: If algorithm is not "SHA-256".
         """
         # Create hash object
         if algorithm == "SHA-256":
