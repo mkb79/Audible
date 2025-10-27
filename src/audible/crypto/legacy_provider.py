@@ -14,7 +14,7 @@ from functools import lru_cache
 from hashlib import sha1, sha256
 from typing import Any
 
-import rsa  # type: ignore[import-untyped]
+import rsa
 from pbkdf2 import PBKDF2  # type: ignore[import-untyped]
 from pyaes import (  # type: ignore[import-untyped]
     AESModeOfOperationCBC,

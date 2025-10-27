@@ -28,9 +28,6 @@ class AESProvider(Protocol):
             iv: The initialization vector (16 bytes).
             data: The plaintext data to encrypt.
             padding: Padding mode - "default" for PKCS7, "none" for no padding.
-
-        Returns:
-            The encrypted ciphertext as bytes.
         """
         ...
 
@@ -44,9 +41,6 @@ class AESProvider(Protocol):
             iv: The initialization vector (16 bytes).
             encrypted_data: The ciphertext to decrypt.
             padding: Padding mode - "default" for PKCS7, "none" for no padding.
-
-        Returns:
-            The decrypted plaintext as a string.
         """
         ...
 
@@ -75,9 +69,6 @@ class PBKDF2Provider(Protocol):
             iterations: Number of iterations (1-65535).
             key_size: Desired key size in bytes.
             hashmod: Hash function factory (e.g., hashlib.sha256).
-
-        Returns:
-            The derived key as bytes.
         """
         ...
 
@@ -99,9 +90,6 @@ class RSAProvider(Protocol):
 
         Args:
             pem_data: RSA private key in PEM format.
-
-        Returns:
-            A parsed key object (implementation-specific type).
         """
         ...
 
@@ -112,9 +100,6 @@ class RSAProvider(Protocol):
             key: A parsed RSA private key (from load_private_key).
             data: The data to sign.
             algorithm: The hash algorithm to use (default: "SHA-256").
-
-        Returns:
-            The signature as bytes.
         """
         ...
 
@@ -131,9 +116,6 @@ class HashProvider(Protocol):
 
         Args:
             data: The data to hash.
-
-        Returns:
-            The SHA-256 digest as bytes.
         """
         ...
 
@@ -142,9 +124,6 @@ class HashProvider(Protocol):
 
         Args:
             data: The data to hash.
-
-        Returns:
-            The SHA-1 digest as bytes.
 
         Note:
             SHA-1 is considered cryptographically broken and should only be

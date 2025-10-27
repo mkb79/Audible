@@ -18,12 +18,12 @@ from typing import Any
 
 # Optional import - only available if pycryptodome is installed
 try:
-    from Crypto.Cipher import AES
-    from Crypto.Hash import SHA1, SHA256
-    from Crypto.Protocol.KDF import PBKDF2
-    from Crypto.PublicKey import RSA
-    from Crypto.Signature import pkcs1_15
-    from Crypto.Util.Padding import pad, unpad
+    from Crypto.Cipher import AES  # type: ignore[import-not-found]
+    from Crypto.Hash import SHA1, SHA256  # type: ignore[import-not-found]
+    from Crypto.Protocol.KDF import PBKDF2  # type: ignore[import-not-found]
+    from Crypto.PublicKey import RSA  # type: ignore[import-not-found]
+    from Crypto.Signature import pkcs1_15  # type: ignore[import-not-found]
+    from Crypto.Util.Padding import pad, unpad  # type: ignore[import-not-found]
 
     PYCRYPTODOME_AVAILABLE = True
 except ImportError:
@@ -79,7 +79,7 @@ class PycryptodomeAESProvider:
             # Apply PKCS7 padding using pycryptodome's built-in function
             data_bytes = pad(data_bytes, AES.block_size, style="pkcs7")
 
-        return cipher.encrypt(data_bytes)
+        return cipher.encrypt(data_bytes)  # type: ignore[no-any-return]
 
     def decrypt(
         self, key: bytes, iv: bytes, encrypted_data: bytes, padding: str = "default"
@@ -103,7 +103,7 @@ class PycryptodomeAESProvider:
             # This includes validation and raises ValueError if padding is invalid
             decrypted = unpad(decrypted, AES.block_size, style="pkcs7")
 
-        return decrypted.decode("utf-8")
+        return decrypted.decode("utf-8")  # type: ignore[no-any-return]
 
 
 class PycryptodomePBKDF2Provider:
@@ -139,7 +139,7 @@ class PycryptodomePBKDF2Provider:
         # Get the corresponding hashlib module for pycryptodome
         hash_module = getattr(hashlib, hash_name)
 
-        return PBKDF2(
+        return PBKDF2(  # type: ignore[no-any-return]
             password,
             salt,
             key_size,
@@ -191,7 +191,7 @@ class PycryptodomeRSAProvider:
 
         # Sign using PKCS#1 v1.5
         # Type checking is unnecessary - pycryptodome will raise clear errors
-        return pkcs1_15.new(key).sign(hash_obj)
+        return pkcs1_15.new(key).sign(hash_obj)  # type: ignore[no-any-return]
 
 
 class PycryptodomeHashProvider:
@@ -210,7 +210,7 @@ class PycryptodomeHashProvider:
         Returns:
             The SHA-256 digest.
         """
-        return SHA256.new(data).digest()
+        return SHA256.new(data).digest()  # type: ignore[no-any-return]
 
     def sha1(self, data: bytes) -> bytes:
         """Compute SHA-1 digest using pycryptodome.
@@ -224,4 +224,4 @@ class PycryptodomeHashProvider:
         Note:
             SHA-1 is cryptographically broken. Use only for legacy compatibility.
         """
-        return SHA1.new(data).digest()
+        return SHA1.new(data).digest()  # type: ignore[no-any-return]

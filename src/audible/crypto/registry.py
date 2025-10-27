@@ -69,7 +69,7 @@ class CryptoProviderRegistry:
         """Auto-detect and select the best available crypto provider.
 
         Returns:
-            The provider name: "pycryptodome" or "legacy".
+            "pycryptodome" or "legacy".
         """
         try:
             from .pycryptodome_provider import PYCRYPTODOME_AVAILABLE  # noqa: PLC0415
@@ -185,7 +185,7 @@ class CryptoProviderRegistry:
         """Get the name of the active crypto provider.
 
         Returns:
-            The provider name: "pycryptodome" or "legacy".
+            "pycryptodome" or "legacy".
         """
         self._initialize_providers()
         assert self._provider_name is not None  # noqa: S101
