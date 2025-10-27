@@ -31,7 +31,41 @@ Python >= 3.10
 
 ## Installation
 
-`pip install audible`
+### Standard Installation
+
+```bash
+pip install audible
+```
+
+### Recommended: With Performance Optimizations
+
+For significantly better performance (5-100x faster cryptographic operations), install with the optional `pycryptodome` backend:
+
+**Using pip:**
+
+```bash
+pip install audible[crypto]
+```
+
+**Using uv:**
+
+```bash
+# Install with extras
+uv pip install audible[crypto]
+
+# Or run with extras (in project context)
+uv run --extra crypto your_script.py
+
+# Or add to existing installation
+uv pip install pycryptodome
+```
+
+The library works perfectly fine without `pycryptodome` using pure-Python fallback libraries, but installing it provides:
+
+- **5-10x faster** AES encryption/decryption
+- **10-20x faster** RSA operations
+- **3-5x faster** key derivation (PBKDF2)
+- **5-10x faster** hashing (SHA-256, SHA-1)
 
 ## Read the Doc
 
