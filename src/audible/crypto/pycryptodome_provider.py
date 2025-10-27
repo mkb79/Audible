@@ -9,7 +9,7 @@ pycryptodome to be installed as an optional dependency.
 
 from __future__ import annotations
 
-import hashlib
+import importlib
 import logging
 from collections.abc import Callable
 from functools import lru_cache
@@ -132,19 +132,49 @@ class PycryptodomePBKDF2Provider:
 
         Returns:
             The derived key.
-        """
-        # Map hashmod callable to hash module name
-        hash_name = hashmod().name  # e.g., "sha256"
 
-        # Get the corresponding hashlib module for pycryptodome
-        hash_module = getattr(hashlib, hash_name)
+        Raises:
+            ValueError: If hashmod is invalid or unsupported.
+        """
+        # Map hashmod callable to hash algorithm name
+        try:
+            hash_obj = hashmod()
+            hash_name = hash_obj.name
+        except (AttributeError, TypeError) as e:
+            msg = "Invalid hashmod: must be a callable returning a hash object with 'name' attribute"
+            raise ValueError(msg) from e
+
+        # Map hash algorithm names to pycryptodome hash modules
+        hash_mapping = {
+            "sha256": "Crypto.Hash.SHA256",
+            "sha1": "Crypto.Hash.SHA1",
+            "sha512": "Crypto.Hash.SHA512",
+            "sha224": "Crypto.Hash.SHA224",
+            "sha384": "Crypto.Hash.SHA384",
+            "md5": "Crypto.Hash.MD5",
+        }
+
+        if hash_name not in hash_mapping:
+            msg = f"Unsupported hash algorithm: {hash_name}"
+            raise ValueError(msg)
+
+        # Dynamically import the appropriate hash module
+        module_path = hash_mapping[hash_name]
+        module_name, class_name = module_path.rsplit(".", 1)
+
+        try:
+            hash_module = importlib.import_module(module_name)
+            pycrypto_hash = getattr(hash_module, class_name)
+        except ImportError as e:
+            msg = f"Hash algorithm {hash_name} not available in pycryptodome"
+            raise ValueError(msg) from e
 
         return PBKDF2(  # type: ignore[no-any-return]
             password,
             salt,
             key_size,
             count=min(iterations, 65535),
-            hmac_hash_module=hash_module,
+            hmac_hash_module=pycrypto_hash,
         )
 
 

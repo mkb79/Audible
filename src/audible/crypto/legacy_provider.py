@@ -190,4 +190,4 @@ class LegacyHashProvider:
         Note:
             SHA-1 is cryptographically broken. Use only for legacy compatibility.
         """
-        return sha1(data).digest()  # noqa: S324
+        return sha1(data, usedforsecurity=False).digest()

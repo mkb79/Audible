@@ -29,6 +29,18 @@ class CryptoProviderRegistry:
     The registry uses lazy initialization - providers are only instantiated
     when first accessed through the property methods.
 
+    Thread Safety:
+        The singleton instance creation (__new__) is NOT thread-safe by default.
+        In multi-threaded environments, there is a theoretical possibility of
+        creating multiple instances if threads call CryptoProviderRegistry()
+        concurrently before _instance is set. However, provider initialization
+        (_initialize_providers) uses a guard check (_aes is not None) to prevent
+        re-initialization. In practice, this is safe for typical usage patterns
+        where the registry is accessed from the main thread during import or
+        early in application startup. If strict thread-safety is required for
+        instance creation in highly concurrent initialization scenarios, external
+        synchronization (e.g., threading.Lock) should be used by the caller.
+
     Example:
         >>> registry = CryptoProviderRegistry()
         >>> registry.provider_name in {"legacy", "pycryptodome"}
@@ -142,9 +154,13 @@ class CryptoProviderRegistry:
 
         Returns:
             An AESProvider instance (lazy-loaded on first access).
+
+        Raises:
+            RuntimeError: If provider initialization failed.
         """
         self._initialize_providers()
-        assert self._aes is not None  # noqa: S101
+        if self._aes is None:
+            raise RuntimeError("AES provider initialization failed")
         return self._aes
 
     @property
@@ -153,9 +169,13 @@ class CryptoProviderRegistry:
 
         Returns:
             A PBKDF2Provider instance (lazy-loaded on first access).
+
+        Raises:
+            RuntimeError: If provider initialization failed.
         """
         self._initialize_providers()
-        assert self._pbkdf2 is not None  # noqa: S101
+        if self._pbkdf2 is None:
+            raise RuntimeError("PBKDF2 provider initialization failed")
         return self._pbkdf2
 
     @property
@@ -164,9 +184,13 @@ class CryptoProviderRegistry:
 
         Returns:
             An RSAProvider instance (lazy-loaded on first access).
+
+        Raises:
+            RuntimeError: If provider initialization failed.
         """
         self._initialize_providers()
-        assert self._rsa is not None  # noqa: S101
+        if self._rsa is None:
+            raise RuntimeError("RSA provider initialization failed")
         return self._rsa
 
     @property
@@ -175,9 +199,13 @@ class CryptoProviderRegistry:
 
         Returns:
             A HashProvider instance (lazy-loaded on first access).
+
+        Raises:
+            RuntimeError: If provider initialization failed.
         """
         self._initialize_providers()
-        assert self._hash is not None  # noqa: S101
+        if self._hash is None:
+            raise RuntimeError("Hash provider initialization failed")
         return self._hash
 
     @property
@@ -186,9 +214,13 @@ class CryptoProviderRegistry:
 
         Returns:
             "pycryptodome" or "legacy".
+
+        Raises:
+            RuntimeError: If provider initialization failed.
         """
         self._initialize_providers()
-        assert self._provider_name is not None  # noqa: S101
+        if self._provider_name is None:
+            raise RuntimeError("Provider name initialization failed")
         return self._provider_name
 
 
