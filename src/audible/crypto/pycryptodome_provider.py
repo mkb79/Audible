@@ -9,7 +9,6 @@ pycryptodome to be installed as an optional dependency.
 
 from __future__ import annotations
 
-import importlib
 import logging
 from collections.abc import Callable
 from functools import lru_cache
@@ -19,7 +18,14 @@ from typing import Any
 # Optional import - only available if pycryptodome is installed
 try:
     from Crypto.Cipher import AES  # type: ignore[import-not-found]
-    from Crypto.Hash import SHA1, SHA256  # type: ignore[import-not-found]
+    from Crypto.Hash import (  # type: ignore[import-not-found]
+        MD5,
+        SHA1,
+        SHA224,
+        SHA256,
+        SHA384,
+        SHA512,
+    )
     from Crypto.Protocol.KDF import PBKDF2  # type: ignore[import-not-found]
     from Crypto.PublicKey import RSA  # type: ignore[import-not-found]
     from Crypto.Signature import pkcs1_15  # type: ignore[import-not-found]
@@ -96,7 +102,8 @@ class PycryptodomeAESProvider:
             The decrypted plaintext as a string.
 
         Raises:
-            ValueError: If PKCS7 padding is invalid (wrong key/IV or corrupted data).
+            ValueError: If PKCS7 padding is invalid or UTF-8 decoding fails
+                (wrong key/IV or corrupted data).
         """
         cipher = AES.new(key, AES.MODE_CBC, iv)
         decrypted = cipher.decrypt(encrypted_data)
@@ -112,7 +119,15 @@ class PycryptodomeAESProvider:
                 )
                 raise ValueError(msg) from e
 
-        return decrypted.decode("utf-8")  # type: ignore[no-any-return]
+        # Decode decrypted bytes to string
+        try:
+            return decrypted.decode("utf-8")  # type: ignore[no-any-return]
+        except UnicodeDecodeError as e:
+            msg = (
+                "Failed to decode decrypted data as UTF-8 - possible decryption "
+                "key/IV mismatch or corrupted ciphertext"
+            )
+            raise ValueError(msg) from e
 
 
 class PycryptodomePBKDF2Provider:
@@ -153,30 +168,22 @@ class PycryptodomePBKDF2Provider:
             msg = "Invalid hashmod: must be a callable returning a hash object with 'name' attribute"
             raise ValueError(msg) from e
 
-        # Map hash algorithm names to pycryptodome hash modules
+        # Map hash algorithm names to pycryptodome hash modules (static references)
         hash_mapping = {
-            "sha256": "Crypto.Hash.SHA256",
-            "sha1": "Crypto.Hash.SHA1",
-            "sha512": "Crypto.Hash.SHA512",
-            "sha224": "Crypto.Hash.SHA224",
-            "sha384": "Crypto.Hash.SHA384",
-            "md5": "Crypto.Hash.MD5",
+            "sha256": SHA256,
+            "sha1": SHA1,
+            "sha512": SHA512,
+            "sha224": SHA224,
+            "sha384": SHA384,
+            "md5": MD5,
         }
 
         if hash_name not in hash_mapping:
             msg = f"Unsupported hash algorithm: {hash_name}"
             raise ValueError(msg)
 
-        # Dynamically import the appropriate hash module
-        module_path = hash_mapping[hash_name]
-        module_name, class_name = module_path.rsplit(".", 1)
-
-        try:
-            hash_module = importlib.import_module(module_name)
-            pycrypto_hash = getattr(hash_module, class_name)
-        except ImportError as e:
-            msg = f"Hash algorithm {hash_name} not available in pycryptodome"
-            raise ValueError(msg) from e
+        # Get the hash module directly from the mapping
+        pycrypto_hash = hash_mapping[hash_name]
 
         return PBKDF2(  # type: ignore[no-any-return]
             password,
@@ -220,8 +227,16 @@ class PycryptodomeRSAProvider:
             The signature bytes.
 
         Raises:
+            TypeError: If key is not a valid RSA key object.
             ValueError: If algorithm is not "SHA-256".
         """
+        # Validate key type - check for RSA key attributes
+        if not hasattr(key, "n") or not hasattr(key, "e"):
+            raise TypeError(
+                f"Expected RSA.RsaKey object with required attributes, "
+                f"got {type(key).__name__}"
+            )
+
         # Create hash object
         if algorithm == "SHA-256":
             hash_obj = SHA256.new(data)
@@ -229,7 +244,6 @@ class PycryptodomeRSAProvider:
             raise ValueError(f"Unsupported algorithm: {algorithm}")
 
         # Sign using PKCS#1 v1.5
-        # Type checking is unnecessary - pycryptodome will raise clear errors
         return pkcs1_15.new(key).sign(hash_obj)  # type: ignore[no-any-return]
 
 

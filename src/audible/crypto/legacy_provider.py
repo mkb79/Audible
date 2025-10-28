@@ -83,10 +83,23 @@ class LegacyAESProvider:
 
         Returns:
             The decrypted plaintext as a string.
+
+        Raises:
+            ValueError: If PKCS7 padding is invalid or UTF-8 decoding fails
+                (wrong key/IV or corrupted data).
         """
         decrypter = Decrypter(AESModeOfOperationCBC(key, iv), padding=padding)
         decrypted: bytes = decrypter.feed(encrypted_data) + decrypter.feed()
-        return decrypted.decode("utf-8")
+
+        # Decode decrypted bytes to string
+        try:
+            return decrypted.decode("utf-8")
+        except UnicodeDecodeError as e:
+            msg = (
+                "Failed to decode decrypted data as UTF-8 - possible decryption "
+                "key/IV mismatch or corrupted ciphertext"
+            )
+            raise ValueError(msg) from e
 
 
 class LegacyPBKDF2Provider:

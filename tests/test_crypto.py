@@ -2,8 +2,9 @@
 
 from __future__ import annotations
 
+import concurrent.futures
 import hashlib
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 import pytest
 
@@ -121,6 +122,58 @@ def test_aes_cross_provider_compatibility() -> None:
     # Each provider should be able to decrypt the other's output
     assert legacy_provider.decrypt(key, iv, pycryptodome_ciphertext) == plaintext
     assert pycryptodome_provider.decrypt(key, iv, legacy_ciphertext) == plaintext
+
+
+@pytest.mark.skipif(not PYCRYPTODOME_AVAILABLE, reason="pycryptodome not installed")
+def test_pycryptodome_aes_decrypt_unicode_error() -> None:
+    """Test that decryption errors produce descriptive ValueError.
+
+    When decryption fails (wrong key, IV, or corrupted data), the provider
+    should raise a descriptive ValueError to help with debugging.
+    """
+    provider: PycryptodomeAESProvider = PycryptodomeAESProvider()
+    correct_key = b"sixteen byte key"
+    wrong_key = b"wrong_key_16byte"
+    iv = b"sixteen byte iv!"
+
+    # Encrypt with correct key
+    plaintext = "test data"
+    encrypted = provider.encrypt(correct_key, iv, plaintext)
+
+    # Attempting to decrypt with wrong key should raise ValueError
+    with pytest.raises(ValueError):
+        provider.decrypt(wrong_key, iv, encrypted)
+
+
+def test_aes_decrypt_error_consistency() -> None:
+    """Test that both providers raise consistent ValueError for decryption errors.
+
+    Both legacy and pycryptodome providers should handle decryption errors
+    identically, raising ValueError with descriptive messages.
+    """
+    legacy_provider = LegacyAESProvider()
+    correct_key = b"sixteen byte key"
+    wrong_key = b"wrong_key_16byte"
+    iv = b"sixteen byte iv!"
+
+    # Encrypt with correct key
+    plaintext = "test data"
+    legacy_encrypted = legacy_provider.encrypt(correct_key, iv, plaintext)
+
+    # Legacy provider should raise ValueError when decrypting with wrong key
+    with pytest.raises(ValueError):
+        legacy_provider.decrypt(wrong_key, iv, legacy_encrypted)
+
+    # If pycryptodome is available, verify it behaves identically
+    if PYCRYPTODOME_AVAILABLE:
+        pycryptodome_provider: PycryptodomeAESProvider = PycryptodomeAESProvider()
+        pycryptodome_encrypted = pycryptodome_provider.encrypt(
+            correct_key, iv, plaintext
+        )
+
+        # Both providers should raise ValueError
+        with pytest.raises(ValueError):
+            pycryptodome_provider.decrypt(wrong_key, iv, pycryptodome_encrypted)
 
 
 # =============================================================================
@@ -303,6 +356,31 @@ def test_pycryptodome_rsa_unsupported_algorithm() -> None:
         provider.sign(key, b"data", "unsupported_algo")
 
 
+@pytest.mark.skipif(not PYCRYPTODOME_AVAILABLE, reason="pycryptodome not installed")
+def test_pycryptodome_rsa_sign_invalid_key_type() -> None:
+    """Test that signing with invalid key type raises TypeError.
+
+    The provider should validate the key type and raise a descriptive
+    TypeError instead of allowing pycryptodome to raise cryptic errors.
+    """
+    provider: PycryptodomeRSAProvider = PycryptodomeRSAProvider()
+    data = b"test data to sign"
+
+    # Test with various invalid key types
+    invalid_keys: list[Any] = [
+        None,
+        "not_a_key",
+        123,
+        b"bytes_key",
+        {},
+        [],
+    ]
+
+    for invalid_key in invalid_keys:
+        with pytest.raises(TypeError, match=r"Expected RSA\.RsaKey"):
+            provider.sign(invalid_key, data)
+
+
 # =============================================================================
 # Registry Tests
 # =============================================================================
@@ -422,3 +500,34 @@ Ho8KYXsQV2M4btI7FJO1CMb2SV5sP09IRvBdX1hEqzY=
     key_obj = registry.rsa.load_private_key(rsa_key)
     signature = registry.rsa.sign(key_obj, b"test data")
     assert len(signature) > 0
+
+
+def test_singleton_thread_safety() -> None:
+    """Test that singleton pattern is thread-safe.
+
+    Creates 100 registry instances concurrently from 20 threads
+    to verify that all threads receive the same singleton instance.
+    """
+    instances = []
+    instance_ids = []
+
+    def create_registry() -> None:
+        """Create a registry instance and record it."""
+        registry = CryptoProviderRegistry()
+        instances.append(registry)
+        instance_ids.append(id(registry))
+
+    # Create 100 registries concurrently from 20 threads
+    with concurrent.futures.ThreadPoolExecutor(max_workers=20) as executor:
+        futures = [executor.submit(create_registry) for _ in range(100)]
+        concurrent.futures.wait(futures)
+
+    # Verify all instances are the same object
+    unique_ids = set(instance_ids)
+    assert len(unique_ids) == 1, (
+        f"Multiple singleton instances created! Found {len(unique_ids)} unique instances. "
+        f"All threads should receive the same singleton instance."
+    )
+    assert all(inst is instances[0] for inst in instances), (
+        "Not all registry instances are identical objects"
+    )

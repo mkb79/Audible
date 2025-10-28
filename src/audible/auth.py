@@ -255,10 +255,10 @@ class Authenticator(httpx.Auth):
         usage.
 
     Note:
-        The ``device_private_key`` attribute should be treated as immutable
-        once the authenticator has been used for signing requests. Mutating
-        the value leaves the cached RSA key out of sync. Create a new
-        :class:`Authenticator` instance if you need to swap keys.
+        The ``device_private_key`` attribute is monitored for changes.
+        When modified, the cached RSA key is automatically invalidated to
+        ensure the correct key is used for signing. The new key will be
+        loaded and cached on the next signing operation.
     """
 
     access_token: str | None = None
@@ -289,6 +289,12 @@ class Authenticator(httpx.Auth):
 
         if self._apply_test_convert:
             value = test_convert(attr, value)
+
+        # Invalidate RSA key cache if device_private_key changes
+        if attr == "device_private_key" and hasattr(self, "_cached_rsa_key"):
+            object.__setattr__(self, "_cached_rsa_key", None)
+            logger.debug("Invalidated cached RSA key due to device_private_key change")
+
         object.__setattr__(self, attr, value)
 
     def __iter__(self) -> Iterator[str]:

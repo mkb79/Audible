@@ -8,6 +8,7 @@ accessed, minimizing import overhead.
 """
 
 import logging
+import threading
 import warnings
 from typing import TYPE_CHECKING
 
@@ -17,6 +18,9 @@ if TYPE_CHECKING:
 
 
 logger = logging.getLogger("audible.crypto")
+
+# Thread-safe singleton lock for registry instance creation
+_registry_lock = threading.Lock()
 
 
 class CryptoProviderRegistry:
@@ -30,16 +34,11 @@ class CryptoProviderRegistry:
     when first accessed through the property methods.
 
     Thread Safety:
-        The singleton instance creation (__new__) is NOT thread-safe by default.
-        In multi-threaded environments, there is a theoretical possibility of
-        creating multiple instances if threads call CryptoProviderRegistry()
-        concurrently before _instance is set. However, provider initialization
-        (_initialize_providers) uses a guard check (_aes is not None) to prevent
-        re-initialization. In practice, this is safe for typical usage patterns
-        where the registry is accessed from the main thread during import or
-        early in application startup. If strict thread-safety is required for
-        instance creation in highly concurrent initialization scenarios, external
-        synchronization (e.g., threading.Lock) should be used by the caller.
+        The singleton instance creation uses double-checked locking with
+        threading.Lock to ensure thread-safe initialization. Multiple concurrent
+        threads calling CryptoProviderRegistry() will safely receive the same
+        singleton instance without race conditions. The implementation minimizes
+        locking overhead by only acquiring the lock when _instance is None.
 
     Example:
         >>> registry = CryptoProviderRegistry()
@@ -55,13 +54,19 @@ class CryptoProviderRegistry:
     _initialized: bool = False
 
     def __new__(cls) -> "CryptoProviderRegistry":
-        """Ensure only one instance exists (singleton pattern).
+        """Ensure only one instance exists (singleton pattern with thread-safety).
+
+        Uses double-checked locking to ensure thread-safe singleton creation
+        without performance overhead on subsequent calls.
 
         Returns:
             The singleton CryptoProviderRegistry instance.
         """
         if cls._instance is None:
-            cls._instance = super().__new__(cls)
+            with _registry_lock:
+                # Double-check inside lock to prevent race condition
+                if cls._instance is None:
+                    cls._instance = super().__new__(cls)
         return cls._instance
 
     def __init__(self) -> None:
