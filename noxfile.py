@@ -154,7 +154,7 @@ def safety(s: nox.Session) -> None:
     )
 
 
-@session(python=PYTHON_VERSIONS, uv_groups=[MYPY_GROUP])
+@session(python=PYTHON_VERSIONS, uv_groups=[MYPY_GROUP, TESTS_GROUP])
 def mypy(s: nox.Session) -> None:
     """Type-check using mypy."""
     default_args = ["src/audible", "tests", "docs/source/conf.py"]
@@ -165,7 +165,7 @@ def mypy(s: nox.Session) -> None:
         s.run("mypy", f"--python-executable={sys.executable}", "noxfile.py")
 
 
-@session(python=PYTHON_VERSIONS, uv_groups=[TESTS_GROUP])
+@session(python=PYTHON_VERSIONS, uv_groups=[TESTS_GROUP], uv_extras=["crypto"])
 def tests(s: nox.Session) -> None:
     """Run the test suite."""
     try:
@@ -193,7 +193,9 @@ def coverage(s: nox.Session) -> None:
     s.run("coverage", *args)
 
 
-@session(python=DEFAULT_PYTHON_VERSION, uv_groups=[TYPEGUARD_GROUP])
+@session(
+    python=DEFAULT_PYTHON_VERSION, uv_groups=[TYPEGUARD_GROUP], uv_extras=["crypto"]
+)
 def typeguard(s: nox.Session) -> None:
     """Runtime type checking using Typeguard."""
     s.run("pytest", f"--typeguard-packages={PACKAGE}", *s.posargs)

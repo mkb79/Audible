@@ -9,12 +9,7 @@ import struct
 from hashlib import sha256
 from typing import TYPE_CHECKING, Any, Literal
 
-from pbkdf2 import PBKDF2  # type: ignore[import-untyped]
-from pyaes import (  # type: ignore[import-untyped]
-    AESModeOfOperationCBC,
-    Decrypter,
-    Encrypter,
-)
+from .crypto import get_crypto_providers
 
 
 if TYPE_CHECKING:
@@ -40,9 +35,8 @@ def aes_cbc_encrypt(
     Returns:
         The encrypted data.
     """
-    encrypter = Encrypter(AESModeOfOperationCBC(key, iv), padding=padding)
-    encrypted: bytes = encrypter.feed(data) + encrypter.feed()
-    return encrypted
+    providers = get_crypto_providers()
+    return providers.aes.encrypt(key, iv, data, padding)
 
 
 def aes_cbc_decrypt(
@@ -59,9 +53,8 @@ def aes_cbc_decrypt(
     Returns:
         The decrypted data.
     """
-    decrypter = Decrypter(AESModeOfOperationCBC(key, iv), padding=padding)
-    decrypted: bytes = decrypter.feed(encrypted_data) + decrypter.feed()
-    return decrypted.decode("utf-8")
+    providers = get_crypto_providers()
+    return providers.aes.decrypt(key, iv, encrypted_data, padding)
 
 
 def create_salt(salt_marker: bytes, kdf_iterations: int) -> tuple[bytes, bytes]:
@@ -102,9 +95,10 @@ def derive_from_pbkdf2(  # type: ignore[no-untyped-def]
     password: str, *, key_size: int, salt: bytes, kdf_iterations: int, hashmod, mac
 ) -> bytes:
     """Creates an AES key with the :class:`PBKDF2` key derivation class."""
-    kdf = PBKDF2(password, salt, min(kdf_iterations, 65535), hashmod, mac)
-    key: bytes = kdf.read(key_size)
-    return key
+    providers = get_crypto_providers()
+    return providers.pbkdf2.derive_key(
+        password, salt, kdf_iterations, key_size, hashmod
+    )
 
 
 class AESCipher:
@@ -403,7 +397,8 @@ def _decrypt_voucher(
     # https://github.com/mkb79/Audible/issues/3#issuecomment-705262614
     buf_str = device_type + device_serial_number + customer_id + asin
     buf = buf_str.encode("ascii")
-    digest = sha256(buf).digest()
+    providers = get_crypto_providers()
+    digest = providers.hash.sha256(buf)
     key = digest[0:16]
     iv = digest[16:]
 
