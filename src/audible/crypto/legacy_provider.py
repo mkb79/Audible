@@ -9,6 +9,7 @@ and work in all environments without compilation.
 
 import hmac
 import logging
+import warnings
 from collections.abc import Callable
 from functools import lru_cache
 from hashlib import sha1, sha256
@@ -204,3 +205,71 @@ class LegacyHashProvider:
             SHA-1 is cryptographically broken. Use only for legacy compatibility.
         """
         return sha1(data, usedforsecurity=False).digest()
+
+
+class LegacyProvider:
+    """Unified legacy crypto provider using pure Python libraries.
+
+    This provider uses pure Python implementations (pyaes, rsa, pbkdf2) and
+    serves as a fallback when neither cryptography nor pycryptodome are available.
+
+    Performance: Slower than native providers (5-20x) but requires no compilation.
+
+    A UserWarning is shown on first use to encourage installing faster alternatives.
+
+    Example:
+        >>> from audible.crypto import get_crypto_providers, LegacyProvider
+        >>> providers = get_crypto_providers(LegacyProvider)
+        >>> providers.provider_name
+        'legacy'
+    """
+
+    def __init__(self) -> None:
+        """Initialize legacy provider."""
+        self._aes = LegacyAESProvider()
+        self._pbkdf2 = LegacyPBKDF2Provider()
+        self._rsa = LegacyRSAProvider()
+        self._hash = LegacyHashProvider()
+
+        # Show warning on initialization
+        warnings.warn(
+            "Using legacy crypto libraries (pyaes, rsa, pbkdf2). "
+            "For better performance, install cryptography or pycryptodome: "
+            "pip install audible[cryptography] or pip install audible[pycryptodome]",
+            UserWarning,
+            stacklevel=4,
+        )
+
+    @property
+    def aes(self) -> LegacyAESProvider:
+        """Get the AES provider."""
+        return self._aes
+
+    @property
+    def pbkdf2(self) -> LegacyPBKDF2Provider:
+        """Get the PBKDF2 provider."""
+        return self._pbkdf2
+
+    @property
+    def rsa(self) -> LegacyRSAProvider:
+        """Get the RSA provider."""
+        return self._rsa
+
+    @property
+    def hash(self) -> LegacyHashProvider:
+        """Get the hash provider."""
+        return self._hash
+
+    @property
+    def provider_name(self) -> str:
+        """Get provider name."""
+        return "legacy"
+
+
+__all__ = [
+    "LegacyAESProvider",
+    "LegacyHashProvider",
+    "LegacyPBKDF2Provider",
+    "LegacyProvider",
+    "LegacyRSAProvider",
+]

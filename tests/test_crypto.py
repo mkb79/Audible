@@ -14,7 +14,7 @@ from audible.crypto.legacy_provider import (
     LegacyPBKDF2Provider,
     LegacyRSAProvider,
 )
-from audible.crypto.registry import CryptoProviderRegistry, get_crypto_providers
+from audible.crypto.registry import get_crypto_providers
 
 
 if TYPE_CHECKING:
@@ -24,23 +24,6 @@ if TYPE_CHECKING:
         PycryptodomePBKDF2Provider,
         PycryptodomeRSAProvider,
     )
-
-# Valid RSA private key in PKCS#1 format (1024-bit for testing)
-TEST_RSA_KEY = """-----BEGIN RSA PRIVATE KEY-----
-MIICXAIBAAKBgQCckEdw6Hd8Pwm1YRtinw2UQkTmRM5QQcfsUxi86w6mxXRomETI
-FPZaFS6q9D1x1Zgzhk+tXS6MBl8tJrDjaAUROeoajdNylvunvdyLNQhoaGOcbRSr
-0DFV/an6oKv6IsLQzI7UP91ZSbg4fDb5/LqqD4devp5QpShJMEtw2OUUzwIDAQAB
-AoGAdqJtQAUm5SLvPF2E3sofBATjKIlivDXcRBsDV8PVqlFc0BTxqZsYwVHjtu6z
-0JpFZmWT4o4FQ11gqVn0F50umJuPoS/slfBGiV3TE2b3o+uLy6EcVDoOtH7cUO6l
-gTvejvv6rCpuvHHLkDf8mUEtN+WJDGwYamyHfCIChSAIrMECQQDMIdhGmNg7ckpb
-KnrJ2rAj38QrUO0t1m/t+i/76vyvPN65o6lnvI/SHNXUf/asQbmHeUT3b75ApqoV
-BLSGWG15AkEAxFg++zayNfGHl99xYpB0g4gom/UqGC87hiVJYXpoXCld4kmguW4j
-ov3rRDKQGZwh/DQyX0BvxDHmfGzTXNmqhwJAS+m6OGbW4ySZqlWd3DtLjcvFdCZg
-Tc+VSHbmKVU2KyUD3x2R/lYNViILEz+TSHQYvtzGXQ5dPkW8spxRVjTEYQJAGowH
-7/VkQRDoEWu/q+D2L/aP7w5F48E3HhsagdiIFbXuILNtzMSMgvQsBCuF+kB3A9+W
-0/QlaHSKwlYAefRgLwJBAMQc+jY9eymjJ08KVZrVC8NhYEliWTPkpfjeh4CTTfNY
-Ho8KYXsQV2M4btI7FJO1CMb2SV5sP09IRvBdX1hEqzY=
------END RSA PRIVATE KEY-----"""
 
 # Try to import pycryptodome providers
 try:
@@ -316,41 +299,41 @@ def test_hash_cross_provider_compatibility() -> None:
 # =============================================================================
 
 
-def test_legacy_rsa_load_key() -> None:
+def test_legacy_rsa_load_key(rsa_private_key: str) -> None:
     """Test legacy RSA key loading."""
     provider = LegacyRSAProvider()
 
-    key = provider.load_private_key(TEST_RSA_KEY)
+    key = provider.load_private_key(rsa_private_key)
 
     assert key is not None
 
 
-def test_legacy_rsa_key_caching() -> None:
+def test_legacy_rsa_key_caching(rsa_private_key: str) -> None:
     """Test that RSA keys are cached properly."""
     provider = LegacyRSAProvider()
 
-    key1 = provider.load_private_key(TEST_RSA_KEY)
-    key2 = provider.load_private_key(TEST_RSA_KEY)
+    key1 = provider.load_private_key(rsa_private_key)
+    key2 = provider.load_private_key(rsa_private_key)
 
     # Should return the same cached object
     assert key1 is key2
 
 
 @pytest.mark.skipif(not PYCRYPTODOME_AVAILABLE, reason="pycryptodome not installed")
-def test_pycryptodome_rsa_load_key() -> None:
+def test_pycryptodome_rsa_load_key(rsa_private_key: str) -> None:
     """Test pycryptodome RSA key loading."""
     provider: PycryptodomeRSAProvider = PycryptodomeRSAProvider()
 
-    key = provider.load_private_key(TEST_RSA_KEY)
+    key = provider.load_private_key(rsa_private_key)
 
     assert key is not None
 
 
 @pytest.mark.skipif(not PYCRYPTODOME_AVAILABLE, reason="pycryptodome not installed")
-def test_pycryptodome_rsa_unsupported_algorithm() -> None:
+def test_pycryptodome_rsa_unsupported_algorithm(rsa_private_key: str) -> None:
     """Test error handling for unsupported RSA algorithms."""
     provider: PycryptodomeRSAProvider = PycryptodomeRSAProvider()
-    key = provider.load_private_key(TEST_RSA_KEY)
+    key = provider.load_private_key(rsa_private_key)
 
     with pytest.raises(ValueError, match="Unsupported algorithm"):
         provider.sign(key, b"data", "unsupported_algo")
@@ -387,13 +370,13 @@ def test_pycryptodome_rsa_sign_invalid_key_type() -> None:
 
 
 def test_registry_singleton() -> None:
-    """Test that registry is a singleton."""
-    registry1 = CryptoProviderRegistry()
-    registry2 = CryptoProviderRegistry()
-    registry3 = get_crypto_providers()
+    """Test that get_crypto_providers() returns the same auto-detected instance."""
+    provider1 = get_crypto_providers()
+    provider2 = get_crypto_providers()
+    provider3 = get_crypto_providers(None)
 
-    assert registry1 is registry2
-    assert registry2 is registry3
+    assert provider1 is provider2
+    assert provider2 is provider3
 
 
 def test_registry_provider_name() -> None:
@@ -402,7 +385,7 @@ def test_registry_provider_name() -> None:
 
     provider_name = registry.provider_name
 
-    assert provider_name in ("legacy", "pycryptodome")
+    assert provider_name in ("legacy", "pycryptodome", "cryptography")
 
 
 def test_registry_provides_all_protocols() -> None:
@@ -443,13 +426,13 @@ def test_registry_hash_operations() -> None:
     assert len(sha1_digest) == 20
 
 
-def test_registry_provider_selection() -> None:
+def test_registry_provider_selection(rsa_private_key: str) -> None:
     """Test that registry selects appropriate provider based on availability."""
     registry = get_crypto_providers()
 
     # Verify provider is selected (either pycryptodome or legacy)
     provider_name = registry.provider_name
-    assert provider_name in ("legacy", "pycryptodome")
+    assert provider_name in ("legacy", "pycryptodome", "cryptography")
 
     # Verify all required providers are initialized correctly
     assert registry.aes is not None
@@ -482,22 +465,7 @@ def test_registry_provider_selection() -> None:
     assert len(registry.hash.sha1(b"test")) == 20
 
     # Test RSA
-    rsa_key = """-----BEGIN RSA PRIVATE KEY-----
-MIICXAIBAAKBgQCckEdw6Hd8Pwm1YRtinw2UQkTmRM5QQcfsUxi86w6mxXRomETI
-FPZaFS6q9D1x1Zgzhk+tXS6MBl8tJrDjaAUROeoajdNylvunvdyLNQhoaGOcbRSr
-0DFV/an6oKv6IsLQzI7UP91ZSbg4fDb5/LqqD4devp5QpShJMEtw2OUUzwIDAQAB
-AoGAdqJtQAUm5SLvPF2E3sofBATjKIlivDXcRBsDV8PVqlFc0BTxqZsYwVHjtu6z
-0JpFZmWT4o4FQ11gqVn0F50umJuPoS/slfBGiV3TE2b3o+uLy6EcVDoOtH7cUO6l
-gTvejvv6rCpuvHHLkDf8mUEtN+WJDGwYamyHfCIChSAIrMECQQDMIdhGmNg7ckpb
-KnrJ2rAj38QrUO0t1m/t+i/76vyvPN65o6lnvI/SHNXUf/asQbmHeUT3b75ApqoV
-BLSGWG15AkEAxFg++zayNfGHl99xYpB0g4gom/UqGC87hiVJYXpoXCld4kmguW4j
-ov3rRDKQGZwh/DQyX0BvxDHmfGzTXNmqhwJAS+m6OGbW4ySZqlWd3DtLjcvFdCZg
-Tc+VSHbmKVU2KyUD3x2R/lYNViILEz+TSHQYvtzGXQ5dPkW8spxRVjTEYQJAGowH
-7/VkQRDoEWu/q+D2L/aP7w5F48E3HhsagdiIFbXuILNtzMSMgvQsBCuF+kB3A9+W
-0/QlaHSKwlYAefRgLwJBAMQc+jY9eymjJ08KVZrVC8NhYEliWTPkpfjeh4CTTfNY
-Ho8KYXsQV2M4btI7FJO1CMb2SV5sP09IRvBdX1hEqzY=
------END RSA PRIVATE KEY-----"""
-    key_obj = registry.rsa.load_private_key(rsa_key)
+    key_obj = registry.rsa.load_private_key(rsa_private_key)
     signature = registry.rsa.sign(key_obj, b"test data")
     assert len(signature) > 0
 
@@ -513,9 +481,9 @@ def test_singleton_thread_safety() -> None:
 
     def create_registry() -> None:
         """Create a registry instance and record it."""
-        registry = CryptoProviderRegistry()
-        instances.append(registry)
-        instance_ids.append(id(registry))
+        provider = get_crypto_providers()
+        instances.append(provider)
+        instance_ids.append(id(provider))
 
     # Create 100 registries concurrently from 20 threads
     with concurrent.futures.ThreadPoolExecutor(max_workers=20) as executor:

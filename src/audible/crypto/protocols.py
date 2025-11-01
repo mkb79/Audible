@@ -131,3 +131,72 @@ class HashProvider(Protocol):
             used for non-security-critical purposes (e.g., legacy compatibility).
         """
         ...
+
+
+@runtime_checkable
+class CryptoProvider(Protocol):
+    """Protocol for complete crypto provider implementations.
+
+    This protocol defines the contract that all crypto providers must follow.
+    Providers must implement all four sub-providers (AES, PBKDF2, RSA, Hash)
+    to ensure complete cryptographic functionality.
+
+    Custom providers can be created by implementing this protocol and passing
+    the provider class to get_crypto_providers().
+
+    Example:
+        >>> class MyProvider:
+        ...     @property
+        ...     def aes(self) -> AESProvider:
+        ...         return MyAESProvider()
+        ...     @property
+        ...     def pbkdf2(self) -> PBKDF2Provider:
+        ...         return MyPBKDF2Provider()
+        ...     @property
+        ...     def rsa(self) -> RSAProvider:
+        ...         return MyRSAProvider()
+        ...     @property
+        ...     def hash(self) -> HashProvider:
+        ...         return MyHashProvider()
+        ...     @property
+        ...     def provider_name(self) -> str:
+        ...         return "my-custom-provider"
+        >>> from audible.crypto import get_crypto_providers
+        >>> providers = get_crypto_providers(MyProvider)
+        >>> providers.provider_name
+        'my-custom-provider'
+    """
+
+    @property
+    def aes(self) -> AESProvider:
+        """Return the AES encryption/decryption provider."""
+        ...
+
+    @property
+    def pbkdf2(self) -> PBKDF2Provider:
+        """Return the PBKDF2 key derivation provider."""
+        ...
+
+    @property
+    def rsa(self) -> RSAProvider:
+        """Return the RSA signing provider."""
+        ...
+
+    @property
+    def hash(self) -> HashProvider:
+        """Return the cryptographic hash provider."""
+        ...
+
+    @property
+    def provider_name(self) -> str:
+        """Return the human-readable provider name."""
+        ...
+
+
+__all__ = [
+    "AESProvider",
+    "CryptoProvider",
+    "HashProvider",
+    "PBKDF2Provider",
+    "RSAProvider",
+]

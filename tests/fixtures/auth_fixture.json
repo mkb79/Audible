@@ -1,0 +1,32 @@
+{
+  "website_cookies": {
+    "session-id": "123-4567890-1234567",
+    "ubid-main": "456-7890123-4567890",
+    "x-main": "TestUser123@example.com",
+    "at-main": "Atza|IwEBITestAccessTokenForTestingPurposesOnlyThisIsNotARealTokenAndShouldOnlyBeUsedForUnitTestingInThePytestFrameworkDoNotUseInProduction123456789",
+    "sess-at-main": "dGVzdFNlc3Npb25BdE1haW5Ub2tlbkZvclRlc3Rpbmc="
+  },
+  "adp_token": "{enc:dGVzdEVuY3J5cHRlZEFkcFRva2VuRm9yVGVzdGluZ1B1cnBvc2VzT25seVRoaXNJc05vdEFSZWFsVG9rZW5BbmRTaG91bGRPbmx5QmVVc2VkRm9yVW5pdFRlc3Rpbmc=}{key:dGVzdEtleUZvckFkcFRva2VuRW5jcnlwdGlvblRlc3RpbmdPbmx5Tm90UmVhbA==}{iv:dGVzdEl2Rm9yQWRwVG9rZW4=}{name:QURQVG9rZW5FbmNyeXB0aW9uS2V5}{serial:Mg==}",
+  "access_token": "Atna|EwICITestAccessTokenForTestingPurposesOnlyThisIsNotARealTokenAndShouldOnlyBeUsedForUnitTestingInThePytestFramework123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789",
+  "refresh_token": "Atnr|EwICITestRefreshTokenForTestingPurposesOnlyThisIsNotARealTokenAndShouldOnlyBeUsedForUnitTestingInThePytestFramework123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789",
+  "device_private_key": "-----BEGIN RSA PRIVATE KEY-----\nMIICXAIBAAKBgQCckEdw6Hd8Pwm1YRtinw2UQkTmRM5QQcfsUxi86w6mxXRomETI\nFPZaFS6q9D1x1Zgzhk+tXS6MBl8tJrDjaAUROeoajdNylvunvdyLNQhoaGOcbRSr\n0DFV/an6oKv6IsLQzI7UP91ZSbg4fDb5/LqqD4devp5QpShJMEtw2OUUzwIDAQAB\nAoGAdqJtQAUm5SLvPF2E3sofBATjKIlivDXcRBsDV8PVqlFc0BTxqZsYwVHjtu6z\n0JpFZmWT4o4FQ11gqVn0F50umJuPoS/slfBGiV3TE2b3o+uLy6EcVDoOtH7cUO6l\ngTvejvv6rCpuvHHLkDf8mUEtN+WJDGwYamyHfCIChSAIrMECQQDMIdhGmNg7ckpb\nKnrJ2rAj38QrUO0t1m/t+i/76vyvPN65o6lnvI/SHNXUf/asQbmHeUT3b75ApqoV\nBLSGWG15AkEAxFg++zayNfGHl99xYpB0g4gom/UqGC87hiVJYXpoXCld4kmguW4j\nov3rRDKQGZwh/DQyX0BvxDHmfGzTXNmqhwJAS+m6OGbW4ySZqlWd3DtLjcvFdCZg\nTc+VSHbmKVU2KyUD3x2R/lYNViILEz+TSHQYvtzGXQ5dPkW8spxRVjTEYQJAGowH\n7/VkQRDoEWu/q+D2L/aP7w5F48E3HhsagdiIFbXuILNtzMSMgvQsBCuF+kB3A9+W\n0/QlaHSKwlYAefRgLwJBAMQc+jY9eymjJ08KVZrVC8NhYEliWTPkpfjeh4CTTfNY\nHo8KYXsQV2M4btI7FJO1CMb2SV5sP09IRvBdX1hEqzY=\n-----END RSA PRIVATE KEY-----\n",
+  "store_authentication_cookie": {
+    "cookie": "dGVzdFN0b3JlQXV0aGVudGljYXRpb25Db29raWVGb3JUZXN0aW5nUHVycG9zZXNPbmx5VGhpc0lzTm90QVJlYWxDb29raWVBbmRTaG91bGRPbmx5QmVVc2VkRm9yVW5pdFRlc3Rpbmc="
+  },
+  "device_info": {
+    "device_name": "Test User's Audible Device",
+    "device_serial_number": "TESTSERIAL123456789ABCDEF0123456",
+    "device_type": "A2CZJZGLK2JJVM"
+  },
+  "customer_info": {
+    "account_pool": "Amazon",
+    "user_id": "amzn1.account.TESTUSER123456789ABCDEFGHIJKLMNO",
+    "home_region": "EU",
+    "name": "Test User",
+    "given_name": "Test"
+  },
+  "expires": 1893456000.0,
+  "locale_code": "de",
+  "with_username": false,
+  "activation_bytes": "deadbeef"
+}
