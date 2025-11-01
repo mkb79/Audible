@@ -16,6 +16,13 @@
 - `uv run nox --session=pre-commit` executes the lint/format pipeline (ruff, docstring checks, etc.).
 - `uv run nox --session=docs-build` builds the Sphinx site into `docs/_build`.
 
+## Crypto Providers & Optional Dependencies
+
+- Install high-performance backends with `uv pip install audible[cryptography]`, `audible[pycryptodome]`, or both.
+- Auto-detection order is `cryptography` → `pycryptodome` → legacy (pure Python).
+- Prefer provider overrides via high-level APIs (e.g. `Authenticator.from_file(..., crypto_provider=CryptographyProvider)`); `get_crypto_providers()` is internal and should not be exposed in docs.
+- For global overrides use `set_default_crypto_provider(...)` and reset with `set_default_crypto_provider()`.
+
 ## Coding Style & Naming Conventions
 
 - Follow 4-space indentation, keep lines ≤88 characters, and include type hints; `pyproject.toml` enforces these via Ruff and mypy.

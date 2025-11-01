@@ -191,9 +191,14 @@ Requires Python 3.10-3.13 (3.14 not yet supported per pyproject.toml)
 - **httpx**: HTTP client library (sync/async)
 - **Pillow**: Image processing (CAPTCHA handling)
 - **beautifulsoup4**: HTML parsing (login flows)
-- **rsa**: RSA encryption (API authentication)
-- **pyaes**: AES encryption (credential storage)
-- **pbkdf2**: Key derivation (password-based encryption)
+- **rsa**: RSA encryption (legacy fallback)
+- **pyaes**: AES encryption (legacy fallback)
+- **pbkdf2**: Key derivation (legacy fallback)
+
+**Optional (recommended for performance):**
+
+- **cryptography**: Rust-accelerated crypto operations (preferred)
+- **pycryptodome**: C-based crypto operations
 
 ## Claude Code Integration
 

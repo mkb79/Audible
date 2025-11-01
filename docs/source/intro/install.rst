@@ -19,28 +19,30 @@ It depends on the following packages:
 Optional Dependencies
 =====================
 
-For significantly improved performance, you can optionally install:
+For significantly improved performance, you can optionally install
+high-performance cryptographic backends:
 
-* **pycryptodome** - High-performance cryptographic operations using native C extensions
+* **cryptography** - Modern, Rust-accelerated library (recommended)
+* **pycryptodome** - Mature, C-based cryptographic library
 
-The library automatically detects and uses ``pycryptodome`` if available, otherwise
-it falls back to pure-Python implementations (``pyaes``, ``rsa``, ``pbkdf2``).
+The library automatically selects the best available provider:
 
-Performance Improvements with pycryptodome
-------------------------------------------
+1. ``cryptography`` (preferred, Rust-accelerated)
+2. ``pycryptodome`` (C-based)
+3. ``legacy`` fallback (pure Python: ``pyaes``, ``rsa``, ``pbkdf2``)
 
-Installing ``pycryptodome`` provides:
+Performance improvements with optimized backends:
 
 * **5-10x faster** AES encryption/decryption
 * **10-20x faster** RSA signing operations
 * **3-5x faster** PBKDF2 key derivation
 * **5-10x faster** SHA-256 and SHA-1 hashing
 
-This is especially beneficial for applications that:
+These benefits are most noticeable when you:
 
-* Make many API requests (RSA signing on each request)
-* Handle authentication frequently (PBKDF2 key derivation)
-* Encrypt/decrypt large amounts of data
+* Make frequent API requests (RSA signing on each request)
+* Handle authentication workflows often (PBKDF2 key derivation)
+* Encrypt or decrypt larger payloads
 
 Installation
 ============
@@ -59,27 +61,51 @@ Using uv (faster alternative to pip)::
 Recommended: With Performance Optimizations
 --------------------------------------------
 
-To install with the optional ``pycryptodome`` backend for better performance.
+Install with optional extras to enable high-performance crypto providers.
 
-Using pip::
+Using pip (choose one or both extras)::
 
-    pip install audible[crypto]
+    # cryptography (recommended)
+    pip install audible[cryptography]
+
+    # pycryptodome
+    pip install audible[pycryptodome]
+
+    # both
+    pip install audible[cryptography,pycryptodome]
 
 Using uv::
 
-    uv pip install audible[crypto]
+    uv pip install audible[cryptography]
+    uv pip install audible[pycryptodome]
+    uv pip install audible[cryptography,pycryptodome]
 
-Or in a project context, run with extras::
+Or run with extras inside the project::
 
-    uv run --extra crypto your_script.py
+    uv run --extra cryptography your_script.py
 
-Or add to existing installation::
+Provider Overrides (advanced)
+-----------------------------
 
-    # Using pip
-    pip install pycryptodome
+Most use cases do not need direct access to the crypto registry. Prefer wiring
+providers through high-level APIs such as ``Authenticator``::
 
-    # Using uv
-    uv pip install pycryptodome
+    from audible import Authenticator
+    from audible.crypto import CryptographyProvider, set_default_crypto_provider
+
+    auth = Authenticator.from_file(
+        "auth.json",
+        password="secret",
+        crypto_provider=CryptographyProvider,
+    )
+
+    # Optional: set and later reset a process-wide default provider
+    set_default_crypto_provider(CryptographyProvider)
+    ...
+    set_default_crypto_provider()
+
+``get_crypto_providers()`` is considered an internal helper and is not intended
+for general external use.
 
 Development Installation
 ------------------------
@@ -93,15 +119,17 @@ development version::
 
 With optional dependencies::
 
-    pip install .[crypto]
+    pip install .[cryptography]
+    pip install .[pycryptodome]
+    pip install .[cryptography,pycryptodome]
 
 Using uv::
 
-    uv pip install -e .[crypto]
+    uv pip install -e .[cryptography,pycryptodome]
 
 Or when working in the project::
 
-    uv sync --extra crypto
+    uv sync --extra cryptography --extra pycryptodome
 
 Alternatively, install it directly from the GitHub repository::
 
@@ -109,4 +137,5 @@ Alternatively, install it directly from the GitHub repository::
 
 With optional dependencies::
 
-    pip install "audible[crypto] @ git+https://github.com/mkb79/audible.git"
+    pip install "audible[cryptography] @ git+https://github.com/mkb79/audible.git"
+    pip install "audible[pycryptodome] @ git+https://github.com/mkb79/audible.git"
