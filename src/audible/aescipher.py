@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import base64
 import hmac
 import json
@@ -15,6 +17,8 @@ from .crypto import get_crypto_providers
 if TYPE_CHECKING:
     import audible
 
+    from .crypto.protocols import CryptoProvider
+
 
 logger = logging.getLogger("audible.aescipher")
 
@@ -22,7 +26,12 @@ BLOCK_SIZE: int = 16  # the AES block size
 
 
 def aes_cbc_encrypt(
-    key: bytes, iv: bytes, data: str, padding: str = "default"
+    key: bytes,
+    iv: bytes,
+    data: str,
+    padding: str = "default",
+    *,
+    crypto_provider: CryptoProvider | type[CryptoProvider] | None = None,
 ) -> bytes:
     """Encrypts data in cipher block chaining mode of operation.
 
@@ -31,16 +40,22 @@ def aes_cbc_encrypt(
         iv: The initialization vector.
         data: The data to encrypt.
         padding: Can be ``default`` or ``none`` (Default: default)
+        crypto_provider: Optional provider override (class or instance).
 
     Returns:
         The encrypted data.
     """
-    providers = get_crypto_providers()
+    providers = get_crypto_providers(crypto_provider)
     return providers.aes.encrypt(key, iv, data, padding)
 
 
 def aes_cbc_decrypt(
-    key: bytes, iv: bytes, encrypted_data: bytes, padding: str = "default"
+    key: bytes,
+    iv: bytes,
+    encrypted_data: bytes,
+    padding: str = "default",
+    *,
+    crypto_provider: CryptoProvider | type[CryptoProvider] | None = None,
 ) -> str:
     """Decrypts data encrypted in cipher block chaining mode of operation.
 
@@ -49,11 +64,12 @@ def aes_cbc_decrypt(
         iv: The initialization vector used at encryption.
         encrypted_data: The encrypted data to decrypt.
         padding: Can be ``default`` or ``none`` (Default: default)
+        crypto_provider: Optional provider override (class or instance).
 
     Returns:
         The decrypted data.
     """
-    providers = get_crypto_providers()
+    providers = get_crypto_providers(crypto_provider)
     return providers.aes.decrypt(key, iv, encrypted_data, padding)
 
 
@@ -92,10 +108,30 @@ def unpack_salt(packed_salt: bytes, salt_marker: bytes) -> tuple[bytes, int]:
 
 
 def derive_from_pbkdf2(  # type: ignore[no-untyped-def]
-    password: str, *, key_size: int, salt: bytes, kdf_iterations: int, hashmod, mac
+    password: str,
+    *,
+    key_size: int,
+    salt: bytes,
+    kdf_iterations: int,
+    hashmod,
+    mac,
+    crypto_provider: CryptoProvider | type[CryptoProvider] | None = None,
 ) -> bytes:
-    """Creates an AES key with the :class:`PBKDF2` key derivation class."""
-    providers = get_crypto_providers()
+    """Creates an AES key with the :class:`PBKDF2` key derivation class.
+
+    Args:
+        password: Source password.
+        key_size: Desired key length in bytes.
+        salt: Random salt for PBKDF2.
+        kdf_iterations: Number of iterations.
+        hashmod: Hash factory.
+        mac: MAC module.
+        crypto_provider: Optional provider override (class or instance).
+
+    Returns:
+        Derived key bytes produced by the PBKDF2 provider.
+    """
+    providers = get_crypto_providers(crypto_provider)
     return providers.pbkdf2.derive_key(
         password, salt, kdf_iterations, key_size, hashmod
     )
@@ -135,6 +171,8 @@ class AESCipher:
             derive the key (Default: 1000).
         hashmod: The hash method to use (Default: sha256).
         mac: The mac module to use (Default: hmac).
+        crypto_provider: Optional provider override (class or instance).
+        crypto_provider: Optional provider override (class or instance).
 
     Args:
         password: The password for encryption/decryption.
@@ -161,6 +199,7 @@ class AESCipher:
         kdf_iterations: int = 1000,
         hashmod=sha256,
         mac=hmac,
+        crypto_provider: type[CryptoProvider] | None = None,
     ) -> None:
         if not 1 <= len(salt_marker) <= 6:
             raise ValueError("The salt_marker must be one to six bytes long.")
@@ -177,9 +216,15 @@ class AESCipher:
         self.mac = mac
         self.salt_marker = salt_marker
         self.kdf_iterations = kdf_iterations
+        self._crypto_provider = crypto_provider
+
+    def _get_crypto(self) -> CryptoProvider:
+        """Return the configured crypto provider."""
+        return get_crypto_providers(self._crypto_provider)
 
     def _encrypt(self, data: str) -> tuple[bytes, bytes, bytes]:
         header, salt = create_salt(self.salt_marker, self.kdf_iterations)
+        providers = self._get_crypto()
         key = derive_from_pbkdf2(
             password=self.password,
             key_size=self.key_size,
@@ -187,9 +232,10 @@ class AESCipher:
             kdf_iterations=self.kdf_iterations,
             hashmod=self.hashmod,
             mac=self.mac,
+            crypto_provider=providers,
         )
         iv = os.urandom(BLOCK_SIZE)
-        encrypted_data = aes_cbc_encrypt(key, iv, data)
+        encrypted_data = aes_cbc_encrypt(key, iv, data, crypto_provider=providers)
         return pack_salt(header, salt), iv, encrypted_data
 
     def _decrypt(self, salt: bytes, iv: bytes, encrypted_data: bytes) -> str:
@@ -198,6 +244,7 @@ class AESCipher:
         except ValueError:
             kdf_iterations = self.kdf_iterations
 
+        providers = self._get_crypto()
         key = derive_from_pbkdf2(
             password=self.password,
             key_size=self.key_size,
@@ -205,8 +252,9 @@ class AESCipher:
             kdf_iterations=kdf_iterations,
             hashmod=self.hashmod,
             mac=self.mac,
+            crypto_provider=providers,
         )
-        return aes_cbc_decrypt(key, iv, encrypted_data)
+        return aes_cbc_decrypt(key, iv, encrypted_data, crypto_provider=providers)
 
     def to_dict(self, data: str) -> dict[str, str]:
         """Encrypts data in dict style.
@@ -393,18 +441,22 @@ def _decrypt_voucher(
     device_type: str,
     asin: str,
     voucher: str,
+    *,
+    crypto_provider: CryptoProvider | type[CryptoProvider] | None = None,
 ) -> dict[str, Any]:
     # https://github.com/mkb79/Audible/issues/3#issuecomment-705262614
     buf_str = device_type + device_serial_number + customer_id + asin
     buf = buf_str.encode("ascii")
-    providers = get_crypto_providers()
+    providers = get_crypto_providers(crypto_provider)
     digest = providers.hash.sha256(buf)
     key = digest[0:16]
     iv = digest[16:]
 
     # decrypt "voucher" using AES in CBC mode with no padding
     b64d_voucher = base64.b64decode(voucher)
-    plaintext = aes_cbc_decrypt(key, iv, b64d_voucher, padding="none").rstrip("\x00")
+    plaintext = aes_cbc_decrypt(
+        key, iv, b64d_voucher, padding="none", crypto_provider=providers
+    ).rstrip("\x00")
 
     try:
         voucher_dict: dict[str, Any] = json.loads(plaintext)
@@ -418,7 +470,10 @@ def _decrypt_voucher(
 
 
 def decrypt_voucher_from_licenserequest(
-    auth: "audible.Authenticator", license_response: dict[str, Any]
+    auth: audible.Authenticator,
+    license_response: dict[str, Any],
+    *,
+    crypto_provider: CryptoProvider | type[CryptoProvider] | None = None,
 ) -> dict[str, Any]:
     """Decrypt the voucher from license request response.
 
@@ -426,6 +481,7 @@ def decrypt_voucher_from_licenserequest(
         auth: The Authenticator.
         license_response: The response content from a
             :http:post:`/1.0/content/(string:asin)/licenserequest` request.
+        crypto_provider: Optional provider override (class or instance).
 
     Returns:
         The decrypted license voucher with needed key and iv.
@@ -454,10 +510,19 @@ def decrypt_voucher_from_licenserequest(
     asin = license_response["content_license"]["asin"]
     encrypted_voucher = license_response["content_license"]["license_response"]
 
+    provider_hint = crypto_provider
+    if provider_hint is None:
+        get_crypto_method = getattr(auth, "_get_crypto", None)
+        if callable(get_crypto_method):
+            provider_hint = get_crypto_method()
+
+    providers = get_crypto_providers(provider_hint)
+
     return _decrypt_voucher(
         device_serial_number=device_serial_number,
         customer_id=customer_id,
         device_type=device_type,
         asin=asin,
         voucher=encrypted_voucher,
+        crypto_provider=providers,
     )
