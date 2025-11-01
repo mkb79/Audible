@@ -10,6 +10,7 @@ import pytest
 
 from audible.crypto import set_default_crypto_provider
 
+
 try:
     from audible.crypto.cryptography_provider import CRYPTOGRAPHY_AVAILABLE
 except ImportError:  # pragma: no cover - module missing when extra absent

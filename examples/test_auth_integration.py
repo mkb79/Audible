@@ -1,12 +1,14 @@
 """Manual integration smoke test for Authenticator with crypto overrides.
 
 Usage:
+    export AUTH_FIXTURE_PASSWORD=test_password_123
     uv run --extra cryptography --extra pycryptodome python examples/test_auth_integration.py
 """
 
 from __future__ import annotations
 
 import json
+import os
 from pathlib import Path
 
 from audible import Authenticator
@@ -16,20 +18,22 @@ from audible.crypto import (
     CryptographyProvider,
     LegacyProvider,
     PycryptodomeProvider,
-    get_crypto_providers,
 )
+
 
 FIXTURES_DIR = Path("tests/fixtures")
 AUTH_JSON = FIXTURES_DIR / "auth_fixture.json"
 AUTH_JSON_ENCRYPTED = FIXTURES_DIR / "auth_fixture_encrypted_json.json"
-PASSWORD = "test_password_123"
+PASSWORD = os.environ.get("AUTH_FIXTURE_PASSWORD")
 
 
 def _load_fixture() -> dict[str, str]:
+    """Return the JSON payload backing the auth fixtures."""
     return json.loads(AUTH_JSON.read_text())
 
 
 def smoke(auth: Authenticator) -> None:
+    """Print signing headers for a configured authenticator."""
     request_headers = sign_request(
         method="GET",
         path="/test",
@@ -49,6 +53,10 @@ PROVIDERS = [
 
 
 def main() -> None:
+    """Exercise authenticator flows under each available provider."""
+    if PASSWORD is None:
+        raise RuntimeError("Set AUTH_FIXTURE_PASSWORD environment variable")
+
     for name, provider_cls in PROVIDERS:
         print(f"\nTesting Authenticator with provider: {name}")
         data = _load_fixture()

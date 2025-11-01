@@ -13,6 +13,7 @@ from audible.crypto import (
     get_crypto_providers,
 )
 
+
 PROVIDERS = [
     ("cryptography", CryptographyProvider),
     ("pycryptodome", PycryptodomeProvider),
@@ -21,6 +22,7 @@ PROVIDERS = [
 
 
 def main() -> None:
+    """Run AES smoke tests for each available provider."""
     key = bytes([0x01]) * 16
     iv = bytes([0x02]) * 16
     plaintext = "explicit provider smoke test"

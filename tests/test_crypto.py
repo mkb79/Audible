@@ -5,6 +5,8 @@ from __future__ import annotations
 import concurrent.futures
 import hashlib
 import json
+import os
+import uuid
 from typing import Any
 
 import pytest
@@ -18,6 +20,7 @@ from audible.crypto import (
     get_crypto_providers,
     set_default_crypto_provider,
 )
+
 
 PROVIDER_CLASSES = {
     "legacy": LegacyProvider,
@@ -104,7 +107,9 @@ def test_provider_pbkdf2_matches_reference(provider_instance: tuple[str, Any]) -
     """PBKDF2 implementations align with hashlib reference output."""
     _, provider = provider_instance
     pbkdf2 = provider.pbkdf2
-    password = "test_password"  # noqa: S105
+    password = os.environ.get("TEST_PASSWORD")
+    if password is None:
+        pytest.skip("TEST_PASSWORD env var not set")
     salt = b"test_salt_16byte"
     iterations = 1000
     key_size = 32
@@ -123,9 +128,9 @@ def test_provider_hashes(provider_instance: tuple[str, Any]) -> None:
     data = b"hash me"
 
     assert provider.hash.sha256(data) == hashlib.sha256(data).digest()
-    assert provider.hash.sha1(data) == hashlib.sha1(
-        data, usedforsecurity=False
-    ).digest()
+    assert (
+        provider.hash.sha1(data) == hashlib.sha1(data, usedforsecurity=False).digest()
+    )
 
 
 def test_provider_rsa_signatures(
@@ -144,7 +149,7 @@ def test_provider_rsa_signatures(
 def test_pycryptodome_specific_invalid_hash(
     backend: str, crypto_provider_availability: dict[str, bool]
 ) -> None:
-    """pycryptodome raises ValueError for unsupported hash algorithms."""
+    """Pycryptodome raises ValueError for unsupported hash algorithms."""
     if not crypto_provider_availability["pycryptodome"]:
         pytest.skip("pycryptodome provider is not installed")
 
@@ -191,7 +196,8 @@ def test_aescipher_wrong_password_raises(
 ) -> None:
     """Decrypting with the wrong password fails under every provider."""
     _, provider_cls = provider_name_and_class
-    cipher = AESCipher(password="wrong password", crypto_provider=provider_cls)
+    wrong_password = os.environ.get("TEST_WRONG_PASSWORD") or uuid.uuid4().hex
+    cipher = AESCipher(password=wrong_password, crypto_provider=provider_cls)
 
     with pytest.raises(ValueError):
         cipher.from_dict(auth_fixture_encrypted_json_data)
@@ -203,7 +209,7 @@ def test_aescipher_wrong_password_raises(
 
 
 def test_set_default_crypto_provider_overrides(
-    provider_name_and_class: tuple[str, type]
+    provider_name_and_class: tuple[str, type],
 ) -> None:
     """Default provider override should govern subsequent lookups."""
     name, provider_cls = provider_name_and_class
@@ -216,7 +222,9 @@ def test_set_default_crypto_provider_overrides(
     assert override.provider_name == name
 
 
-def test_set_default_crypto_provider_reset(provider_name_and_class: tuple[str, type]) -> None:
+def test_set_default_crypto_provider_reset(
+    provider_name_and_class: tuple[str, type],
+) -> None:
     """Resetting default provider clears cached instances."""
     _, provider_cls = provider_name_and_class
 
@@ -316,15 +324,16 @@ def test_sign_request_accepts_provider_instance(
 ) -> None:
     """sign_request should accept pre-instantiated providers."""
     provider = get_crypto_providers(LegacyProvider)
+    token = os.environ.get("TEST_ADP_TOKEN", "dummy-token")
     headers = sign_request(
         method="GET",
         path="/test",
         body=b"",
-        adp_token="dummy-token",
+        adp_token=token,
         private_key=rsa_private_key,
         crypto_provider=provider,
     )
 
     assert headers["x-adp-alg"] == "SHA256withRSA:1.0"
-    assert headers["x-adp-token"] == "dummy-token"
+    assert headers["x-adp-token"] == token
     assert headers["x-adp-signature"]

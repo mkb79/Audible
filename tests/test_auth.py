@@ -15,6 +15,7 @@ from audible.crypto import (
     get_crypto_providers,
 )
 
+
 PROVIDER_CLASSES = {
     "legacy": LegacyProvider,
     "pycryptodome": PycryptodomeProvider,
