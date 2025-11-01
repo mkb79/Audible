@@ -172,7 +172,6 @@ class AESCipher:
         hashmod: The hash method to use (Default: sha256).
         mac: The mac module to use (Default: hmac).
         crypto_provider: Optional provider override (class or instance).
-        crypto_provider: Optional provider override (class or instance).
 
     Args:
         password: The password for encryption/decryption.
