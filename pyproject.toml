@@ -33,7 +33,10 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-crypto = [
+cryptography = [
+    "cryptography (>=42.0.0)",
+]
+pycryptodome = [
     "pycryptodome (>=3.20.0)",
 ]
 

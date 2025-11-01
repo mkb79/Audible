@@ -71,7 +71,10 @@ dependencies = [
 ]
 
 [package.optional-dependencies]
-crypto = [
+cryptography = [
+    { name = "cryptography" },
+]
+pycryptodome = [
     { name = "pycryptodome" },
 ]
 
@@ -127,14 +130,15 @@ xdocs = [
 [package.metadata]
 requires-dist = [
     { name = "beautifulsoup4", specifier = ">=4.11.2" },
+    { name = "cryptography", marker = "extra == 'cryptography'", specifier = ">=42.0.0" },
     { name = "httpx", specifier = ">=0.23.3" },
     { name = "pbkdf2", specifier = ">=1.3" },
     { name = "pillow", specifier = ">=9.4.0" },
     { name = "pyaes", specifier = ">=1.6.1" },
-    { name = "pycryptodome", marker = "extra == 'crypto'", specifier = ">=3.20.0" },
+    { name = "pycryptodome", marker = "extra == 'pycryptodome'", specifier = ">=3.20.0" },
     { name = "rsa", specifier = ">=4.9" },
 ]
-provides-extras = ["crypto"]
+provides-extras = ["cryptography", "pycryptodome"]
 
 [package.metadata.requires-dev]
 dev = [
