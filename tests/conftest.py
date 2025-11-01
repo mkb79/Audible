@@ -8,6 +8,18 @@ from typing import Any, cast
 
 import pytest
 
+from audible.crypto import set_default_crypto_provider
+
+try:
+    from audible.crypto.cryptography_provider import CRYPTOGRAPHY_AVAILABLE
+except ImportError:  # pragma: no cover - module missing when extra absent
+    CRYPTOGRAPHY_AVAILABLE = False
+
+try:
+    from audible.crypto.pycryptodome_provider import PYCRYPTODOME_AVAILABLE
+except ImportError:  # pragma: no cover - module missing when extra absent
+    PYCRYPTODOME_AVAILABLE = False
+
 
 # Test password for encrypted fixtures
 TEST_AUTH_PASSWORD = "test_password_123"  # noqa: S105
@@ -100,3 +112,20 @@ def auth_fixture_password() -> str:
 def rsa_private_key(auth_fixture_data: dict[str, Any]) -> str:
     """RSA private key from auth fixture data."""
     return cast(str, auth_fixture_data["device_private_key"])
+
+
+@pytest.fixture(autouse=True)
+def reset_crypto_provider_state() -> None:
+    """Ensure crypto registry overrides are cleared between tests."""
+    set_default_crypto_provider()
+    yield
+    set_default_crypto_provider()
+
+
+@pytest.fixture
+def crypto_provider_availability() -> dict[str, bool]:
+    """Report availability of optional crypto backends."""
+    return {
+        "cryptography": CRYPTOGRAPHY_AVAILABLE,
+        "pycryptodome": PYCRYPTODOME_AVAILABLE,
+    }

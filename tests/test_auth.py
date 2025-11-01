@@ -5,8 +5,51 @@ from __future__ import annotations
 from unittest.mock import Mock
 
 import httpx
+import pytest
 
 from audible.auth import Authenticator
+from audible.crypto import (
+    CryptographyProvider,
+    LegacyProvider,
+    PycryptodomeProvider,
+    get_crypto_providers,
+)
+
+PROVIDER_CLASSES = {
+    "legacy": LegacyProvider,
+    "pycryptodome": PycryptodomeProvider,
+    "cryptography": CryptographyProvider,
+}
+
+
+@pytest.mark.parametrize("provider_name", PROVIDER_CLASSES.keys())
+def test_authenticator_from_dict_respects_crypto_override(
+    provider_name: str,
+    auth_fixture_data: dict[str, str],
+    crypto_provider_availability: dict[str, bool],
+) -> None:
+    """from_dict should honour explicit crypto provider overrides."""
+    if provider_name != "legacy" and not crypto_provider_availability[provider_name]:
+        pytest.skip(f"{provider_name} provider is not installed")
+
+    provider_cls = PROVIDER_CLASSES[provider_name]
+    auth = Authenticator.from_dict(auth_fixture_data, crypto_provider=provider_cls)
+
+    assert auth._get_crypto().provider_name == provider_name
+
+
+@pytest.mark.parametrize("provider_name", PROVIDER_CLASSES.keys())
+def test_authenticator_accepts_provider_instance(
+    provider_name: str, crypto_provider_availability: dict[str, bool]
+) -> None:
+    """Direct instantiation accepts provider instances."""
+    if provider_name != "legacy" and not crypto_provider_availability[provider_name]:
+        pytest.skip(f"{provider_name} provider is not installed")
+
+    provider_instance = get_crypto_providers(PROVIDER_CLASSES[provider_name])
+    auth = Authenticator(crypto_provider=provider_instance)
+
+    assert auth._get_crypto() is provider_instance
 
 
 def test_rsa_key_cache_invalidation(auth_fixture_data: dict[str, str]) -> None:
