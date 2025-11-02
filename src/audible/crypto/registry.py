@@ -100,7 +100,7 @@ def _coerce_provider(
     provider: CryptoProvider | type[CryptoProvider],
 ) -> CryptoProvider:
     """Instantiate provider classes to obtain a validated provider instance."""
-    instance: Any
+    instance: object
     if inspect.isclass(provider):
         instance = provider()
     else:

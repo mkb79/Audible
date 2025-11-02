@@ -146,7 +146,11 @@ class CryptographyAESProvider:
                 unpadder = sym_padding.PKCS7(128).unpadder()
                 plaintext = unpadder.update(plaintext) + unpadder.finalize()
             except ValueError as e:
-                raise ValueError(f"Invalid padding: {e}") from e
+                msg = (
+                    "Invalid PKCS7 padding - possible decryption key/IV mismatch or "
+                    "corrupted ciphertext"
+                )
+                raise ValueError(msg) from e
         elif padding != "none":
             raise ValueError(f"Unknown padding mode: {padding}")
 
