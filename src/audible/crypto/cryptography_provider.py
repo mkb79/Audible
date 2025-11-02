@@ -15,6 +15,7 @@ This is the preferred provider when available, selected first during auto-detect
 from __future__ import annotations
 
 import logging
+import warnings
 from collections.abc import Callable
 from functools import lru_cache
 from typing import Any
@@ -22,6 +23,7 @@ from typing import Any
 
 # Optional import - only available if cryptography is installed
 try:
+    from cryptography.exceptions import InvalidKey, UnsupportedAlgorithm
     from cryptography.hazmat.backends import default_backend
     from cryptography.hazmat.primitives import hashes, serialization
     from cryptography.hazmat.primitives import padding as sym_padding
@@ -62,9 +64,10 @@ def _load_rsa_private_key_cryptography(pem_data: str) -> Any:
         if not isinstance(key, rsa.RSAPrivateKey):
             raise ValueError("Key is not an RSA private key")
         return key
-    except Exception as e:
-        logger.error("Failed to load RSA private key: %s", e)
-        raise
+    except (ValueError, TypeError, UnsupportedAlgorithm, InvalidKey) as exc:
+        logger.error("Failed to load RSA private key: %s", exc)
+        _load_rsa_private_key_cryptography.cache_clear()
+        raise ValueError("Failed to load RSA private key") from exc
 
 
 class CryptographyAESProvider:
@@ -286,6 +289,11 @@ class CryptographyHashProvider:
         Note:
             SHA-1 is cryptographically broken. Only use for legacy compatibility.
         """
+        warnings.warn(
+            "SHA-1 is deprecated and should only be used for legacy compatibility",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         digest = hashes.Hash(hashes.SHA1(), backend=default_backend())  # noqa: S303 - legacy compatibility
         digest.update(data)
         return digest.finalize()
@@ -317,8 +325,8 @@ class CryptographyProvider:
         """
         if not CRYPTOGRAPHY_AVAILABLE:
             raise ImportError(  # doctest: +SKIP
-                "cryptography is not installed. "  # doctest: +SKIP
-                "Install with: pip install audible[cryptography]"  # doctest: +SKIP
+                "cryptography is not installed. Install with: pip install "
+                "audible[cryptography] (or audible[cryptography,pycryptodome] for full coverage)."  # doctest: +SKIP
             )
 
         self._aes = CryptographyAESProvider()

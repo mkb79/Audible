@@ -162,6 +162,12 @@ class AESCipher:
     having the value of the length of the padding.
     All values in dict mode are written as base64 encoded string.
 
+    Note:
+        Every encryption call generates a fresh, random IV using
+        :func:`os.urandom`. While the probability of IV reuse is negligible,
+        consumers should avoid reusing IVs manually as CBC mode requires a
+        unique IV per message to maintain semantic security.
+
     Attributes:
         password: The password for encryption/decryption.
         key_size: The size of the key. Can be ``16``, ``24`` or ``32``

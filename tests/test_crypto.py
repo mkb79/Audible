@@ -5,8 +5,6 @@ from __future__ import annotations
 import concurrent.futures
 import hashlib
 import json
-import os
-import uuid
 from typing import Any
 
 import pytest
@@ -103,13 +101,13 @@ def test_provider_aes_wrong_key_raises(provider_instance: tuple[str, Any]) -> No
         aes.decrypt(wrong_key, iv, ciphertext)
 
 
-def test_provider_pbkdf2_matches_reference(provider_instance: tuple[str, Any]) -> None:
+def test_provider_pbkdf2_matches_reference(
+    provider_instance: tuple[str, Any], auth_fixture_password: str
+) -> None:
     """PBKDF2 implementations align with hashlib reference output."""
     _, provider = provider_instance
     pbkdf2 = provider.pbkdf2
-    password = os.environ.get("TEST_PASSWORD")
-    if password is None:
-        pytest.skip("TEST_PASSWORD env var not set")
+    password = auth_fixture_password
     salt = b"test_salt_16byte"
     iterations = 1000
     key_size = 32
@@ -193,11 +191,14 @@ def test_aescipher_decrypts_fixtures(
 def test_aescipher_wrong_password_raises(
     provider_name_and_class: tuple[str, type],
     auth_fixture_encrypted_json_data: dict[str, Any],
+    auth_fixture_password: str,
 ) -> None:
     """Decrypting with the wrong password fails under every provider."""
     _, provider_cls = provider_name_and_class
-    wrong_password = os.environ.get("TEST_WRONG_PASSWORD") or uuid.uuid4().hex
-    cipher = AESCipher(password=wrong_password, crypto_provider=provider_cls)
+    cipher = AESCipher(
+        password=f"{auth_fixture_password}-wrong",
+        crypto_provider=provider_cls,
+    )
 
     with pytest.raises(ValueError):
         cipher.from_dict(auth_fixture_encrypted_json_data)
@@ -324,7 +325,7 @@ def test_sign_request_accepts_provider_instance(
 ) -> None:
     """sign_request should accept pre-instantiated providers."""
     provider = get_crypto_providers(LegacyProvider)
-    token = os.environ.get("TEST_ADP_TOKEN", "dummy-token")
+    token = f"{provider.provider_name}-token"
     headers = sign_request(
         method="GET",
         path="/test",

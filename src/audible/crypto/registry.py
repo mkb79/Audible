@@ -31,8 +31,9 @@ Example:
 
 from __future__ import annotations
 
+import inspect
 import logging
-from typing import TYPE_CHECKING  # doctest: +SKIP
+from typing import TYPE_CHECKING, Any  # doctest: +SKIP
 
 
 # doctest: +SKIP
@@ -45,6 +46,15 @@ logger = logging.getLogger("audible.crypto")
 
 # Registry state shared between helper functions
 _STATE: dict[str, CryptoProvider | None] = {"auto": None, "default": None}
+
+
+def _validate_provider(candidate: Any) -> CryptoProvider:
+    required_attributes = ("aes", "pbkdf2", "rsa", "hash", "provider_name")
+    missing = [attr for attr in required_attributes if not hasattr(candidate, attr)]
+    if missing:
+        joined = ", ".join(missing)
+        raise TypeError(f"Object is not a CryptoProvider; missing: {joined}")
+    return candidate
 
 
 def _auto_detect_provider_class() -> type[CryptoProvider]:
@@ -89,10 +99,13 @@ def _auto_detect_provider_class() -> type[CryptoProvider]:
 def _coerce_provider(
     provider: CryptoProvider | type[CryptoProvider],
 ) -> CryptoProvider:
-    """Instantiate provider classes to obtain a provider instance."""
-    if isinstance(provider, type):
-        return provider()
-    return provider
+    """Instantiate provider classes to obtain a validated provider instance."""
+    instance: Any
+    if inspect.isclass(provider):
+        instance = provider()
+    else:
+        instance = provider
+    return _validate_provider(instance)
 
 
 def get_crypto_providers(
@@ -142,13 +155,14 @@ def get_crypto_providers(
     # Create new instance with specified provider
     try:
         return _coerce_provider(provider)
-    except ImportError as e:
+    except (ImportError, TypeError) as e:
         name = (
             provider.__name__ if isinstance(provider, type) else type(provider).__name__
         )
         raise ImportError(
             f"Failed to initialize {name}: {e}. "
-            "Install the required library or let the system auto-detect."
+            "Install the required extra (cryptography or pycryptodome) or let the system auto-detect "
+            "in priority order (cryptography → pycryptodome → legacy)."
         ) from e
 
 

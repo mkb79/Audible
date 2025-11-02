@@ -10,6 +10,7 @@ pycryptodome to be installed as an optional dependency.
 from __future__ import annotations
 
 import logging
+import warnings
 from collections.abc import Callable
 from functools import lru_cache
 from typing import Any
@@ -77,13 +78,23 @@ class PycryptodomeAESProvider:
 
         Returns:
             The encrypted ciphertext.
+
+        Raises:
+            ValueError: If key/IV sizes are invalid or padding mode unknown.
         """
+        if len(iv) != AES.block_size:
+            raise ValueError(f"IV must be {AES.block_size} bytes, got {len(iv)}")
+        if len(key) not in (16, 24, 32):
+            raise ValueError(f"Key must be 16, 24, or 32 bytes, got {len(key)}")
+
         cipher = AES.new(key, AES.MODE_CBC, iv)
         data_bytes = data.encode("utf-8")
 
         if padding == "default":
             # Apply PKCS7 padding using pycryptodome's built-in function
             data_bytes = pad(data_bytes, AES.block_size, style="pkcs7")
+        elif padding != "none":
+            raise ValueError(f"Unknown padding mode: {padding}")
 
         return cipher.encrypt(data_bytes)
 
@@ -102,9 +113,15 @@ class PycryptodomeAESProvider:
             The decrypted plaintext as a string.
 
         Raises:
-            ValueError: If PKCS7 padding is invalid or UTF-8 decoding fails
-                (wrong key/IV or corrupted data).
+            ValueError: If key/IV sizes invalid, padding mode unknown, PKCS7
+                padding invalid, or UTF-8 decoding fails (wrong key/IV or
+                corrupted data).
         """
+        if len(iv) != AES.block_size:
+            raise ValueError(f"IV must be {AES.block_size} bytes, got {len(iv)}")
+        if len(key) not in (16, 24, 32):
+            raise ValueError(f"Key must be 16, 24, or 32 bytes, got {len(key)}")
+
         cipher = AES.new(key, AES.MODE_CBC, iv)
         decrypted = cipher.decrypt(encrypted_data)
 
@@ -118,6 +135,8 @@ class PycryptodomeAESProvider:
                     "corrupted ciphertext"
                 )
                 raise ValueError(msg) from e
+        elif padding != "none":
+            raise ValueError(f"Unknown padding mode: {padding}")
 
         # Decode decrypted bytes to string
         try:
@@ -277,6 +296,11 @@ class PycryptodomeHashProvider:
         Note:
             SHA-1 is cryptographically broken. Use only for legacy compatibility.
         """
+        warnings.warn(
+            "SHA-1 is deprecated and should only be used for legacy compatibility",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         return SHA1.new(data).digest()
 
 
@@ -307,8 +331,8 @@ class PycryptodomeProvider:
         """
         if not PYCRYPTODOME_AVAILABLE:
             raise ImportError(
-                "pycryptodome is not installed. "
-                "Install with: pip install audible[pycryptodome]"
+                "pycryptodome is not installed. Install with: pip install "
+                "audible[pycryptodome] (or audible[cryptography,pycryptodome] for full coverage)."
             )
 
         self._aes = PycryptodomeAESProvider()

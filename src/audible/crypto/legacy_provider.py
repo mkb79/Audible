@@ -204,6 +204,11 @@ class LegacyHashProvider:
         Note:
             SHA-1 is cryptographically broken. Use only for legacy compatibility.
         """
+        warnings.warn(
+            "SHA-1 is deprecated and should only be used for legacy compatibility",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         return sha1(data, usedforsecurity=False).digest()
 
 
