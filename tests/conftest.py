@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+from collections.abc import Generator
 from pathlib import Path
 from typing import Any, cast
 
@@ -116,7 +117,7 @@ def rsa_private_key(auth_fixture_data: dict[str, Any]) -> str:
 
 
 @pytest.fixture(autouse=True)
-def reset_crypto_provider_state() -> None:
+def reset_crypto_provider_state() -> Generator[None, None, None]:
     """Ensure crypto registry overrides are cleared between tests."""
     set_default_crypto_provider()
     yield

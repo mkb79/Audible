@@ -145,7 +145,7 @@ class CryptoProvider(Protocol):
     the provider class to get_crypto_providers().
 
     Example:
-        >>> class MyProvider:
+        >>> class MyProvider:  # doctest: +SKIP
         ...     @property
         ...     def aes(self) -> AESProvider:
         ...         return MyAESProvider()
@@ -161,9 +161,9 @@ class CryptoProvider(Protocol):
         ...     @property
         ...     def provider_name(self) -> str:
         ...         return "my-custom-provider"
-        >>> from audible.crypto import get_crypto_providers
-        >>> providers = get_crypto_providers(MyProvider)
-        >>> providers.provider_name
+        >>> from audible.crypto import get_crypto_providers  # doctest: +SKIP
+        >>> providers = get_crypto_providers(MyProvider)  # doctest: +SKIP
+        >>> providers.provider_name  # doctest: +SKIP
         'my-custom-provider'
     """
 

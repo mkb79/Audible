@@ -10,13 +10,14 @@ import pytest
 from audible.auth import Authenticator
 from audible.crypto import (
     CryptographyProvider,
+    CryptoProvider,
     LegacyProvider,
     PycryptodomeProvider,
     get_crypto_providers,
 )
 
 
-PROVIDER_CLASSES = {
+PROVIDER_CLASSES: dict[str, type[CryptoProvider]] = {
     "legacy": LegacyProvider,
     "pycryptodome": PycryptodomeProvider,
     "cryptography": CryptographyProvider,
@@ -33,7 +34,7 @@ def test_authenticator_from_dict_respects_crypto_override(
     if provider_name != "legacy" and not crypto_provider_availability[provider_name]:
         pytest.skip(f"{provider_name} provider is not installed")
 
-    provider_cls = PROVIDER_CLASSES[provider_name]
+    provider_cls: type[CryptoProvider] = PROVIDER_CLASSES[provider_name]
     auth = Authenticator.from_dict(auth_fixture_data, crypto_provider=provider_cls)
 
     assert auth._get_crypto().provider_name == provider_name
@@ -47,7 +48,8 @@ def test_authenticator_accepts_provider_instance(
     if provider_name != "legacy" and not crypto_provider_availability[provider_name]:
         pytest.skip(f"{provider_name} provider is not installed")
 
-    provider_instance = get_crypto_providers(PROVIDER_CLASSES[provider_name])
+    provider_cls: type[CryptoProvider] = PROVIDER_CLASSES[provider_name]
+    provider_instance = get_crypto_providers(provider_cls)
     auth = Authenticator(crypto_provider=provider_instance)
 
     assert auth._get_crypto() is provider_instance

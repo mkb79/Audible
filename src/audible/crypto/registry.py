@@ -33,7 +33,7 @@ from __future__ import annotations
 
 import inspect
 import logging
-from typing import TYPE_CHECKING, Any  # doctest: +SKIP
+from typing import TYPE_CHECKING, Any, cast  # doctest: +SKIP
 
 
 # doctest: +SKIP
@@ -54,7 +54,7 @@ def _validate_provider(candidate: Any) -> CryptoProvider:
     if missing:
         joined = ", ".join(missing)
         raise TypeError(f"Object is not a CryptoProvider; missing: {joined}")
-    return candidate
+    return cast("CryptoProvider", candidate)
 
 
 def _auto_detect_provider_class() -> type[CryptoProvider]:

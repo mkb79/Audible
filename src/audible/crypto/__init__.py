@@ -28,11 +28,13 @@ Example:
 
 from .cryptography_provider import CryptographyProvider
 from .legacy_provider import LegacyProvider
+from .protocols import CryptoProvider
 from .pycryptodome_provider import PycryptodomeProvider
 from .registry import get_crypto_providers, set_default_crypto_provider
 
 
 __all__ = [
+    "CryptoProvider",
     "CryptographyProvider",
     "LegacyProvider",
     "PycryptodomeProvider",
