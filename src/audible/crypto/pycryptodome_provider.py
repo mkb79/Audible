@@ -273,6 +273,8 @@ class PycryptodomeHashProvider:
     faster hashing operations.
     """
 
+    _sha1_warning_shown = False
+
     def sha256(self, data: bytes) -> bytes:
         """Compute SHA-256 digest using pycryptodome.
 
@@ -296,11 +298,14 @@ class PycryptodomeHashProvider:
         Note:
             SHA-1 is cryptographically broken. Use only for legacy compatibility.
         """
-        warnings.warn(
-            "SHA-1 is deprecated and should only be used for legacy compatibility",
-            DeprecationWarning,
-            stacklevel=2,
-        )
+        if not self.__class__._sha1_warning_shown:
+            warnings.warn(
+                "SHA-1 is deprecated and should only be used for legacy compatibility",
+                DeprecationWarning,
+                stacklevel=2,
+            )
+            self.__class__._sha1_warning_shown = True
+
         return SHA1.new(data).digest()
 
 

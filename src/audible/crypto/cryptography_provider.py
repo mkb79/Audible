@@ -150,7 +150,15 @@ class CryptographyAESProvider:
         elif padding != "none":
             raise ValueError(f"Unknown padding mode: {padding}")
 
-        return plaintext.decode("utf-8")
+        # Decode decrypted bytes to string
+        try:
+            return plaintext.decode("utf-8")
+        except UnicodeDecodeError as e:
+            msg = (
+                "Failed to decode decrypted data as UTF-8 - possible decryption "
+                "key/IV mismatch or corrupted ciphertext"
+            )
+            raise ValueError(msg) from e
 
 
 class CryptographyPBKDF2Provider:
@@ -264,6 +272,8 @@ class CryptographyHashProvider:
     Uses Rust-accelerated hash primitives.
     """
 
+    _sha1_warning_shown = False
+
     def sha256(self, data: bytes) -> bytes:
         """Compute SHA-256 hash.
 
@@ -289,11 +299,14 @@ class CryptographyHashProvider:
         Note:
             SHA-1 is cryptographically broken. Only use for legacy compatibility.
         """
-        warnings.warn(
-            "SHA-1 is deprecated and should only be used for legacy compatibility",
-            DeprecationWarning,
-            stacklevel=2,
-        )
+        if not self.__class__._sha1_warning_shown:
+            warnings.warn(
+                "SHA-1 is deprecated and should only be used for legacy compatibility",
+                DeprecationWarning,
+                stacklevel=2,
+            )
+            self.__class__._sha1_warning_shown = True
+
         digest = hashes.Hash(hashes.SHA1(), backend=default_backend())  # noqa: S303 - legacy compatibility
         digest.update(data)
         return digest.finalize()
