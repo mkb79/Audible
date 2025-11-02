@@ -4,9 +4,9 @@ import base64
 import hmac
 import json
 import logging
-import os
 import pathlib
 import re
+import secrets
 import struct
 from hashlib import sha256
 from typing import TYPE_CHECKING, Any, Literal
@@ -82,7 +82,7 @@ def create_salt(salt_marker: bytes, kdf_iterations: int) -> tuple[bytes, bytes]:
     length of the salt header.
     """
     header = salt_marker + struct.pack(">H", kdf_iterations) + salt_marker
-    salt = os.urandom(BLOCK_SIZE - len(header))
+    salt = secrets.token_bytes(BLOCK_SIZE - len(header))
     return header, salt
 
 
@@ -164,7 +164,7 @@ class AESCipher:
 
     Note:
         Every encryption call generates a fresh, random IV using
-        :func:`os.urandom`. While the probability of IV reuse is negligible,
+        :func:`secrets.token_bytes`. While the probability of IV reuse is negligible,
         consumers should avoid reusing IVs manually as CBC mode requires a
         unique IV per message to maintain semantic security.
 
@@ -239,7 +239,7 @@ class AESCipher:
             mac=self.mac,
             crypto_provider=providers,
         )
-        iv = os.urandom(BLOCK_SIZE)
+        iv = secrets.token_bytes(BLOCK_SIZE)
         encrypted_data = aes_cbc_encrypt(key, iv, data, crypto_provider=providers)
         return pack_salt(header, salt), iv, encrypted_data
 
