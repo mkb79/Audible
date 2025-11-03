@@ -20,6 +20,9 @@ classifiers = [
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
 ]
+homepage = "https://github.com/mkb79/Audible"
+repository = "https://github.com/mkb79/Audible"
+documentation = "https://audible.readthedocs.io"
 dependencies = [
     "Pillow (>=9.4.0)",
     "beautifulsoup4 (>=4.11.2)",
@@ -28,9 +31,14 @@ dependencies = [
     "pyaes (>=1.6.1)",
     "rsa (>=4.9)",
 ]
-homepage = "https://github.com/mkb79/Audible"
-repository = "https://github.com/mkb79/Audible"
-documentation = "https://audible.readthedocs.io"
+
+[project.optional-dependencies]
+cryptography = [
+    "cryptography (>=42.0.0)",
+]
+pycryptodome = [
+    "pycryptodome (>=3.20.0)",
+]
 
 [project.urls]
 Changelog = "https://github.com/mkb79/Audible/releases"
@@ -126,6 +134,10 @@ show_error_codes = true
 show_error_context = true
 strict = true
 warn_unreachable = true
+
+[[tool.mypy.overrides]]
+module = "tests.*"
+disallow_untyped_decorators = false
 
 [tool.ruff]
 #  missing rst-docstrings check, these should be adding through ruff
