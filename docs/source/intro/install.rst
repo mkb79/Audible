@@ -19,6 +19,8 @@ It depends on the following packages:
 Optional Dependencies
 =====================
 
+**Available in audible >= 0.11.0**
+
 For significantly improved performance, you can optionally install
 high-performance cryptographic backends:
 
@@ -60,6 +62,8 @@ Using uv (faster alternative to pip)::
 
 Recommended: With Performance Optimizations
 --------------------------------------------
+
+**Available in audible >= 0.11.0**
 
 Install with optional extras to enable high-performance crypto providers.
 

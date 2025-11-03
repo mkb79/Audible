@@ -39,6 +39,8 @@ pip install audible
 
 ### Recommended: With Performance Optimizations
 
+**Available in audible >= 0.11.0**
+
 For significantly better performance (5-100x faster cryptographic operations),
 install with optional high-performance crypto backends.
 
