@@ -6,6 +6,43 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## Unreleased
 
+### Added
+
+- Optional high-performance crypto backends for significantly improved performance:
+  - `cryptography` (Rust-accelerated, recommended) - install with `pip install audible[cryptography]`
+  - `pycryptodome` (C-based) - install with `pip install audible[pycryptodome]`
+  - Automatic provider selection: cryptography → pycryptodome → legacy (pure Python fallback)
+  - Performance improvements: 5-10x faster AES operations, 10-20x faster RSA operations (up to 100x with caching), 3-5x faster PBKDF2, 5-10x faster hashing
+- New `audible.crypto` module with protocol-based provider abstraction layer:
+  - `protocols.py` - Type-safe Protocol definitions for crypto operations
+  - `cryptography_provider.py` - High-performance implementation using cryptography library
+  - `pycryptodome_provider.py` - High-performance implementation using pycryptodome library
+  - `legacy_provider.py` - Pure-Python implementation wrapper (pyaes, rsa, pbkdf2)
+  - `registry.py` - Provider selection and caching with lazy initialization
+- RSA key caching in `Authenticator` for improved performance on repeated API requests
+- Provider override capability: pass `crypto_provider` parameter to `Authenticator.from_file()` and related methods
+- Process-wide default provider configuration via `set_default_crypto_provider()`
+
+### Changed
+
+- `aescipher.py` now uses crypto providers for AES, PBKDF2, and hashing operations
+- `auth.py` now uses crypto providers with module-level RSA key caching
+- Replaced `os.urandom` with `secrets.token_bytes` for better cryptographic randomness
+- Improved error messages and type annotations throughout crypto layer
+
+### Fixed
+
+- Prevent SHA-1 deprecation warning spam from cryptography library
+- Security vulnerabilities in crypto handling
+- MyPy typing issues in crypto provider implementations
+
+### Documentation
+
+- Added comprehensive installation guide for crypto extras in README and docs
+- Added performance benchmarks and provider selection documentation
+- Added version requirement notes (crypto features available in audible >= 0.11.0)
+- Added example scripts for crypto provider usage
+
 ### Bugfix
 
 - Make register() resilient to missing fields in the registration response:
