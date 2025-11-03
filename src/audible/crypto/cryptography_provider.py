@@ -17,7 +17,6 @@ from __future__ import annotations
 import logging
 import warnings
 from collections.abc import Callable
-from functools import lru_cache
 from typing import Any
 
 
@@ -40,13 +39,12 @@ except ImportError:
 logger = logging.getLogger("audible.crypto.cryptography")
 
 
-# Module-level cached function for RSA key loading
-@lru_cache(maxsize=8)
 def _load_rsa_private_key_cryptography(pem_data: str) -> Any:
-    """Load and cache an RSA private key from PEM using cryptography.
+    """Load an RSA private key from PEM using cryptography.
 
-    This function caches up to 8 different keys. For the same PEM string,
-    the cached key object will be returned instead of re-parsing.
+    Note:
+        This function does NOT cache keys. Caching is the caller's
+        responsibility (e.g., Authenticator._cached_rsa_key for performance).
 
     Args:
         pem_data: RSA private key in PEM format.
@@ -66,7 +64,6 @@ def _load_rsa_private_key_cryptography(pem_data: str) -> Any:
         return key
     except (ValueError, TypeError, UnsupportedAlgorithm, InvalidKey) as exc:
         logger.error("Failed to load RSA private key: %s", exc)
-        _load_rsa_private_key_cryptography.cache_clear()
         raise ValueError("Failed to load RSA private key") from exc
 
 
@@ -228,13 +225,10 @@ class CryptographyRSAProvider:
     """RSA provider using cryptography library.
 
     Implements RSA private key loading and PKCS#1 v1.5 signing with SHA-256.
-    Uses LRU caching for parsed keys to optimize performance.
     """
 
     def load_private_key(self, pem_data: str) -> Any:
-        """Load and cache an RSA private key from PEM format.
-
-        Uses module-level LRU cache to avoid re-parsing the same key.
+        """Load an RSA private key from PEM format.
 
         Args:
             pem_data: RSA private key in PEM format.
