@@ -11,7 +11,6 @@ import hmac
 import logging
 import warnings
 from collections.abc import Callable
-from functools import lru_cache
 from hashlib import sha1, sha256
 from typing import Any
 
@@ -27,13 +26,12 @@ from pyaes import (  # type: ignore[import-untyped]
 logger = logging.getLogger("audible.crypto.legacy")
 
 
-# Module-level cached function to avoid memory leaks with lru_cache on methods
-@lru_cache(maxsize=8)
-def _load_rsa_private_key_cached(pem_data: str) -> rsa.PrivateKey:
-    """Load and cache an RSA private key from PEM.
+def _load_rsa_private_key_legacy(pem_data: str) -> rsa.PrivateKey:
+    """Load an RSA private key from PEM.
 
-    This function caches up to 8 different keys. For the same PEM string,
-    the cached key object will be returned instead of re-parsing.
+    Note:
+        This function does NOT cache keys. Caching is the caller's
+        responsibility (e.g., Authenticator._cached_rsa_key for performance).
 
     Args:
         pem_data: RSA private key in PEM format.
@@ -135,18 +133,16 @@ class LegacyPBKDF2Provider:
 
 
 class LegacyRSAProvider:
-    """RSA provider using the rsa library with key caching.
+    """RSA provider using the rsa library.
 
     This implementation uses pure Python RSA from the rsa library.
-    Keys are cached via a module-level function to avoid re-parsing the same PEM
-    string multiple times, which significantly improves performance.
     """
 
     def load_private_key(self, pem_data: str) -> rsa.PrivateKey:
-        """Load and cache an RSA private key from PEM.
+        """Load an RSA private key from PEM.
 
-        This method uses a module-level cached function to avoid memory leaks
-        that occur when using lru_cache on instance methods.
+        Note:
+            Caching is the caller's responsibility for optimal performance.
 
         Args:
             pem_data: RSA private key in PEM format.
@@ -154,7 +150,7 @@ class LegacyRSAProvider:
         Returns:
             A parsed rsa.PrivateKey object.
         """
-        return _load_rsa_private_key_cached(pem_data)
+        return _load_rsa_private_key_legacy(pem_data)
 
     def sign(self, key: Any, data: bytes, algorithm: str = "SHA-256") -> bytes:
         """Sign data with an RSA private key using PKCS#1 v1.5.

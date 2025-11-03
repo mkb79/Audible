@@ -12,7 +12,6 @@ from __future__ import annotations
 import logging
 import warnings
 from collections.abc import Callable
-from functools import lru_cache
 from typing import Any
 
 
@@ -40,13 +39,12 @@ except ImportError:
 logger = logging.getLogger("audible.crypto.pycryptodome")
 
 
-# Module-level cached function to avoid memory leaks with lru_cache on methods
-@lru_cache(maxsize=8)
 def _load_rsa_private_key_pycryptodome(pem_data: str) -> Any:
-    """Load and cache an RSA private key from PEM using pycryptodome.
+    """Load an RSA private key from PEM using pycryptodome.
 
-    This function caches up to 8 different keys. For the same PEM string,
-    the cached key object will be returned instead of re-parsing.
+    Note:
+        This function does NOT cache keys. Caching is the caller's
+        responsibility (e.g., Authenticator._cached_rsa_key for performance).
 
     Args:
         pem_data: RSA private key in PEM format.
@@ -214,17 +212,17 @@ class PycryptodomePBKDF2Provider:
 
 
 class PycryptodomeRSAProvider:
-    """High-performance RSA provider using pycryptodome with key caching.
+    """High-performance RSA provider using pycryptodome.
 
     This implementation uses native C extensions from pycryptodome for
-    faster RSA operations. Keys are cached to avoid re-parsing.
+    faster RSA operations.
     """
 
     def load_private_key(self, pem_data: str) -> Any:
-        """Load and cache an RSA private key from PEM.
+        """Load an RSA private key from PEM.
 
-        This method uses a module-level cached function to avoid memory leaks
-        that occur when using lru_cache on instance methods.
+        Note:
+            Caching is the caller's responsibility for optimal performance.
 
         Args:
             pem_data: RSA private key in PEM format.
