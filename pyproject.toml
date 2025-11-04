@@ -39,6 +39,22 @@ cryptography = [
 pycryptodome = [
     "pycryptodome (>=3.20.0)",
 ]
+orjson = [
+    "orjson (>=3.9.0)",
+]
+ujson = [
+    "ujson (>=5.8.0)",
+]
+rapidjson = [
+    "python-rapidjson (>=1.10)",
+]
+json-fast = [
+    "orjson (>=3.9.0)",
+]
+json-full = [
+    "orjson (>=3.9.0)",
+    "ujson (>=5.8.0)",
+]
 
 [project.urls]
 Changelog = "https://github.com/mkb79/Audible/releases"

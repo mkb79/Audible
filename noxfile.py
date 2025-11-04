@@ -157,7 +157,7 @@ def safety(s: nox.Session) -> None:
 @session(
     python=PYTHON_VERSIONS,
     uv_groups=[MYPY_GROUP, TESTS_GROUP],
-    uv_extras=["cryptography", "pycryptodome"],
+    uv_extras=["cryptography", "pycryptodome", "json-full"],
 )
 def mypy(s: nox.Session) -> None:
     """Type-check using mypy."""
@@ -172,7 +172,7 @@ def mypy(s: nox.Session) -> None:
 @session(
     python=PYTHON_VERSIONS,
     uv_groups=[TESTS_GROUP],
-    uv_extras=["cryptography", "pycryptodome"],
+    uv_extras=["cryptography", "pycryptodome", "json-full"],
 )
 def tests(s: nox.Session) -> None:
     """Run the test suite."""
@@ -204,14 +204,18 @@ def coverage(s: nox.Session) -> None:
 @session(
     python=DEFAULT_PYTHON_VERSION,
     uv_groups=[TYPEGUARD_GROUP],
-    uv_extras=["cryptography", "pycryptodome"],
+    uv_extras=["cryptography", "pycryptodome", "json-full"],
 )
 def typeguard(s: nox.Session) -> None:
     """Runtime type checking using Typeguard."""
     s.run("pytest", f"--typeguard-packages={PACKAGE}", *s.posargs)
 
 
-@session(python=PYTHON_VERSIONS, uv_groups=[XDOCTEST_GROUP])
+@session(
+    python=PYTHON_VERSIONS,
+    uv_groups=[XDOCTEST_GROUP],
+    uv_extras=["cryptography", "pycryptodome", "json-full"],
+)
 def xdoctest(s: nox.Session) -> None:
     """Run examples with xdoctest."""
     if s.posargs:
