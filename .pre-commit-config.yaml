@@ -27,7 +27,7 @@ repos:
         language: system
         types: [python]
         stages: [manual]
-        exclude: ^(tests/|examples/|src/audible/json/protocols\.py$)
+        exclude: ^(tests/|examples/)
       - id: end-of-file-fixer
         name: Fix End of Files
         entry: end-of-file-fixer
