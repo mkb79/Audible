@@ -39,6 +39,7 @@ TESTS_GROUP = "tests"
 COVERAGE_GROUP = TESTS_GROUP
 TYPEGUARD_GROUP = "typeguard"
 XDOCTEST_GROUP = "xdocs"
+EXTRA_DEPS_GROUP = "extra-deps"
 
 
 def activate_virtualenv_in_precommit_hooks(s: nox.Session) -> None:
@@ -156,8 +157,7 @@ def safety(s: nox.Session) -> None:
 
 @session(
     python=PYTHON_VERSIONS,
-    uv_groups=[MYPY_GROUP, TESTS_GROUP],
-    uv_extras=["cryptography", "pycryptodome", "json-full"],
+    uv_groups=[MYPY_GROUP, TESTS_GROUP, EXTRA_DEPS_GROUP],
 )
 def mypy(s: nox.Session) -> None:
     """Type-check using mypy."""
@@ -171,8 +171,7 @@ def mypy(s: nox.Session) -> None:
 
 @session(
     python=PYTHON_VERSIONS,
-    uv_groups=[TESTS_GROUP],
-    uv_extras=["cryptography", "pycryptodome", "json-full"],
+    uv_groups=[TESTS_GROUP, EXTRA_DEPS_GROUP],
 )
 def tests(s: nox.Session) -> None:
     """Run the test suite."""
@@ -203,8 +202,7 @@ def coverage(s: nox.Session) -> None:
 
 @session(
     python=DEFAULT_PYTHON_VERSION,
-    uv_groups=[TYPEGUARD_GROUP],
-    uv_extras=["cryptography", "pycryptodome", "json-full"],
+    uv_groups=[TYPEGUARD_GROUP, EXTRA_DEPS_GROUP],
 )
 def typeguard(s: nox.Session) -> None:
     """Runtime type checking using Typeguard."""
@@ -213,8 +211,7 @@ def typeguard(s: nox.Session) -> None:
 
 @session(
     python=PYTHON_VERSIONS,
-    uv_groups=[XDOCTEST_GROUP],
-    uv_extras=["cryptography", "pycryptodome", "json-full"],
+    uv_groups=[XDOCTEST_GROUP, EXTRA_DEPS_GROUP],
 )
 def xdoctest(s: nox.Session) -> None:
     """Run examples with xdoctest."""

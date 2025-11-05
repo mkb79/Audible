@@ -110,6 +110,14 @@ xdocs = [
     "xdoctest[colors]>=0.15.10",
 ]
 
+extra-deps = [
+    "cryptography>=42.0.0",
+    "pycryptodome>=3.20.0",
+    "orjson>=3.9.0",
+    "ujson>=5.8.0",
+    "python-rapidjson>=1.10",
+]
+
 [tool.hatch.build.targets.sdist]
 include = ["src/audible"]
 

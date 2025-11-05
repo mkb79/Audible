@@ -110,6 +110,13 @@ docs = [
     { name = "sphinx-rtd-theme" },
     { name = "sphinxcontrib-httpdomain" },
 ]
+extra-deps = [
+    { name = "cryptography" },
+    { name = "orjson" },
+    { name = "pycryptodome" },
+    { name = "python-rapidjson" },
+    { name = "ujson" },
+]
 mypy = [
     { name = "mypy" },
     { name = "types-beautifulsoup4" },
@@ -174,6 +181,13 @@ docs = [
     { name = "sphinx-autodoc-typehints", specifier = ">=1.22" },
     { name = "sphinx-rtd-theme", specifier = ">=1.2.0" },
     { name = "sphinxcontrib-httpdomain", specifier = ">=1.8.1" },
+]
+extra-deps = [
+    { name = "cryptography", specifier = ">=42.0.0" },
+    { name = "orjson", specifier = ">=3.9.0" },
+    { name = "pycryptodome", specifier = ">=3.20.0" },
+    { name = "python-rapidjson", specifier = ">=1.10" },
+    { name = "ujson", specifier = ">=5.8.0" },
 ]
 mypy = [
     { name = "mypy", specifier = ">=0.930" },
