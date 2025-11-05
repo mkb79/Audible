@@ -1,5 +1,0 @@
-[darglint]
-docstring_style=google
-strictness=short
-ignore_regex=^_
-exclude=src/audible/json/protocols\.py
