@@ -8,7 +8,7 @@ from audible.json import get_json_provider
 class TestRealWorldUsage:
     """Test real-world usage patterns from audible and audible-cli."""
 
-    def test_auth_file_format(self):
+    def test_auth_file_format(self) -> None:
         """Test auth file serialization (indent=4)."""
         provider = get_json_provider()
 
@@ -32,7 +32,7 @@ class TestRealWorldUsage:
         parsed = provider.loads(result)
         assert parsed == auth_data
 
-    def test_compact_api_response(self):
+    def test_compact_api_response(self) -> None:
         """Test API response handling (compact JSON)."""
         provider = get_json_provider()
 
@@ -56,7 +56,7 @@ class TestRealWorldUsage:
         parsed = provider.loads(result)
         assert parsed == api_response
 
-    def test_metadata_with_separators(self):
+    def test_metadata_with_separators(self) -> None:
         """Test metadata format with custom separators (rare case)."""
         import json  # Use stdlib directly for this edge case
 
@@ -69,7 +69,7 @@ class TestRealWorldUsage:
         result = json.dumps(meta_dict, separators=(",", ":"))
         assert result == '{"n":"fwcim-ubf-collector","t":0}'
 
-    def test_library_export(self):
+    def test_library_export(self) -> None:
         """Test library export (indent=4, from audible-cli)."""
         provider = get_json_provider()
 
@@ -95,7 +95,7 @@ class TestRealWorldUsage:
         parsed = provider.loads(result)
         assert parsed == library_data
 
-    def test_wishlist_export(self):
+    def test_wishlist_export(self) -> None:
         """Test wishlist export (indent=4, from audible-cli)."""
         provider = get_json_provider()
 
@@ -118,7 +118,7 @@ class TestRealWorldUsage:
         parsed = provider.loads(result)
         assert parsed == wishlist_data
 
-    def test_chapter_metadata(self):
+    def test_chapter_metadata(self) -> None:
         """Test chapter metadata export (indent=4, from audible-cli)."""
         provider = get_json_provider()
 
@@ -149,7 +149,7 @@ class TestRealWorldUsage:
         parsed = provider.loads(result)
         assert parsed == chapter_data
 
-    def test_annotation_export(self):
+    def test_annotation_export(self) -> None:
         """Test annotation export (indent=4, from audible-cli)."""
         provider = get_json_provider()
 
@@ -174,7 +174,7 @@ class TestRealWorldUsage:
         parsed = provider.loads(result)
         assert parsed == annotation_data
 
-    def test_license_response(self):
+    def test_license_response(self) -> None:
         """Test AAXC license response (indent=4, from audible-cli)."""
         provider = get_json_provider()
 
@@ -194,7 +194,7 @@ class TestRealWorldUsage:
         parsed = provider.loads(result)
         assert parsed == license_response
 
-    def test_complex_nested_structure(self):
+    def test_complex_nested_structure(self) -> None:
         """Test complex nested structures with mixed types."""
         provider = get_json_provider()
 
@@ -231,7 +231,7 @@ class TestRealWorldUsage:
         parsed_compact = provider.loads(compact)
         assert parsed_compact == complex_data
 
-    def test_unicode_handling(self):
+    def test_unicode_handling(self) -> None:
         """Test that unicode characters are handled correctly."""
         provider = get_json_provider()
 
@@ -246,7 +246,7 @@ class TestRealWorldUsage:
         parsed = provider.loads(result)
         assert parsed == unicode_data
 
-    def test_empty_structures(self):
+    def test_empty_structures(self) -> None:
         """Test empty objects and arrays."""
         provider = get_json_provider()
 
@@ -257,10 +257,14 @@ class TestRealWorldUsage:
         assert provider.loads(provider.dumps([])) == []
 
         # Nested empty
-        nested_empty = {"obj": {}, "arr": [], "null": None}
+        nested_empty: dict[str, dict[str, object] | list[object] | None] = {
+            "obj": {},
+            "arr": [],
+            "null": None,
+        }
         assert provider.loads(provider.dumps(nested_empty)) == nested_empty
 
-    def test_large_dataset(self):
+    def test_large_dataset(self) -> None:
         """Test handling of larger datasets (performance sanity check)."""
         provider = get_json_provider()
 

@@ -8,7 +8,7 @@ from audible.json import OrjsonProvider, get_json_provider
 class TestOrjsonFallback:
     """Test orjson smart fallback logic."""
 
-    def test_fallback_chain_indent_4(self):
+    def test_fallback_chain_indent_4(self) -> None:
         """Test that indent=4 triggers fallback."""
         try:
             provider = OrjsonProvider()
@@ -22,7 +22,7 @@ class TestOrjsonFallback:
         assert '    "key"' in result
         assert '        "inner"' in result
 
-    def test_fallback_preserves_correctness(self):
+    def test_fallback_preserves_correctness(self) -> None:
         """Test that fallback doesn't corrupt data."""
         try:
             provider = OrjsonProvider()
@@ -45,7 +45,7 @@ class TestOrjsonFallback:
             deserialized = provider.loads(serialized)
             assert deserialized == test_data, f"Data corrupted with indent={indent}"
 
-    def test_separators_fallback_to_stdlib(self):
+    def test_separators_fallback_to_stdlib(self) -> None:
         """Test that separators trigger stdlib fallback."""
         try:
             provider = OrjsonProvider()
@@ -58,7 +58,7 @@ class TestOrjsonFallback:
         # Should use compact format
         assert result == '{"key":"value"}'
 
-    def test_native_orjson_compact(self):
+    def test_native_orjson_compact(self) -> None:
         """Test that compact JSON uses native orjson."""
         try:
             provider = OrjsonProvider()
@@ -71,7 +71,7 @@ class TestOrjsonFallback:
         # orjson produces compact JSON
         assert result == '{"key":"value","num":42}'
 
-    def test_native_orjson_indent_2(self):
+    def test_native_orjson_indent_2(self) -> None:
         """Test that indent=2 uses native orjson."""
         try:
             provider = OrjsonProvider()
@@ -84,7 +84,7 @@ class TestOrjsonFallback:
         # Should have 2-space indentation
         assert '  "key"' in result
 
-    def test_fallback_to_ujson_or_stdlib(self):
+    def test_fallback_to_ujson_or_stdlib(self) -> None:
         """Test that indent=4 falls back to ujson or stdlib."""
         try:
             provider = OrjsonProvider()
@@ -101,7 +101,7 @@ class TestOrjsonFallback:
         parsed = provider.loads(result)
         assert parsed == data
 
-    def test_fallback_with_nested_data(self):
+    def test_fallback_with_nested_data(self) -> None:
         """Test fallback with deeply nested structures."""
         try:
             provider = OrjsonProvider()
@@ -130,7 +130,7 @@ class TestOrjsonFallback:
         parsed = provider.loads(result)
         assert parsed == data
 
-    def test_fallback_with_arrays(self):
+    def test_fallback_with_arrays(self) -> None:
         """Test fallback with arrays and mixed content."""
         try:
             provider = OrjsonProvider()
@@ -155,7 +155,7 @@ class TestOrjsonFallback:
         parsed = provider.loads(result)
         assert parsed == data
 
-    def test_performance_sanity_compact(self):
+    def test_performance_sanity_compact(self) -> None:
         """Sanity check that compact JSON uses fast path."""
         try:
             provider = OrjsonProvider()
@@ -173,7 +173,7 @@ class TestOrjsonFallback:
         assert parsed == data
         assert len(result) < len(provider.dumps(data, indent=4))
 
-    def test_mixed_indent_values(self):
+    def test_mixed_indent_values(self) -> None:
         """Test various indent values trigger correct paths."""
         try:
             provider = OrjsonProvider()
@@ -202,7 +202,7 @@ class TestOrjsonFallback:
         for result in [result_none, result_2, result_4, result_8]:
             assert provider.loads(result) == data
 
-    def test_separator_with_indent(self):
+    def test_separator_with_indent(self) -> None:
         """Test that separators override indent and use stdlib."""
         try:
             provider = OrjsonProvider()
@@ -218,7 +218,7 @@ class TestOrjsonFallback:
         # The result will have indent=4 formatting from stdlib
         assert '    "key"' in result
 
-    def test_lazy_fallback_initialization(self):
+    def test_lazy_fallback_initialization(self) -> None:
         """Test that fallback provider is lazily initialized."""
         try:
             provider = OrjsonProvider()
@@ -240,7 +240,7 @@ class TestOrjsonFallback:
 class TestAutoProviderFallback:
     """Test that auto-detected provider handles fallbacks."""
 
-    def test_auto_provider_indent_4(self):
+    def test_auto_provider_indent_4(self) -> None:
         """Test auto-detected provider with indent=4."""
         provider = get_json_provider()
 
@@ -254,7 +254,7 @@ class TestAutoProviderFallback:
         parsed = provider.loads(result)
         assert parsed == data
 
-    def test_auto_provider_separators(self):
+    def test_auto_provider_separators(self) -> None:
         """Test auto-detected provider with separators."""
         provider = get_json_provider()
 
@@ -264,7 +264,7 @@ class TestAutoProviderFallback:
         # Should produce compact output
         assert result == '{"key":"value"}'
 
-    def test_auto_provider_mixed_operations(self):
+    def test_auto_provider_mixed_operations(self) -> None:
         """Test auto-detected provider with various operation types."""
         provider = get_json_provider()
 

@@ -16,7 +16,7 @@ This serves as an alternative fallback provider to ujson.
 from __future__ import annotations
 
 import logging
-from typing import Any
+from typing import Any, cast
 
 
 # Optional import - only available if python-rapidjson is installed
@@ -112,7 +112,7 @@ class RapidjsonProvider:
         if not ensure_ascii:
             kwargs["ensure_ascii"] = False
 
-        return rapidjson.dumps(obj, **kwargs)
+        return cast(str, rapidjson.dumps(obj, **kwargs))
 
     def loads(self, s: str | bytes) -> Any:
         """Deserialize JSON string using python-rapidjson.

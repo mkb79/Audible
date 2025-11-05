@@ -6,6 +6,7 @@ aescipher.py, and login.py.
 """
 
 import json
+from typing import Any
 
 import pytest
 
@@ -15,7 +16,7 @@ from audible.json import StdlibProvider, get_json_provider, set_default_json_pro
 class TestProviderSwitching:
     """Test that provider switching works across all modules."""
 
-    def test_client_convert_response_content_uses_switched_provider(self):
+    def test_client_convert_response_content_uses_switched_provider(self) -> None:
         """Test that client.py uses switched provider."""
         from unittest.mock import Mock
 
@@ -45,7 +46,7 @@ class TestProviderSwitching:
         current_provider = get_json_provider()
         assert current_provider.provider_name == "stdlib"
 
-    def test_auth_to_dict_uses_switched_provider(self, auth_fixture_data):
+    def test_auth_to_dict_uses_switched_provider(self, auth_fixture_data: dict[str, Any]) -> None:
         """Test that auth.py uses switched provider for JSON serialization."""
         import tempfile
         from pathlib import Path
@@ -82,7 +83,7 @@ class TestProviderSwitching:
             if temp_path.exists():
                 temp_path.unlink()
 
-    def test_aescipher_uses_switched_provider(self):
+    def test_aescipher_uses_switched_provider(self) -> None:
         """Test that aescipher.py uses switched provider."""
         import tempfile
         from pathlib import Path
@@ -115,7 +116,7 @@ class TestProviderSwitching:
             if temp_path.exists():
                 temp_path.unlink()
 
-    def test_login_build_init_cookies_uses_switched_provider(self):
+    def test_login_build_init_cookies_uses_switched_provider(self) -> None:
         """Test that login.py uses switched provider."""
         from audible.login import build_init_cookies
 
@@ -134,7 +135,7 @@ class TestProviderSwitching:
         current_provider = get_json_provider()
         assert current_provider.provider_name == "stdlib"
 
-    def test_provider_switch_affects_all_modules(self):
+    def test_provider_switch_affects_all_modules(self) -> None:
         """Test that switching provider affects all modules simultaneously."""
         # Set stdlib as default
         set_default_json_provider(StdlibProvider)
@@ -150,7 +151,7 @@ class TestProviderSwitching:
         assert provider2.provider_name == "stdlib"
         assert provider1 is provider2  # Same instance
 
-    def test_provider_reset_restores_auto_detection(self):
+    def test_provider_reset_restores_auto_detection(self) -> None:
         """Test that resetting provider restores auto-detection."""
         # Get auto-detected provider
         auto_provider = get_json_provider()

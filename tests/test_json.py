@@ -15,57 +15,57 @@ from audible.json import (
 class TestStdlibProvider:
     """Tests for stdlib JSON provider."""
 
-    def test_dumps_basic(self):
+    def test_dumps_basic(self) -> None:
         provider = StdlibProvider()
         result = provider.dumps({"key": "value"})
         assert result == '{"key": "value"}'
 
-    def test_dumps_indent(self):
+    def test_dumps_indent(self) -> None:
         provider = StdlibProvider()
         result = provider.dumps({"key": "value"}, indent=4)
         assert '    "key"' in result
 
-    def test_dumps_indent_2(self):
+    def test_dumps_indent_2(self) -> None:
         provider = StdlibProvider()
         result = provider.dumps({"key": "value"}, indent=2)
         assert '  "key"' in result
 
-    def test_dumps_separators(self):
+    def test_dumps_separators(self) -> None:
         provider = StdlibProvider()
         result = provider.dumps({"key": "value"}, separators=(",", ":"))
         assert result == '{"key":"value"}'
 
-    def test_dumps_ensure_ascii_true(self):
+    def test_dumps_ensure_ascii_true(self) -> None:
         provider = StdlibProvider()
         result = provider.dumps({"key": "über"}, ensure_ascii=True)
         assert "\\u00fc" in result
 
-    def test_dumps_ensure_ascii_false(self):
+    def test_dumps_ensure_ascii_false(self) -> None:
         provider = StdlibProvider()
         result = provider.dumps({"key": "über"}, ensure_ascii=False)
         assert "über" in result
 
-    def test_loads_string(self):
+    def test_loads_string(self) -> None:
         provider = StdlibProvider()
         result = provider.loads('{"key": "value"}')
         assert result == {"key": "value"}
 
-    def test_loads_bytes(self):
+    def test_loads_bytes(self) -> None:
         provider = StdlibProvider()
         result = provider.loads(b'{"key": "value"}')
         assert result == {"key": "value"}
 
-    def test_loads_complex(self):
+    def test_loads_complex(self) -> None:
         provider = StdlibProvider()
         data = {"string": "test", "number": 42, "float": 3.14, "bool": True, "null": None}
         result = provider.loads(provider.dumps(data))
         assert result == data
 
-    def test_provider_name(self):
+    def test_provider_name(self) -> None:
         provider = StdlibProvider()
         assert provider.provider_name == "stdlib"
 
-    def test_roundtrip(self):
+    def test_roundtrip(self) -> None:
         provider = StdlibProvider()
         original = {"key": "value", "nested": {"inner": "data"}, "array": [1, 2, 3]}
         serialized = provider.dumps(original)
@@ -76,7 +76,7 @@ class TestStdlibProvider:
 class TestUjsonProvider:
     """Tests for ujson provider."""
 
-    def test_import_available(self):
+    def test_import_available(self) -> None:
         """Test that UJSON_AVAILABLE flag is correct."""
         from audible.json.ujson_provider import UJSON_AVAILABLE
         try:
@@ -85,7 +85,7 @@ class TestUjsonProvider:
         except ImportError:
             assert UJSON_AVAILABLE is False
 
-    def test_dumps_indent_4(self):
+    def test_dumps_indent_4(self) -> None:
         try:
             provider = UjsonProvider()
         except ImportError:
@@ -94,7 +94,7 @@ class TestUjsonProvider:
         result = provider.dumps({"key": "value"}, indent=4)
         assert '    "key"' in result
 
-    def test_dumps_compact(self):
+    def test_dumps_compact(self) -> None:
         try:
             provider = UjsonProvider()
         except ImportError:
@@ -104,7 +104,7 @@ class TestUjsonProvider:
         # ujson might add spaces, just check it's valid
         assert "key" in result and "value" in result
 
-    def test_separators_fallback(self):
+    def test_separators_fallback(self) -> None:
         try:
             provider = UjsonProvider()
         except ImportError:
@@ -114,7 +114,7 @@ class TestUjsonProvider:
         result = provider.dumps({"key": "value"}, separators=(",", ":"))
         assert result == '{"key":"value"}'
 
-    def test_loads_string(self):
+    def test_loads_string(self) -> None:
         try:
             provider = UjsonProvider()
         except ImportError:
@@ -123,7 +123,7 @@ class TestUjsonProvider:
         result = provider.loads('{"key": "value"}')
         assert result == {"key": "value"}
 
-    def test_loads_bytes(self):
+    def test_loads_bytes(self) -> None:
         try:
             provider = UjsonProvider()
         except ImportError:
@@ -132,7 +132,7 @@ class TestUjsonProvider:
         result = provider.loads(b'{"key": "value"}')
         assert result == {"key": "value"}
 
-    def test_provider_name(self):
+    def test_provider_name(self) -> None:
         try:
             provider = UjsonProvider()
         except ImportError:
@@ -140,7 +140,7 @@ class TestUjsonProvider:
 
         assert provider.provider_name == "ujson"
 
-    def test_roundtrip(self):
+    def test_roundtrip(self) -> None:
         try:
             provider = UjsonProvider()
         except ImportError:
@@ -155,7 +155,7 @@ class TestUjsonProvider:
 class TestRapidjsonProvider:
     """Tests for rapidjson provider."""
 
-    def test_import_available(self):
+    def test_import_available(self) -> None:
         """Test that RAPIDJSON_AVAILABLE flag is correct."""
         from audible.json.rapidjson_provider import RAPIDJSON_AVAILABLE
         try:
@@ -164,7 +164,7 @@ class TestRapidjsonProvider:
         except ImportError:
             assert RAPIDJSON_AVAILABLE is False
 
-    def test_dumps_indent_4(self):
+    def test_dumps_indent_4(self) -> None:
         try:
             provider = RapidjsonProvider()
         except ImportError:
@@ -173,7 +173,7 @@ class TestRapidjsonProvider:
         result = provider.dumps({"key": "value"}, indent=4)
         assert '    "key"' in result
 
-    def test_separators_fallback(self):
+    def test_separators_fallback(self) -> None:
         try:
             provider = RapidjsonProvider()
         except ImportError:
@@ -183,7 +183,7 @@ class TestRapidjsonProvider:
         result = provider.dumps({"key": "value"}, separators=(",", ":"))
         assert result == '{"key":"value"}'
 
-    def test_provider_name(self):
+    def test_provider_name(self) -> None:
         try:
             provider = RapidjsonProvider()
         except ImportError:
@@ -191,7 +191,7 @@ class TestRapidjsonProvider:
 
         assert provider.provider_name == "rapidjson"
 
-    def test_roundtrip(self):
+    def test_roundtrip(self) -> None:
         try:
             provider = RapidjsonProvider()
         except ImportError:
@@ -206,7 +206,7 @@ class TestRapidjsonProvider:
 class TestOrjsonProvider:
     """Tests for orjson provider with fallback logic."""
 
-    def test_import_available(self):
+    def test_import_available(self) -> None:
         """Test that ORJSON_AVAILABLE flag is correct."""
         from audible.json.orjson_provider import ORJSON_AVAILABLE
         try:
@@ -215,7 +215,7 @@ class TestOrjsonProvider:
         except ImportError:
             assert ORJSON_AVAILABLE is False
 
-    def test_dumps_compact(self):
+    def test_dumps_compact(self) -> None:
         try:
             provider = OrjsonProvider()
         except ImportError:
@@ -224,7 +224,7 @@ class TestOrjsonProvider:
         result = provider.dumps({"key": "value"})
         assert result == '{"key":"value"}'
 
-    def test_dumps_indent_2(self):
+    def test_dumps_indent_2(self) -> None:
         try:
             provider = OrjsonProvider()
         except ImportError:
@@ -234,7 +234,7 @@ class TestOrjsonProvider:
         # orjson handles this natively
         assert '"key"' in result
 
-    def test_dumps_indent_4_fallback(self):
+    def test_dumps_indent_4_fallback(self) -> None:
         try:
             provider = OrjsonProvider()
         except ImportError:
@@ -244,7 +244,7 @@ class TestOrjsonProvider:
         # Should fallback to ujson/rapidjson/stdlib
         assert '    "key"' in result
 
-    def test_separators_fallback(self):
+    def test_separators_fallback(self) -> None:
         try:
             provider = OrjsonProvider()
         except ImportError:
@@ -254,7 +254,7 @@ class TestOrjsonProvider:
         result = provider.dumps({"key": "value"}, separators=(",", ":"))
         assert result == '{"key":"value"}'
 
-    def test_loads_string(self):
+    def test_loads_string(self) -> None:
         try:
             provider = OrjsonProvider()
         except ImportError:
@@ -263,7 +263,7 @@ class TestOrjsonProvider:
         result = provider.loads('{"key":"value"}')
         assert result == {"key": "value"}
 
-    def test_loads_bytes(self):
+    def test_loads_bytes(self) -> None:
         try:
             provider = OrjsonProvider()
         except ImportError:
@@ -272,7 +272,7 @@ class TestOrjsonProvider:
         result = provider.loads(b'{"key":"value"}')
         assert result == {"key": "value"}
 
-    def test_provider_name(self):
+    def test_provider_name(self) -> None:
         try:
             provider = OrjsonProvider()
         except ImportError:
@@ -280,7 +280,7 @@ class TestOrjsonProvider:
 
         assert provider.provider_name == "orjson"
 
-    def test_roundtrip_compact(self):
+    def test_roundtrip_compact(self) -> None:
         try:
             provider = OrjsonProvider()
         except ImportError:
@@ -291,7 +291,7 @@ class TestOrjsonProvider:
         deserialized = provider.loads(serialized)
         assert deserialized == original
 
-    def test_roundtrip_indent_4(self):
+    def test_roundtrip_indent_4(self) -> None:
         try:
             provider = OrjsonProvider()
         except ImportError:
@@ -306,21 +306,21 @@ class TestOrjsonProvider:
 class TestRegistry:
     """Tests for provider registry and auto-detection."""
 
-    def test_auto_detect(self):
+    def test_auto_detect(self) -> None:
         provider = get_json_provider()
         assert provider.provider_name in {"orjson", "ujson", "rapidjson", "stdlib"}
 
-    def test_explicit_stdlib(self):
+    def test_explicit_stdlib(self) -> None:
         provider = get_json_provider(StdlibProvider)
         assert provider.provider_name == "stdlib"
 
-    def test_explicit_stdlib_instance(self):
+    def test_explicit_stdlib_instance(self) -> None:
         instance = StdlibProvider()
         provider = get_json_provider(instance)
         assert provider.provider_name == "stdlib"
         assert provider is instance
 
-    def test_set_default(self):
+    def test_set_default(self) -> None:
         # Save original state
         original = get_json_provider()
 
@@ -341,7 +341,7 @@ class TestRegistry:
         restored = get_json_provider()
         assert restored.provider_name == original.provider_name
 
-    def test_set_default_instance(self):
+    def test_set_default_instance(self) -> None:
         try:
             instance = StdlibProvider()
             set_default_json_provider(instance)
@@ -350,7 +350,7 @@ class TestRegistry:
         finally:
             set_default_json_provider(None)
 
-    def test_roundtrip_auto(self):
+    def test_roundtrip_auto(self) -> None:
         provider = get_json_provider()
         original = {"key": "value", "number": 42, "nested": {"inner": "data"}}
 
@@ -359,7 +359,7 @@ class TestRegistry:
 
         assert deserialized == original
 
-    def test_roundtrip_with_indent(self):
+    def test_roundtrip_with_indent(self) -> None:
         provider = get_json_provider()
         original = {"key": "value", "array": [1, 2, 3]}
 
@@ -368,15 +368,15 @@ class TestRegistry:
 
         assert deserialized == original
 
-    def test_invalid_provider(self):
+    def test_invalid_provider(self) -> None:
         """Test that invalid providers raise ImportError."""
         class NotAProvider:
             pass
 
         with pytest.raises(ImportError, match="not a JSONProvider"):
-            get_json_provider(NotAProvider())
+            get_json_provider(NotAProvider())  # type: ignore[arg-type]
 
-    def test_unavailable_provider(self):
+    def test_unavailable_provider(self) -> None:
         """Test that requesting unavailable provider raises ImportError."""
         # This test assumes at least one provider is not installed
         # We'll test by trying to force a provider that might not exist
