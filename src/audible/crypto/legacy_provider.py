@@ -12,7 +12,11 @@ import logging
 import warnings
 from collections.abc import Callable
 from hashlib import sha1, sha256
-from typing import Any
+from typing import TYPE_CHECKING, Any
+
+
+if TYPE_CHECKING:
+    from .protocols import HashAlgorithm
 
 import rsa
 from pbkdf2 import PBKDF2  # type: ignore[import-untyped]
@@ -113,7 +117,7 @@ class LegacyPBKDF2Provider:
         salt: bytes,
         iterations: int,
         key_size: int,
-        hashmod: Callable[[], Any],
+        hashmod: Callable[..., "HashAlgorithm"],
     ) -> bytes:
         """Derive a key using PBKDF2 with the pbkdf2 library.
 
@@ -231,7 +235,6 @@ class LegacyProvider:
     """
 
     def __init__(self) -> None:
-        """Initialize legacy provider."""
         self._aes = LegacyAESProvider()
         self._pbkdf2 = LegacyPBKDF2Provider()
         self._rsa = LegacyRSAProvider()
