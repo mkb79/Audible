@@ -48,6 +48,9 @@ class RapidjsonProvider:
     - No custom separators support
     - Falls back to stdlib for separators
 
+    Raises:
+        ImportError: If python-rapidjson library is not installed.
+
     Example:
         >>> from audible.json import get_json_provider, RapidjsonProvider
         >>> provider = get_json_provider(RapidjsonProvider)
@@ -60,11 +63,6 @@ class RapidjsonProvider:
     """
 
     def __init__(self) -> None:
-        """Initialize python-rapidjson provider.
-
-        Raises:
-            ImportError: If python-rapidjson library is not installed.
-        """
         if not RAPIDJSON_AVAILABLE:
             raise ImportError(
                 "python-rapidjson is not installed. Install with: pip install "

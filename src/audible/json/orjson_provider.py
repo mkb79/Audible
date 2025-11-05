@@ -56,6 +56,9 @@ class OrjsonProvider:
     - Automatic fallback to 2-3x faster libraries for indent=4
     - Falls back to stdlib only for separators (rare use case)
 
+    Raises:
+        ImportError: If orjson library is not installed.
+
     Example:
         >>> from audible.json import get_json_provider, OrjsonProvider
         >>> provider = get_json_provider(OrjsonProvider)
@@ -70,11 +73,6 @@ class OrjsonProvider:
     """
 
     def __init__(self) -> None:
-        """Initialize orjson provider with lazy fallback loading.
-
-        Raises:
-            ImportError: If orjson library is not installed.
-        """
         if not ORJSON_AVAILABLE:
             raise ImportError(
                 "orjson is not installed. Install with: pip install "
