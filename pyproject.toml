@@ -67,7 +67,7 @@ mypy = [
 ]
 
 pre-commit = [
-    "darglint>=1.8.1",
+    "pydoclint>=0.5.0",
     "nox>=2025.5.1",
     "pre-commit>=2.16.0",
     "pre-commit-hooks>=4.1.0",
@@ -193,3 +193,9 @@ lines-after-imports = 2
 
 [tool.pytest.ini_options]
 testpaths = ["tests", "src/audible"]
+
+[tool.pydoclint]
+style = "google"
+exclude = '\.git|\.nox|\.pytest_cache|__pycache__'
+arg-type-hints-in-docstring = false
+check-return-types = false

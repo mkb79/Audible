@@ -319,6 +319,9 @@ class PycryptodomeProvider:
     - 3-5x faster PBKDF2 key derivation vs pure Python
     - 5-10x faster hashing operations vs pure Python
 
+    Raises:
+        ImportError: If pycryptodome is not installed.
+
     Example:
         >>> from audible.crypto import get_crypto_providers, PycryptodomeProvider  # doctest: +SKIP
         >>> providers = get_crypto_providers(PycryptodomeProvider)  # doctest: +SKIP
@@ -327,11 +330,6 @@ class PycryptodomeProvider:
     """
 
     def __init__(self) -> None:
-        """Initialize pycryptodome provider.
-
-        Raises:
-            ImportError: If pycryptodome is not installed.
-        """
         if not PYCRYPTODOME_AVAILABLE:
             raise ImportError(
                 "pycryptodome is not installed. Install with: pip install "

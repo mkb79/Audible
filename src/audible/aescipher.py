@@ -8,6 +8,7 @@ import pathlib
 import re
 import secrets
 import struct
+from collections.abc import Callable
 from hashlib import sha256
 from typing import TYPE_CHECKING, Any, Literal
 
@@ -107,14 +108,14 @@ def unpack_salt(packed_salt: bytes, salt_marker: bytes) -> tuple[bytes, int]:
     return salt, kdf_iterations
 
 
-def derive_from_pbkdf2(  # type: ignore[no-untyped-def]
+def derive_from_pbkdf2(
     password: str,
     *,
     key_size: int,
     salt: bytes,
     kdf_iterations: int,
-    hashmod,
-    mac,
+    hashmod: Callable[[], Any],
+    mac: Any,
     crypto_provider: CryptoProvider | type[CryptoProvider] | None = None,
 ) -> bytes:
     """Creates an AES key with the :class:`PBKDF2` key derivation class.
@@ -168,7 +169,7 @@ class AESCipher:
         consumers should avoid reusing IVs manually as CBC mode requires a
         unique IV per message to maintain semantic security.
 
-    Attributes:
+    Args:
         password: The password for encryption/decryption.
         key_size: The size of the key. Can be ``16``, ``24`` or ``32``
             (Default: 32).
@@ -179,31 +180,21 @@ class AESCipher:
         mac: The mac module to use (Default: hmac).
         crypto_provider: Optional provider override (class or instance).
 
-    Args:
-        password: The password for encryption/decryption.
-        key_size: The size of the key. Can be ``16``, ``24`` or ``32``
-            (Default: 32).
-        salt_marker: The salt marker with max. length of 6 bytes (Default: $).
-        kdf_iterations: The number of iterations of the hash function to
-            derive the key (Default: 1000).
-        hashmod: The hash method to use (Default: sha256).
-        mac: The mac module to use (Default: hmac).
-
     Raises:
-        ValueError: If `salt_marker` is not one to six bytes long.
-        ValueError: If `kdf_iterations` is greater than 65535.
         TypeError: If type of `salt_marker` is not bytes.
+        ValueError: If `salt_marker` is not one to six bytes long or if
+            `kdf_iterations` is greater than 65535.
     """
 
-    def __init__(  # type: ignore[no-untyped-def]
+    def __init__(
         self,
         password: str,
         *,
         key_size: int = 32,
         salt_marker: bytes = b"$",
         kdf_iterations: int = 1000,
-        hashmod=sha256,
-        mac=hmac,
+        hashmod: Callable[[], Any] = sha256,
+        mac: Any = hmac,
         crypto_provider: type[CryptoProvider] | None = None,
     ) -> None:
         if not 1 <= len(salt_marker) <= 6:

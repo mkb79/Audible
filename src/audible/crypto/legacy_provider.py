@@ -231,7 +231,6 @@ class LegacyProvider:
     """
 
     def __init__(self) -> None:
-        """Initialize legacy provider."""
         self._aes = LegacyAESProvider()
         self._pbkdf2 = LegacyPBKDF2Provider()
         self._rsa = LegacyRSAProvider()

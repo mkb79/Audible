@@ -321,6 +321,9 @@ class CryptographyProvider:
     - Modern API and active maintenance
     - Preferred choice for new installations
 
+    Raises:
+        ImportError: If cryptography library is not installed.
+
     Example:
         >>> from audible.crypto import get_crypto_providers, CryptographyProvider  # doctest: +SKIP
         >>> providers = get_crypto_providers(CryptographyProvider)  # doctest: +SKIP
@@ -329,11 +332,6 @@ class CryptographyProvider:
     """
 
     def __init__(self) -> None:
-        """Initialize cryptography provider.
-
-        Raises:
-            ImportError: If cryptography library is not installed.
-        """
         if not CRYPTOGRAPHY_AVAILABLE:
             raise ImportError(  # doctest: +SKIP
                 "cryptography is not installed. Install with: pip install "

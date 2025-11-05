@@ -191,8 +191,8 @@ def sign_request(
     """Helper function who creates signed headers for http requests.
 
     Args:
-        path: The requested http url path and query.
         method: The http request method (GET, POST, DELETE, ...).
+        path: The requested http url path and query.
         body: The http message body.
         adp_token: The adp token obtained after a device registration.
         private_key: The rsa key obtained after device registration.
@@ -570,7 +570,7 @@ class Authenticator(httpx.Auth):
             request: The request made by ``httpx``.
 
         Yields:
-            The next request
+            httpx.Request: The authenticated request with signed headers.
 
         Raises:
             AuthFlowError: If no auth flow is available.
