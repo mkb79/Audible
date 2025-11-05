@@ -24,7 +24,7 @@ if TYPE_CHECKING:
 logger = logging.getLogger("audible.aescipher")
 
 BLOCK_SIZE: int = 16  # the AES block size
-_DEFAULT_HASHMOD: Callable[..., "HashAlgorithm"] = cast(
+_DEFAULT_HASHMOD: Callable[..., HashAlgorithm] = cast(
     Callable[..., "HashAlgorithm"], sha256
 )
 
