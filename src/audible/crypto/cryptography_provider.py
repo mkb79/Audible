@@ -17,7 +17,11 @@ from __future__ import annotations
 import logging
 import warnings
 from collections.abc import Callable
-from typing import Any
+from typing import TYPE_CHECKING, Any
+
+
+if TYPE_CHECKING:
+    from .protocols import HashAlgorithm
 
 
 # Optional import - only available if cryptography is installed
@@ -175,7 +179,7 @@ class CryptographyPBKDF2Provider:
         salt: bytes,
         iterations: int,
         key_size: int,
-        hashmod: Callable[[], Any],
+        hashmod: Callable[..., HashAlgorithm],
     ) -> bytes:
         """Derive a key from password using PBKDF2.
 
@@ -321,6 +325,9 @@ class CryptographyProvider:
     - Modern API and active maintenance
     - Preferred choice for new installations
 
+    Raises:
+        ImportError: If cryptography library is not installed.
+
     Example:
         >>> from audible.crypto import get_crypto_providers, CryptographyProvider  # doctest: +SKIP
         >>> providers = get_crypto_providers(CryptographyProvider)  # doctest: +SKIP
@@ -329,11 +336,6 @@ class CryptographyProvider:
     """
 
     def __init__(self) -> None:
-        """Initialize cryptography provider.
-
-        Raises:
-            ImportError: If cryptography library is not installed.
-        """
         if not CRYPTOGRAPHY_AVAILABLE:
             raise ImportError(  # doctest: +SKIP
                 "cryptography is not installed. Install with: pip install "

@@ -10,6 +10,20 @@ from typing import Any, Protocol, runtime_checkable
 
 
 @runtime_checkable
+class HashAlgorithm(Protocol):
+    """Protocol for hash algorithm objects.
+
+    This protocol defines the interface that hash objects must provide.
+    Compatible with hashlib hash objects (e.g., hashlib.sha256()).
+
+    Attributes:
+        name: The name of the hash algorithm (e.g., 'sha256', 'sha1').
+    """
+
+    name: str
+
+
+@runtime_checkable
 class AESProvider(Protocol):
     """Protocol for AES-CBC encryption/decryption operations.
 
@@ -28,6 +42,9 @@ class AESProvider(Protocol):
             iv: The initialization vector (16 bytes).
             data: The plaintext data to encrypt.
             padding: Padding mode - "default" for PKCS7, "none" for no padding.
+
+        Returns:
+            The encrypted data as bytes.
         """
         ...
 
@@ -41,6 +58,9 @@ class AESProvider(Protocol):
             iv: The initialization vector (16 bytes).
             encrypted_data: The ciphertext to decrypt.
             padding: Padding mode - "default" for PKCS7, "none" for no padding.
+
+        Returns:
+            The decrypted plaintext as a string.
         """
         ...
 
@@ -59,7 +79,7 @@ class PBKDF2Provider(Protocol):
         salt: bytes,
         iterations: int,
         key_size: int,
-        hashmod: Callable[[], Any],
+        hashmod: Callable[..., "HashAlgorithm"],
     ) -> bytes:
         """Derive a cryptographic key from a password using PBKDF2.
 
@@ -69,6 +89,9 @@ class PBKDF2Provider(Protocol):
             iterations: Number of iterations (1-65535).
             key_size: Desired key size in bytes.
             hashmod: Hash function factory (e.g., hashlib.sha256).
+
+        Returns:
+            The derived key as bytes.
         """
         ...
 
@@ -90,6 +113,9 @@ class RSAProvider(Protocol):
 
         Args:
             pem_data: RSA private key in PEM format.
+
+        Returns:
+            The loaded RSA private key object.
         """
         ...
 
@@ -101,6 +127,9 @@ class RSAProvider(Protocol):
             data: The data to sign.
             algorithm: The hash algorithm to use. Currently only "SHA-256"
                 is supported to match Audible API requirements (SHA256withRSA).
+
+        Returns:
+            The RSA signature as bytes.
         """
         ...
 
@@ -117,6 +146,9 @@ class HashProvider(Protocol):
 
         Args:
             data: The data to hash.
+
+        Returns:
+            The SHA-256 hash digest as bytes.
         """
         ...
 
@@ -125,6 +157,9 @@ class HashProvider(Protocol):
 
         Args:
             data: The data to hash.
+
+        Returns:
+            The SHA-1 hash digest as bytes.
 
         Note:
             SHA-1 is considered cryptographically broken and should only be
@@ -169,33 +204,55 @@ class CryptoProvider(Protocol):
 
     @property
     def aes(self) -> AESProvider:
-        """Return the AES encryption/decryption provider."""
+        """Return the AES encryption/decryption provider.
+
+        Returns:
+            The AES encryption/decryption provider instance.
+        """
         ...
 
     @property
     def pbkdf2(self) -> PBKDF2Provider:
-        """Return the PBKDF2 key derivation provider."""
+        """Return the PBKDF2 key derivation provider.
+
+        Returns:
+            The PBKDF2 key derivation provider instance.
+        """
         ...
 
     @property
     def rsa(self) -> RSAProvider:
-        """Return the RSA signing provider."""
+        """Return the RSA signing provider.
+
+        Returns:
+            The RSA signing provider instance.
+        """
         ...
 
     @property
     def hash(self) -> HashProvider:
-        """Return the cryptographic hash provider."""
+        """Return the cryptographic hash provider.
+
+        Returns:
+            The cryptographic hash provider instance.
+        """
         ...
 
     @property
     def provider_name(self) -> str:
-        """Return the human-readable provider name."""
+        """Return the human-readable provider name.
+
+        Returns:
+            The human-readable provider name (e.g., 'cryptography',
+            'pycryptodome', 'legacy').
+        """
         ...
 
 
 __all__ = [
     "AESProvider",
     "CryptoProvider",
+    "HashAlgorithm",
     "HashProvider",
     "PBKDF2Provider",
     "RSAProvider",

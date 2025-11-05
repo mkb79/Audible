@@ -12,7 +12,11 @@ from __future__ import annotations
 import logging
 import warnings
 from collections.abc import Callable
-from typing import Any
+from typing import TYPE_CHECKING, Any
+
+
+if TYPE_CHECKING:
+    from .protocols import HashAlgorithm
 
 
 # Optional import - only available if pycryptodome is installed
@@ -160,7 +164,7 @@ class PycryptodomePBKDF2Provider:
         salt: bytes,
         iterations: int,
         key_size: int,
-        hashmod: Callable[[], Any],
+        hashmod: Callable[..., HashAlgorithm],
     ) -> bytes:
         """Derive a key using PBKDF2 with pycryptodome.
 
@@ -319,6 +323,9 @@ class PycryptodomeProvider:
     - 3-5x faster PBKDF2 key derivation vs pure Python
     - 5-10x faster hashing operations vs pure Python
 
+    Raises:
+        ImportError: If pycryptodome is not installed.
+
     Example:
         >>> from audible.crypto import get_crypto_providers, PycryptodomeProvider  # doctest: +SKIP
         >>> providers = get_crypto_providers(PycryptodomeProvider)  # doctest: +SKIP
@@ -327,11 +334,6 @@ class PycryptodomeProvider:
     """
 
     def __init__(self) -> None:
-        """Initialize pycryptodome provider.
-
-        Raises:
-            ImportError: If pycryptodome is not installed.
-        """
         if not PYCRYPTODOME_AVAILABLE:
             raise ImportError(
                 "pycryptodome is not installed. Install with: pip install "

@@ -42,6 +42,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ### Changed
 
+- **Replaced `darglint` with `pydoclint` for docstring validation** - modern, actively maintained alternative with better Protocol support
 - `aescipher.py` now uses crypto providers for AES, PBKDF2, and hashing operations
 - `aescipher.py` now uses JSON providers for JSON serialization/deserialization
 - `auth.py` now uses crypto providers for RSA signing operations
@@ -53,6 +54,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Improved error messages and type annotations throughout crypto layer
 - Improved error messages and type annotations throughout JSON layer
 - Simplified RSA key loading by removing redundant module-level cache (Authenticator-level caching remains)
+- Improved docstring quality across codebase:
+  - Added missing return type documentation in Protocol definitions
+  - Moved `__init__` docstrings to class-level (Google Style Guide compliant)
+  - Added explicit type hints for `hashmod` and `mac` parameters
+  - Fixed argument order mismatches between signatures and docstrings
+  - Added missing exception documentation
 
 ### Fixed
 
