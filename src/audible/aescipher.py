@@ -10,7 +10,7 @@ import secrets
 import struct
 from collections.abc import Callable
 from hashlib import sha256
-from typing import TYPE_CHECKING, Any, Literal
+from typing import TYPE_CHECKING, Any, Literal, cast
 
 from .crypto import get_crypto_providers
 
@@ -18,12 +18,15 @@ from .crypto import get_crypto_providers
 if TYPE_CHECKING:
     import audible
 
-    from .crypto.protocols import CryptoProvider
+    from .crypto.protocols import CryptoProvider, HashAlgorithm
 
 
 logger = logging.getLogger("audible.aescipher")
 
 BLOCK_SIZE: int = 16  # the AES block size
+_DEFAULT_HASHMOD: Callable[..., "HashAlgorithm"] = cast(
+    Callable[..., "HashAlgorithm"], sha256
+)
 
 
 def aes_cbc_encrypt(
@@ -114,7 +117,7 @@ def derive_from_pbkdf2(
     key_size: int,
     salt: bytes,
     kdf_iterations: int,
-    hashmod: Callable[[], Any],
+    hashmod: Callable[..., HashAlgorithm],
     mac: Any,
     crypto_provider: CryptoProvider | type[CryptoProvider] | None = None,
 ) -> bytes:
@@ -193,7 +196,7 @@ class AESCipher:
         key_size: int = 32,
         salt_marker: bytes = b"$",
         kdf_iterations: int = 1000,
-        hashmod: Callable[[], Any] = sha256,
+        hashmod: Callable[..., HashAlgorithm] = _DEFAULT_HASHMOD,
         mac: Any = hmac,
         crypto_provider: type[CryptoProvider] | None = None,
     ) -> None:

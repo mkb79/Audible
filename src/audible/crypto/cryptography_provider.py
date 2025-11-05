@@ -17,7 +17,11 @@ from __future__ import annotations
 import logging
 import warnings
 from collections.abc import Callable
-from typing import Any
+from typing import TYPE_CHECKING, Any
+
+
+if TYPE_CHECKING:
+    from .protocols import HashAlgorithm
 
 
 # Optional import - only available if cryptography is installed
@@ -175,7 +179,7 @@ class CryptographyPBKDF2Provider:
         salt: bytes,
         iterations: int,
         key_size: int,
-        hashmod: Callable[[], Any],
+        hashmod: Callable[..., HashAlgorithm],
     ) -> bytes:
         """Derive a key from password using PBKDF2.
 
