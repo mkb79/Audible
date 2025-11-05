@@ -1,7 +1,5 @@
 """Integration tests for JSON providers in real-world scenarios."""
 
-import pytest
-
 from audible.json import get_json_provider
 
 
@@ -207,18 +205,9 @@ class TestRealWorldUsage:
             "array": [1, 2, 3],
             "nested_object": {
                 "inner": "data",
-                "deep": {
-                    "very_deep": {
-                        "value": "nested"
-                    }
-                }
+                "deep": {"very_deep": {"value": "nested"}},
             },
-            "mixed_array": [
-                {"type": "dict"},
-                ["nested", "list"],
-                42,
-                "string"
-            ]
+            "mixed_array": [{"type": "dict"}, ["nested", "list"], 42, "string"],
         }
 
         # Test with indent=4
@@ -236,10 +225,7 @@ class TestRealWorldUsage:
         provider = get_json_provider()
 
         # Use simple unicode that won't have encoding issues
-        unicode_data = {
-            "ascii": "simple",
-            "latin": "café"
-        }
+        unicode_data = {"ascii": "simple", "latin": "café"}
 
         # Test roundtrip
         result = provider.dumps(unicode_data)
@@ -278,7 +264,7 @@ class TestRealWorldUsage:
                     "metadata": {
                         "created": f"2024-01-{i % 30 + 1:02d}",
                         "tags": [f"tag{j}" for j in range(5)],
-                    }
+                    },
                 }
                 for i in range(100)
             ]

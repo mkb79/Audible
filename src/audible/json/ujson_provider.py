@@ -32,7 +32,7 @@ logger = logging.getLogger("audible.json.ujson")
 
 
 class UjsonProvider:
-    """JSON provider using the ujson library.
+    r"""JSON provider using the ujson library.
 
     This provider implements JSON operations using ujson, a C-based library
     that offers excellent performance. It supports custom indentation natively,
@@ -49,12 +49,14 @@ class UjsonProvider:
     - Falls back to stdlib for separators
 
     Example:
-        >>> from audible.json import get_json_provider, UjsonProvider  # doctest: +SKIP
-        >>> provider = get_json_provider(UjsonProvider)  # doctest: +SKIP
-        >>> provider.provider_name  # doctest: +SKIP
+        >>> from audible.json import get_json_provider, UjsonProvider
+        >>> provider = get_json_provider(UjsonProvider)
+        >>> provider.provider_name
         'ujson'
-        >>> provider.dumps({"key": "value"}, indent=4)  # doctest: +SKIP
-        '{\\n    "key": "value"\\n}'
+        >>> print(provider.dumps({"key": "value"}, indent=4))
+        {
+            "key": "value"
+        }
     """
 
     def __init__(self) -> None:

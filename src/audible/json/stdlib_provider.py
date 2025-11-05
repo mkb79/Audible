@@ -23,7 +23,7 @@ STDLIB_AVAILABLE = True
 
 
 class StdlibProvider:
-    """JSON provider using Python's standard library.
+    r"""JSON provider using Python's standard library.
 
     This provider implements all JSON operations using the built-in json module.
     It provides complete feature support including custom separators, arbitrary
@@ -40,8 +40,10 @@ class StdlibProvider:
         >>> provider = get_json_provider(StdlibProvider)
         >>> provider.provider_name
         'stdlib'
-        >>> provider.dumps({"key": "value"}, indent=4)
-        '{\\n    "key": "value"\\n}'
+        >>> print(provider.dumps({"key": "value"}, indent=4))
+        {
+            "key": "value"
+        }
     """
 
     def dumps(

@@ -57,7 +57,13 @@ class TestStdlibProvider:
 
     def test_loads_complex(self) -> None:
         provider = StdlibProvider()
-        data = {"string": "test", "number": 42, "float": 3.14, "bool": True, "null": None}
+        data = {
+            "string": "test",
+            "number": 42,
+            "float": 3.14,
+            "bool": True,
+            "null": None,
+        }
         result = provider.loads(provider.dumps(data))
         assert result == data
 
@@ -79,8 +85,10 @@ class TestUjsonProvider:
     def test_import_available(self) -> None:
         """Test that UJSON_AVAILABLE flag is correct."""
         from audible.json.ujson_provider import UJSON_AVAILABLE
+
         try:
             import ujson  # noqa: F401
+
             assert UJSON_AVAILABLE is True
         except ImportError:
             assert UJSON_AVAILABLE is False
@@ -158,8 +166,10 @@ class TestRapidjsonProvider:
     def test_import_available(self) -> None:
         """Test that RAPIDJSON_AVAILABLE flag is correct."""
         from audible.json.rapidjson_provider import RAPIDJSON_AVAILABLE
+
         try:
             import rapidjson  # noqa: F401
+
             assert RAPIDJSON_AVAILABLE is True
         except ImportError:
             assert RAPIDJSON_AVAILABLE is False
@@ -209,8 +219,10 @@ class TestOrjsonProvider:
     def test_import_available(self) -> None:
         """Test that ORJSON_AVAILABLE flag is correct."""
         from audible.json.orjson_provider import ORJSON_AVAILABLE
+
         try:
             import orjson  # noqa: F401
+
             assert ORJSON_AVAILABLE is True
         except ImportError:
             assert ORJSON_AVAILABLE is False
@@ -370,6 +382,7 @@ class TestRegistry:
 
     def test_invalid_provider(self) -> None:
         """Test that invalid providers raise ImportError."""
+
         class NotAProvider:
             pass
 
@@ -383,8 +396,8 @@ class TestRegistry:
         try:
             # Try to import all providers to see which ones exist
             from audible.json.orjson_provider import ORJSON_AVAILABLE
-            from audible.json.ujson_provider import UJSON_AVAILABLE
             from audible.json.rapidjson_provider import RAPIDJSON_AVAILABLE
+            from audible.json.ujson_provider import UJSON_AVAILABLE
 
             # If all are available, skip this test
             if ORJSON_AVAILABLE and UJSON_AVAILABLE and RAPIDJSON_AVAILABLE:

@@ -33,6 +33,7 @@ from .registry import get_json_provider, set_default_json_provider
 from .stdlib_provider import StdlibProvider
 from .ujson_provider import UjsonProvider
 
+
 __all__ = [
     "JSONProvider",
     "OrjsonProvider",

@@ -136,6 +136,7 @@ pip install audible[json-full]
 ```
 
 Includes:
+
 - `orjson`: 4-5x faster for compact JSON (API responses, metadata)
 - `ujson`: 2-3x faster with indent=4 support (auth files, library exports)
 
@@ -148,6 +149,7 @@ pip install audible[json-fast]
 ```
 
 Includes:
+
 - `orjson`: 4-5x faster for compact JSON
 
 **Option 3: Individual providers**

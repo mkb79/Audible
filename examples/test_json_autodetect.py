@@ -15,6 +15,7 @@ full backward compatibility with stdlib json.
 
 from audible.json import get_json_provider
 
+
 # Get the auto-detected provider
 provider = get_json_provider()
 print(f"Auto-detected provider: {provider.provider_name}")

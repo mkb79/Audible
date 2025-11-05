@@ -19,7 +19,8 @@ This provider implements smart fallback logic:
 from __future__ import annotations
 
 import logging
-from typing import Any, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
+
 
 if TYPE_CHECKING:
     from .protocols import JSONProvider
@@ -38,7 +39,7 @@ logger = logging.getLogger("audible.json.orjson")
 
 
 class OrjsonProvider:
-    """JSON provider using orjson with smart fallback logic.
+    r"""JSON provider using orjson with smart fallback logic.
 
     This provider implements JSON operations using orjson, the fastest available
     JSON library for Python. When orjson cannot handle a specific feature
@@ -56,14 +57,16 @@ class OrjsonProvider:
     - Falls back to stdlib only for separators (rare use case)
 
     Example:
-        >>> from audible.json import get_json_provider, OrjsonProvider  # doctest: +SKIP
-        >>> provider = get_json_provider(OrjsonProvider)  # doctest: +SKIP
-        >>> provider.provider_name  # doctest: +SKIP
+        >>> from audible.json import get_json_provider, OrjsonProvider
+        >>> provider = get_json_provider(OrjsonProvider)
+        >>> provider.provider_name
         'orjson'
-        >>> provider.dumps({"key": "value"})  # Uses orjson  # doctest: +SKIP
+        >>> provider.dumps({"key": "value"})  # Uses orjson
         '{"key":"value"}'
-        >>> provider.dumps({"key": "value"}, indent=4)  # Falls back to ujson  # doctest: +SKIP
-        '{\\n    "key": "value"\\n}'
+        >>> print(provider.dumps({"key": "value"}, indent=4))  # Falls back to ujson
+        {
+            "key": "value"
+        }
     """
 
     def __init__(self) -> None:
@@ -167,7 +170,7 @@ class OrjsonProvider:
         if indent is not None and indent != 2:
             fallback = self._get_fallback_provider()
             logger.debug(
-                f"orjson -> {fallback.provider_name} fallback (indent={indent})"
+                "orjson -> %s fallback (indent=%s)", fallback.provider_name, indent
             )
             return fallback.dumps(obj, indent=indent, ensure_ascii=ensure_ascii)
 

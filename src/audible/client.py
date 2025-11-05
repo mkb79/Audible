@@ -19,7 +19,6 @@ from httpx._models import HeaderTypes  # type: ignore[attr-defined]
 
 from ._types import TrueFalseT
 from .auth import Authenticator
-from .json import get_json_provider
 from .exceptions import (
     BadRequest,
     NetworkError,
@@ -31,6 +30,7 @@ from .exceptions import (
     Unauthorized,
     UnexpectedError,
 )
+from .json import get_json_provider
 from .localization import LOCALE_TEMPLATES, Locale
 
 

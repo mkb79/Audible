@@ -108,15 +108,7 @@ class TestOrjsonFallback:
         except ImportError:
             pytest.skip("orjson not installed")
 
-        data = {
-            "level1": {
-                "level2": {
-                    "level3": {
-                        "level4": "deep value"
-                    }
-                }
-            }
-        }
+        data = {"level1": {"level2": {"level3": {"level4": "deep value"}}}}
 
         # Test with indent=4 (fallback)
         result = provider.dumps(data, indent=4)

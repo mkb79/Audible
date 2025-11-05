@@ -11,18 +11,21 @@
 ## Architecture Overview
 
 ### Provider Priority (Auto-Detection)
+
 1. **orjson** - Rust-accelerated, fastest (4-5x), with smart fallback
 2. **ujson** - C-based, very fast (2-3x), native indent=4 support
 3. **rapidjson** - C++, very fast (2-3x), alternative to ujson
 4. **stdlib** - Pure Python, always available
 
 ### Smart Fallback Strategy (Option A: Conservative)
+
 - **Compact JSON** → orjson natively (maximum performance)
 - **indent=2** → orjson natively (maximum performance)
 - **indent=4** → orjson → ujson/rapidjson fallback (2-3x faster)
 - **separators** → stdlib fallback (rare edge case)
 
 ### Module Structure
+
 ```
 src/audible/json/
 ├── __init__.py                  # Public API
@@ -41,6 +44,7 @@ src/audible/json/
 ### PHASE 1: Module Structure & Base Implementation ✅ COMPLETED
 
 #### Step 1.1: Create Directory Structure ✅
+
 - [x] Create `src/audible/json/` directory
 - [x] Create all module files
 
@@ -49,6 +53,7 @@ src/audible/json/
 ---
 
 #### Step 1.2: Implement protocols.py ✅
+
 - [x] Define `JSONProvider` Protocol
 - [x] Include `dumps()`, `loads()`, `provider_name` methods
 - [x] Add comprehensive docstrings
@@ -59,12 +64,14 @@ src/audible/json/
 ---
 
 #### Step 1.3: Implement stdlib_provider.py ✅
+
 - [x] Implement `StdlibProvider` class
 - [x] Support all parameters: indent, separators, ensure_ascii
 - [x] Add comprehensive docstrings
 - [x] Test: Standalone functionality
 
 **Test Command**:
+
 ```bash
 python -c "from audible.json.stdlib_provider import StdlibProvider; p = StdlibProvider(); print(p.dumps({'test': 'data'}, indent=4))"
 ```
@@ -74,6 +81,7 @@ python -c "from audible.json.stdlib_provider import StdlibProvider; p = StdlibPr
 ---
 
 #### Step 1.4: Implement ujson_provider.py ✅
+
 - [x] Implement `UjsonProvider` class
 - [x] Add stdlib fallback for separators
 - [x] Handle UJSON_AVAILABLE flag
@@ -81,6 +89,7 @@ python -c "from audible.json.stdlib_provider import StdlibProvider; p = StdlibPr
 - [x] Test: With and without ujson installed
 
 **Test Command**:
+
 ```bash
 pip install ujson
 python -c "from audible.json.ujson_provider import UjsonProvider; p = UjsonProvider(); print(p.dumps({'test': 'data'}, indent=4))"
@@ -91,6 +100,7 @@ python -c "from audible.json.ujson_provider import UjsonProvider; p = UjsonProvi
 ---
 
 #### Step 1.5: Implement rapidjson_provider.py ✅
+
 - [x] Implement `RapidjsonProvider` class
 - [x] Add stdlib fallback for separators
 - [x] Handle RAPIDJSON_AVAILABLE flag
@@ -98,6 +108,7 @@ python -c "from audible.json.ujson_provider import UjsonProvider; p = UjsonProvi
 - [x] Test: With and without python-rapidjson installed
 
 **Test Command**:
+
 ```bash
 pip install python-rapidjson
 python -c "from audible.json.rapidjson_provider import RapidjsonProvider; p = RapidjsonProvider(); print(p.dumps({'test': 'data'}, indent=4))"
@@ -108,6 +119,7 @@ python -c "from audible.json.rapidjson_provider import RapidjsonProvider; p = Ra
 ---
 
 #### Step 1.6: Implement orjson_provider.py ✅
+
 - [x] Implement `OrjsonProvider` class
 - [x] **CRITICAL**: Implement smart fallback logic
 - [x] Lazy-load fallback provider chain (ujson → rapidjson → stdlib)
@@ -117,6 +129,7 @@ python -c "from audible.json.rapidjson_provider import RapidjsonProvider; p = Ra
 - [x] Test: All fallback scenarios
 
 **Test Command**:
+
 ```bash
 pip install orjson ujson
 python -c "
@@ -134,6 +147,7 @@ print('Separators:', p.dumps({'test': 'data'}, separators=(',', ':')))
 ---
 
 #### Step 1.7: Implement registry.py
+
 - [ ] Implement `_validate_provider()`
 - [ ] Implement `_auto_detect_provider_class()`
 - [ ] Implement `_coerce_provider()`
@@ -142,6 +156,7 @@ print('Separators:', p.dumps({'test': 'data'}, separators=(',', ':')))
 - [ ] Test: Auto-detection with various installed libraries
 
 **Test Command**:
+
 ```bash
 python -c "
 from audible.json.registry import get_json_provider, set_default_json_provider
@@ -159,13 +174,15 @@ set_default_json_provider(None)
 
 ---
 
-#### Step 1.8: Implement __init__.py ✅
+#### Step 1.8: Implement **init**.py ✅
+
 - [x] Export all providers
 - [x] Export registry functions
 - [x] Add module docstring
 - [x] Test: Public API
 
 **Test Command**:
+
 ```bash
 python -c "
 from audible.json import (
@@ -190,6 +207,7 @@ print(f'Provider: {p.provider_name}')
 ### PHASE 2: Comprehensive Tests ✅ COMPLETED
 
 #### Step 2.1: Create Test Files
+
 - [ ] Create `tests/test_json.py`
 - [ ] Create `tests/test_json_integration.py`
 - [ ] Create `tests/test_json_fallback.py`
@@ -199,6 +217,7 @@ print(f'Provider: {p.provider_name}')
 ---
 
 #### Step 2.2: Implement test_json.py
+
 - [ ] `TestStdlibProvider` class with all tests
 - [ ] `TestUjsonProvider` class with skip conditions
 - [ ] `TestRapidjsonProvider` class with skip conditions
@@ -206,6 +225,7 @@ print(f'Provider: {p.provider_name}')
 - [ ] `TestRegistry` class with auto-detection tests
 
 **Test Command**:
+
 ```bash
 uv run pytest tests/test_json.py -v
 ```
@@ -215,6 +235,7 @@ uv run pytest tests/test_json.py -v
 ---
 
 #### Step 2.3: Implement test_json_integration.py
+
 - [ ] `TestRealWorldUsage` class
 - [ ] Test auth file format (indent=4)
 - [ ] Test compact API responses
@@ -222,6 +243,7 @@ uv run pytest tests/test_json.py -v
 - [ ] Test library export (from audible-cli pattern)
 
 **Test Command**:
+
 ```bash
 uv run pytest tests/test_json_integration.py -v
 ```
@@ -231,12 +253,14 @@ uv run pytest tests/test_json_integration.py -v
 ---
 
 #### Step 2.4: Implement test_json_fallback.py
+
 - [ ] `TestOrjsonFallback` class
 - [ ] Test fallback chain for indent=4
 - [ ] Test fallback preserves correctness
 - [ ] Test separators fallback to stdlib
 
 **Test Command**:
+
 ```bash
 uv run pytest tests/test_json_fallback.py -v
 ```
@@ -246,11 +270,13 @@ uv run pytest tests/test_json_fallback.py -v
 ---
 
 #### Step 2.5: Run Complete Test Suite
+
 - [ ] Run all JSON tests
 - [ ] Check coverage (target >95%)
 - [ ] Verify all scenarios work
 
 **Test Command**:
+
 ```bash
 uv run pytest tests/test_json*.py -v --cov=src/audible/json --cov-report=html
 ```
@@ -262,6 +288,7 @@ uv run pytest tests/test_json*.py -v --cov=src/audible/json --cov-report=html
 ### PHASE 3: Integration into Codebase ✅ COMPLETED
 
 #### Step 3.1: Migrate auth.py ✅
+
 - [x] Add import for `get_json_provider`
 - [x] Create module-level provider cache
 - [x] Replace Line 432: `json.loads()` → `_json_provider.loads()`
@@ -269,6 +296,7 @@ uv run pytest tests/test_json*.py -v --cov=src/audible/json --cov-report=html
 - [x] Run tests (8 tests passed)
 
 **Test Command**:
+
 ```bash
 uv run pytest tests/test_auth.py -v
 ```
@@ -278,6 +306,7 @@ uv run pytest tests/test_auth.py -v
 ---
 
 #### Step 3.2: Migrate aescipher.py ✅
+
 - [x] Add import for `get_json_provider`
 - [x] Create module-level provider cache
 - [x] Replace Line 355: `json.dumps()`
@@ -287,6 +316,7 @@ uv run pytest tests/test_auth.py -v
 - [x] Run tests (41 tests passed)
 
 **Test Command**:
+
 ```bash
 uv run nox --session=tests-3.13 -- tests/test_crypto.py -v
 ```
@@ -296,6 +326,7 @@ uv run nox --session=tests-3.13 -- tests/test_crypto.py -v
 ---
 
 #### Step 3.3: Migrate login.py ✅
+
 - [x] Add import for `get_json_provider`
 - [x] Create module-level provider cache
 - [x] Replace Line 317: `json.dumps()`
@@ -306,6 +337,7 @@ uv run nox --session=tests-3.13 -- tests/test_crypto.py -v
 ---
 
 #### Step 3.4: Verify metadata.py (No Changes) ✅
+
 - [x] Verified Line 369 remains: `json.dumps(meta_dict, separators=(",", ":"))`
 - [x] Documented: This is the only separators use case, stays with stdlib
 - [x] Verified functionality preserved
@@ -315,11 +347,13 @@ uv run nox --session=tests-3.13 -- tests/test_crypto.py -v
 ---
 
 #### Step 3.5: Run Full Test Suite ✅
+
 - [x] Run all tests with nox (116 passed, 4 skipped)
 - [x] Verified no regressions
 - [x] Created example files
 
 **Test Command**:
+
 ```bash
 uv run nox --session=tests-3.13
 ```
@@ -335,6 +369,7 @@ uv run nox --session=tests-3.13
 **Goal**: Replace httpx's `response.json()` with optimized JSON providers in `convert_response_content()`.
 
 #### Step 4.1: Analyze current implementation
+
 - [x] Located `convert_response_content()` function (Line 70-74)
 - [x] Found usage locations: `default_response_callback()` (Line 47) and `raise_for_status()` (Line 55)
 - [x] Identified `resp.json()` uses httpx's internal `json.loads()` from stdlib
@@ -345,6 +380,7 @@ uv run nox --session=tests-3.13
 ---
 
 #### Step 4.2: Design implementation approach ✅
+
 - [x] Replace `resp.json()` with `resp.text` + `_json_provider.loads()`
 - [x] Handle multiple exception types from different providers:
   - `json.JSONDecodeError` (stdlib)
@@ -355,6 +391,7 @@ uv run nox --session=tests-3.13
 - [x] Preserve backward compatibility (still return text on decode error)
 
 **Implemented**:
+
 ```python
 from .json import get_json_provider
 
@@ -374,6 +411,7 @@ def convert_response_content(resp: httpx.Response) -> Any:
 ---
 
 #### Step 4.3: Implement changes to client.py ✅
+
 - [x] Add `from .json import get_json_provider` import
 - [x] Add module-level `_json_provider = get_json_provider()`
 - [x] Replace `resp.json()` with `_json_provider.loads(resp.text)` in `convert_response_content`
@@ -381,6 +419,7 @@ def convert_response_content(resp: httpx.Response) -> Any:
 - [x] Keep `json` import (needed for JSONDecodeError exception type)
 
 **Test Command**:
+
 ```bash
 grep -n "json\." src/audible/client.py
 ```
@@ -392,11 +431,13 @@ grep -n "json\." src/audible/client.py
 ---
 
 #### Step 4.4: Run tests to verify client.py changes ✅
+
 - [x] Run full test suite (116 passed, 4 skipped)
 - [x] Verify no regressions in client functionality
 - [x] Test with different providers (orjson, ujson, stdlib)
 
 **Test Command**:
+
 ```bash
 uv run nox --session=tests-3.13
 ```
@@ -408,6 +449,7 @@ uv run nox --session=tests-3.13
 ---
 
 #### Step 4.5: Create client response performance example (SKIPPED)
+
 - [ ] Create `examples/test_client_json_performance.py`
 - [ ] Demonstrate response parsing performance improvement
 - [ ] Show provider auto-detection in action
@@ -420,6 +462,7 @@ uv run nox --session=tests-3.13
 ---
 
 #### Step 4.6: Update documentation for client optimization ✅
+
 - [x] Update CHANGELOG.md with client.py optimization note
 - [x] Update plan with completed checkboxes
 - [ ] Update CLAUDE.md with client architecture note (optional)
@@ -435,6 +478,7 @@ uv run nox --session=tests-3.13
 **Goal**: Remove module-level caches and call `get_json_provider()` directly each time, matching the crypto system's architecture.
 
 #### Step 4.5.1: Remove module-level caches ✅
+
 - [x] Remove `_json_provider = get_json_provider()` from client.py
 - [x] Remove `_json_provider = get_json_provider()` from auth.py
 - [x] Remove `_json_provider = get_json_provider()` from aescipher.py
@@ -445,6 +489,7 @@ uv run nox --session=tests-3.13
 ---
 
 #### Step 4.5.2: Update all usage sites ✅
+
 - [x] Replace `_json_provider.loads()` with `get_json_provider().loads()` in client.py (1 location)
 - [x] Replace `_json_provider.loads()` with `get_json_provider().loads()` in auth.py (1 location)
 - [x] Replace `_json_provider.dumps()` with `get_json_provider().dumps()` in auth.py (1 location)
@@ -457,6 +502,7 @@ uv run nox --session=tests-3.13
 ---
 
 #### Step 4.5.3: Write tests for provider switching ✅
+
 - [x] Create `tests/test_json_provider_switching.py`
 - [x] Test client.py uses switched provider (convert_response_content)
 - [x] Test aescipher.py uses switched provider (to_file/from_file)
@@ -472,10 +518,12 @@ uv run nox --session=tests-3.13
 ---
 
 #### Step 4.5.4: Run full test suite ✅
+
 - [x] Run complete test suite with nox
 - [x] Verify no regressions
 
 **Test Command**:
+
 ```bash
 uv run nox --session=tests-3.13
 ```
@@ -493,6 +541,7 @@ uv run nox --session=tests-3.13
 ### PHASE 5: Dependencies & Configuration ✅ COMPLETED
 
 #### Step 5.1: Update pyproject.toml ✅
+
 - [x] Add `[project.optional-dependencies]` for JSON backends
 - [x] Add individual providers: orjson, ujson, rapidjson
 - [ ] Add `json-fast` (orjson only)
@@ -505,12 +554,14 @@ uv run nox --session=tests-3.13
 ---
 
 #### Step 4.2: Test Installation Scenarios
+
 - [ ] Test `pip install -e ".[json-full]"` → should detect orjson
 - [ ] Test without ujson → should still use orjson
 - [ ] Test without any extras → should use stdlib
 - [ ] Verify auto-detection works in all scenarios
 
 **Test Commands**:
+
 ```bash
 pip install -e ".[json-full]"
 python -c "from audible.json import get_json_provider; print(get_json_provider().provider_name)"
@@ -529,6 +580,7 @@ python -c "from audible.json import get_json_provider; print(get_json_provider()
 ### PHASE 6: Examples & Documentation ✅ COMPLETED
 
 #### Step 5.1: Create test_json_autodetect.py
+
 - [ ] Create `examples/test_json_autodetect.py`
 - [ ] Test auto-detection
 - [ ] Test compact JSON output
@@ -537,6 +589,7 @@ python -c "from audible.json import get_json_provider; print(get_json_provider()
 - [ ] Add usage instructions in docstring
 
 **Test Command**:
+
 ```bash
 uv run python examples/test_json_autodetect.py
 uv run --with ujson python examples/test_json_autodetect.py
@@ -548,6 +601,7 @@ uv run --with orjson python examples/test_json_autodetect.py
 ---
 
 #### Step 5.2: Create test_json_explicit.py
+
 - [ ] Create `examples/test_json_explicit.py`
 - [ ] Test each provider explicitly
 - [ ] Show availability checking
@@ -555,6 +609,7 @@ uv run --with orjson python examples/test_json_autodetect.py
 - [ ] Add usage instructions
 
 **Test Command**:
+
 ```bash
 uv run --with orjson --with ujson python examples/test_json_explicit.py
 ```
@@ -564,6 +619,7 @@ uv run --with orjson --with ujson python examples/test_json_explicit.py
 ---
 
 #### Step 5.3: Update README.md
+
 - [ ] Add "Optional High-Performance JSON Backends" section
 - [ ] Document installation options
 - [ ] Explain json-full vs json-fast
@@ -575,6 +631,7 @@ uv run --with orjson --with ujson python examples/test_json_explicit.py
 ---
 
 #### Step 5.4: Update CLAUDE.md
+
 - [ ] Add "JSON Backend Architecture" section
 - [ ] Document architecture components
 - [ ] Explain smart fallback logic
@@ -586,6 +643,7 @@ uv run --with orjson --with ujson python examples/test_json_explicit.py
 ---
 
 #### Step 5.5: Update CHANGELOG.md
+
 - [ ] Add new "Added" section for JSON backends
 - [ ] Document performance improvements
 - [ ] List all providers
@@ -599,6 +657,7 @@ uv run --with orjson --with ujson python examples/test_json_explicit.py
 ### PHASE 7: Final Testing & Validation ⏳
 
 #### Step 7.1: Complete Test Suite
+
 - [ ] Run `uv run nox --session=tests`
 - [ ] Run `uv run nox --session=mypy`
 - [ ] Run `uv run nox --session=pre-commit`
@@ -609,6 +668,7 @@ uv run --with orjson --with ujson python examples/test_json_explicit.py
 ---
 
 #### Step 6.2: Performance Benchmarks (Optional)
+
 - [ ] Create benchmark script
 - [ ] Compare stdlib vs orjson vs ujson
 - [ ] Test compact JSON performance
@@ -620,6 +680,7 @@ uv run --with orjson --with ujson python examples/test_json_explicit.py
 ---
 
 #### Step 6.3: Documentation Review
+
 - [ ] Review README.md completeness
 - [ ] Review CLAUDE.md completeness
 - [ ] Review CHANGELOG.md completeness
@@ -633,6 +694,7 @@ uv run --with orjson --with ujson python examples/test_json_explicit.py
 ### PHASE 8: Git Commit & Push ⏳
 
 #### Step 7.1: Stage Files
+
 - [ ] Stage `src/audible/json/`
 - [ ] Stage test files
 - [ ] Stage example files
@@ -640,6 +702,7 @@ uv run --with orjson --with ujson python examples/test_json_explicit.py
 - [ ] Stage documentation files
 
 **Command**:
+
 ```bash
 git status
 git add src/audible/json/
@@ -656,12 +719,14 @@ git add CHANGELOG.md
 ---
 
 #### Step 7.2: Create Commit
+
 - [ ] Create conventional commit message
 - [ ] Include comprehensive description
 - [ ] List all changes
 - [ ] Note performance improvements
 
 **Command**:
+
 ```bash
 git commit -m "feat: add optional high-performance JSON backends
 
@@ -708,10 +773,12 @@ Fully backward compatible - stdlib json remains fallback."
 ---
 
 #### Step 7.3: Push to Remote
+
 - [ ] Push branch to remote
 - [ ] Verify push successful
 
 **Command**:
+
 ```bash
 git push -u origin feat/json-backend-providers
 ```
@@ -723,12 +790,14 @@ git push -u origin feat/json-backend-providers
 ### PHASE 9: PR Creation (Optional) ⏳
 
 #### Step 8.1: Create Pull Request
+
 - [ ] Create PR with comprehensive description
 - [ ] Include performance metrics
 - [ ] Add test plan checklist
 - [ ] Request review
 
 **Command**:
+
 ```bash
 gh pr create --title "feat: add optional high-performance JSON backends" --body "..."
 ```
@@ -740,9 +809,11 @@ gh pr create --title "feat: add optional high-performance JSON backends" --body 
 ## Why json-full is Recommended
 
 ### json-full (Recommended #1)
+
 **Components**: orjson + ujson (~2MB total)
 
 **Benefits**:
+
 1. ✅ Maximum performance in all scenarios
 2. ✅ No stdlib fallbacks (except separators edge case)
 3. ✅ Best user experience - everything optimized
@@ -750,20 +821,24 @@ gh pr create --title "feat: add optional high-performance JSON backends" --body 
 5. ✅ Future-proof - all formats covered
 
 **Performance Matrix**:
+
 - Compact JSON (API): orjson (4-5x)
 - indent=2: orjson (4-5x)
 - indent=4 (Auth): ujson (2-3x)
 - separators (Metadata): stdlib (baseline, rare)
 
 ### json-fast (Alternative #2)
+
 **Components**: orjson only
 
 **Benefits**:
+
 1. ✅ Smallest dependencies
 2. ✅ Maximum performance for compact JSON
 3. ✅ Good for API-heavy workloads
 
 **Trade-offs**:
+
 1. ❌ indent=4 falls back to stdlib (no acceleration)
 2. ❌ ~17% of use cases not optimized (auth files)
 
@@ -787,18 +862,21 @@ gh pr create --title "feat: add optional high-performance JSON backends" --body 
 ## Notes & Decisions
 
 ### Key Design Decisions
+
 1. **Smart Fallback**: orjson auto-falls back to ujson/stdlib for unsupported features
 2. **Conservative Approach**: Prefer correctness over absolute peak performance
 3. **Lazy Loading**: Fallback providers loaded only when needed
 4. **No Breaking Changes**: Fully backward compatible with stdlib json
 
 ### Integration Points
+
 - `auth.py`: 2 locations (loads, dumps)
 - `aescipher.py`: 4 locations (loads, dumps)
 - `login.py`: 1 location (dumps)
 - `metadata.py`: 0 changes (separators edge case stays stdlib)
 
 ### Performance Expectations
+
 - **audible package**: 2-5x faster JSON operations
 - **audible-cli**: 2-5x faster exports and API operations
 - **Overall**: Noticeable improvement with json-full installed

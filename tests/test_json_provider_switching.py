@@ -8,8 +8,6 @@ aescipher.py, and login.py.
 import json
 from typing import Any
 
-import pytest
-
 from audible.json import StdlibProvider, get_json_provider, set_default_json_provider
 
 
@@ -46,7 +44,9 @@ class TestProviderSwitching:
         current_provider = get_json_provider()
         assert current_provider.provider_name == "stdlib"
 
-    def test_auth_to_dict_uses_switched_provider(self, auth_fixture_data: dict[str, Any]) -> None:
+    def test_auth_to_dict_uses_switched_provider(
+        self, auth_fixture_data: dict[str, Any]
+    ) -> None:
         """Test that auth.py uses switched provider for JSON serialization."""
         import tempfile
         from pathlib import Path

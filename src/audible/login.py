@@ -1,7 +1,6 @@
 import base64
 import hashlib
 import io
-import json
 import logging
 import re
 import secrets

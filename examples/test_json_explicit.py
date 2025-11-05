@@ -12,6 +12,7 @@ from audible.json import (
     set_default_json_provider,
 )
 
+
 # Example data
 data = {"asin": "B001", "title": "Book Title", "rating": 4.5}
 

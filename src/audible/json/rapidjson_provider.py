@@ -16,7 +16,7 @@ This serves as an alternative fallback provider to ujson.
 from __future__ import annotations
 
 import logging
-from typing import Any, cast
+from typing import Any
 
 
 # Optional import - only available if python-rapidjson is installed
@@ -32,7 +32,7 @@ logger = logging.getLogger("audible.json.rapidjson")
 
 
 class RapidjsonProvider:
-    """JSON provider using the python-rapidjson library.
+    r"""JSON provider using the python-rapidjson library.
 
     This provider implements JSON operations using python-rapidjson, a C++
     wrapper that provides excellent performance. It supports custom indentation
@@ -49,12 +49,14 @@ class RapidjsonProvider:
     - Falls back to stdlib for separators
 
     Example:
-        >>> from audible.json import get_json_provider, RapidjsonProvider  # doctest: +SKIP
-        >>> provider = get_json_provider(RapidjsonProvider)  # doctest: +SKIP
-        >>> provider.provider_name  # doctest: +SKIP
+        >>> from audible.json import get_json_provider, RapidjsonProvider
+        >>> provider = get_json_provider(RapidjsonProvider)
+        >>> provider.provider_name
         'rapidjson'
-        >>> provider.dumps({"key": "value"}, indent=4)  # doctest: +SKIP
-        '{\\n    "key": "value"\\n}'
+        >>> print(provider.dumps({"key": "value"}, indent=4))
+        {
+            "key": "value"
+        }
     """
 
     def __init__(self) -> None:
@@ -106,13 +108,9 @@ class RapidjsonProvider:
 
         # rapidjson native handling
         # Note: rapidjson uses different parameter names
-        kwargs = {}
         if indent is not None:
-            kwargs["indent"] = indent
-        if not ensure_ascii:
-            kwargs["ensure_ascii"] = False
-
-        return cast(str, rapidjson.dumps(obj, **kwargs))
+            return rapidjson.dumps(obj, indent=indent, ensure_ascii=ensure_ascii)
+        return rapidjson.dumps(obj, ensure_ascii=ensure_ascii)
 
     def loads(self, s: str | bytes) -> Any:
         """Deserialize JSON string using python-rapidjson.
