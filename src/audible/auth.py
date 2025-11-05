@@ -20,6 +20,7 @@ from .activation_bytes import get_activation_bytes as get_ab
 from .aescipher import AESCipher, detect_file_encryption
 from .crypto import get_crypto_providers
 from .exceptions import AuthFlowError, FileEncryptionError, NoRefreshToken
+from .json import get_json_provider
 from .login import external_login, login
 from .register import deregister as deregister_
 from .register import register as register_
@@ -35,6 +36,9 @@ if TYPE_CHECKING:
 
 
 logger = logging.getLogger("audible.auth")
+
+# Module-level JSON provider cache
+_json_provider = get_json_provider()
 
 
 def refresh_access_token(
@@ -425,7 +429,7 @@ class Authenticator(httpx.Auth):
         else:
             file_data = auth.filename.read_text()
 
-        json_data = json.loads(file_data)
+        json_data = _json_provider.loads(file_data)
 
         locale_code = json_data.pop("locale_code", None)
         locale = locale or locale_code
@@ -716,7 +720,7 @@ class Authenticator(httpx.Auth):
             encryption = self.encryption or False
 
         data = self.to_dict()
-        json_data = json.dumps(data, indent=indent)
+        json_data = _json_provider.dumps(data, indent=indent)
 
         if encryption is False:
             target_file.write_text(json_data)

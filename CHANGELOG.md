@@ -22,13 +22,35 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - RSA key caching in `Authenticator` for improved performance on repeated API requests
 - Provider override capability: pass `crypto_provider` parameter to `Authenticator.from_file()` and related methods
 - Process-wide default provider configuration via `set_default_crypto_provider()`
+- Optional high-performance JSON backends for significantly improved JSON serialization performance:
+  - `orjson` (Rust-based, 4-5x faster for compact JSON) - install with `pip install audible[orjson]`
+  - `ujson` (C-based, 2-3x faster with indent=4 support) - install with `pip install audible[ujson]`
+  - `rapidjson` (C++ based, 2-3x faster) - install with `pip install audible[rapidjson]`
+  - `json-full` extra (recommended) - install with `pip install audible[json-full]` for complete coverage (orjson + ujson)
+  - `json-fast` extra - install with `pip install audible[json-fast]` for orjson only
+  - Automatic provider selection: orjson → ujson → rapidjson → stdlib (pure Python fallback)
+  - Performance improvements: 4-5x faster compact JSON (orjson), 2-3x faster pretty-printed JSON (ujson/rapidjson)
+  - Smart fallback logic: orjson automatically uses ujson/rapidjson for indent=4
+- New `audible.json` module with protocol-based provider abstraction layer:
+  - `protocols.py` - Type-safe Protocol definition for JSON operations
+  - `orjson_provider.py` - High-performance implementation using orjson library with smart fallback logic
+  - `ujson_provider.py` - High-performance implementation using ujson library
+  - `rapidjson_provider.py` - High-performance implementation using python-rapidjson library
+  - `stdlib_provider.py` - Standard library json wrapper (always available)
+  - `registry.py` - Provider selection and caching with auto-detection
+- Process-wide default JSON provider configuration via `set_default_json_provider()`
 
 ### Changed
 
 - `aescipher.py` now uses crypto providers for AES, PBKDF2, and hashing operations
+- `aescipher.py` now uses JSON providers for JSON serialization/deserialization
 - `auth.py` now uses crypto providers for RSA signing operations
+- `auth.py` now uses JSON providers for JSON serialization/deserialization
+- `login.py` now uses JSON providers for JSON serialization
+- `metadata.py` still uses stdlib json directly for separators (edge case)
 - Replaced `os.urandom` with `secrets.token_bytes` for better cryptographic randomness
 - Improved error messages and type annotations throughout crypto layer
+- Improved error messages and type annotations throughout JSON layer
 - Simplified RSA key loading by removing redundant module-level cache (Authenticator-level caching remains)
 
 ### Fixed
@@ -40,9 +62,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ### Documentation
 
 - Added comprehensive installation guide for crypto extras in README and docs
-- Added performance benchmarks and provider selection documentation
+- Added comprehensive installation guide for JSON extras in README
+- Added performance benchmarks and provider selection documentation for crypto providers
+- Added performance benchmarks and provider selection documentation for JSON providers
 - Added version requirement notes (crypto features available in audible >= 0.11.0)
+- Added version requirement notes (JSON features available in audible >= 0.11.0)
 - Added example scripts for crypto provider usage
+- Added example scripts for JSON provider usage (`examples/test_json_autodetect.py`, `examples/test_json_explicit.py`)
 
 ### Bugfix
 

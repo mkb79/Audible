@@ -12,6 +12,7 @@ from hashlib import sha256
 from typing import TYPE_CHECKING, Any, Literal
 
 from .crypto import get_crypto_providers
+from .json import get_json_provider
 
 
 if TYPE_CHECKING:
@@ -21,6 +22,9 @@ if TYPE_CHECKING:
 
 
 logger = logging.getLogger("audible.aescipher")
+
+# Module-level JSON provider cache
+_json_provider = get_json_provider()
 
 BLOCK_SIZE: int = 16  # the AES block size
 
@@ -348,7 +352,7 @@ class AESCipher:
         """
         if encryption == "json":
             encrypted_dict = self.to_dict(data)
-            data_json = json.dumps(encrypted_dict, indent=indent)
+            data_json = _json_provider.dumps(encrypted_dict, indent=indent)
             filename.write_text(data_json)
 
         elif encryption == "bytes":
@@ -374,7 +378,7 @@ class AESCipher:
         """
         if encryption == "json":
             encrypted_json = filename.read_text()
-            encrypted_dict = json.loads(encrypted_json)
+            encrypted_dict = _json_provider.loads(encrypted_json)
             return self.from_dict(encrypted_dict)
 
         if encryption == "bytes":
@@ -399,7 +403,7 @@ def detect_file_encryption(
     encryption: Literal[False, "json", "bytes"] | None = None
 
     try:
-        file_json = json.loads(file)
+        file_json = _json_provider.loads(file)
         if "adp_token" in file_json:
             encryption = False
         elif "ciphertext" in file_json:
@@ -464,7 +468,7 @@ def _decrypt_voucher(
     ).rstrip("\x00")
 
     try:
-        voucher_dict: dict[str, Any] = json.loads(plaintext)
+        voucher_dict: dict[str, Any] = _json_provider.loads(plaintext)
         return voucher_dict
     except json.JSONDecodeError:
         fmt = r"^{\"key\":\"(?P<key>.*?)\",\"iv\":\"(?P<iv>.*?)\","
