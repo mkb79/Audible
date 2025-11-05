@@ -10,6 +10,7 @@ from typing import Any, cast
 import pytest
 
 from audible.crypto import set_default_crypto_provider
+from audible.json import set_default_json_provider
 
 
 try:
@@ -122,6 +123,14 @@ def reset_crypto_provider_state() -> Generator[None, None, None]:
     set_default_crypto_provider()
     yield
     set_default_crypto_provider()
+
+
+@pytest.fixture(autouse=True)
+def reset_json_provider_state() -> Generator[None, None, None]:
+    """Ensure JSON registry overrides are cleared between tests."""
+    set_default_json_provider()
+    yield
+    set_default_json_provider()
 
 
 @pytest.fixture
