@@ -47,6 +47,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - `auth.py` now uses crypto providers for RSA signing operations
 - `auth.py` now uses JSON providers for JSON serialization/deserialization
 - `login.py` now uses JSON providers for JSON serialization
+- `client.py` now uses JSON providers for HTTP response deserialization (replaces httpx's internal json.loads())
 - `metadata.py` still uses stdlib json directly for separators (edge case)
 - Replaced `os.urandom` with `secrets.token_bytes` for better cryptographic randomness
 - Improved error messages and type annotations throughout crypto layer

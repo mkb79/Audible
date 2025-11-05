@@ -19,6 +19,7 @@ from httpx._models import HeaderTypes  # type: ignore[attr-defined]
 
 from ._types import TrueFalseT
 from .auth import Authenticator
+from .json import get_json_provider
 from .exceptions import (
     BadRequest,
     NetworkError,
@@ -34,6 +35,7 @@ from .localization import LOCALE_TEMPLATES, Locale
 
 
 logger = logging.getLogger("audible.client")
+_json_provider = get_json_provider()
 
 ClientT = TypeVar("ClientT", httpx.AsyncClient, httpx.Client)
 
@@ -69,8 +71,10 @@ def raise_for_status(resp: httpx.Response) -> None:
 
 def convert_response_content(resp: httpx.Response) -> Any:
     try:
-        return resp.json()
-    except json.JSONDecodeError:
+        return _json_provider.loads(resp.text)
+    except (json.JSONDecodeError, ValueError, Exception):
+        # Catches JSONDecodeError (stdlib, orjson) and ValueError (ujson, rapidjson)
+        # Falls back to returning raw text if JSON parsing fails
         return resp.text
 
 
