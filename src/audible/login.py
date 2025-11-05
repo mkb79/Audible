@@ -21,7 +21,6 @@ from .metadata import encrypt_metadata, meta_audible_app
 
 
 logger = logging.getLogger("audible.login")
-_json_provider = get_json_provider()
 
 USER_AGENT = (
     "Mozilla/5.0 (iPhone; CPU iPhone OS 15_0 like Mac OS X) "
@@ -314,7 +313,7 @@ def build_init_cookies() -> dict[str, str]:
         "device_registration_data": {"software_version": "35602678"},
         "app_identifier": {"app_version": "3.56.2", "bundle_id": "com.audible.iphone"},
     }
-    map_md_str = _json_provider.dumps(map_md_dict)
+    map_md_str = get_json_provider().dumps(map_md_dict)
     map_md = base64.b64encode(map_md_str.encode()).decode().rstrip("=")
 
     amzn_app_id = "MAPiOSLib/6.0/ToHideRetailLink"

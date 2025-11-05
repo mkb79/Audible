@@ -428,6 +428,68 @@ uv run nox --session=tests-3.13
 
 ---
 
+### PHASE 4.5: Fix Module-Level Provider Caching ✅ COMPLETED
+
+**Problem Discovered**: Module-level `_json_provider` caches in client.py, auth.py, aescipher.py, and login.py prevented `set_default_json_provider()` from affecting those modules after import.
+
+**Goal**: Remove module-level caches and call `get_json_provider()` directly each time, matching the crypto system's architecture.
+
+#### Step 4.5.1: Remove module-level caches ✅
+- [x] Remove `_json_provider = get_json_provider()` from client.py
+- [x] Remove `_json_provider = get_json_provider()` from auth.py
+- [x] Remove `_json_provider = get_json_provider()` from aescipher.py
+- [x] Remove `_json_provider = get_json_provider()` from login.py
+
+**Checkpoint**: All module-level caches removed ✅ COMPLETED
+
+---
+
+#### Step 4.5.2: Update all usage sites ✅
+- [x] Replace `_json_provider.loads()` with `get_json_provider().loads()` in client.py (1 location)
+- [x] Replace `_json_provider.loads()` with `get_json_provider().loads()` in auth.py (1 location)
+- [x] Replace `_json_provider.dumps()` with `get_json_provider().dumps()` in auth.py (1 location)
+- [x] Replace `_json_provider.dumps()` with `get_json_provider().dumps()` in aescipher.py (1 location)
+- [x] Replace `_json_provider.loads()` with `get_json_provider().loads()` in aescipher.py (3 locations)
+- [x] Replace `_json_provider.dumps()` with `get_json_provider().dumps()` in login.py (1 location)
+
+**Checkpoint**: All usage sites updated ✅ COMPLETED
+
+---
+
+#### Step 4.5.3: Write tests for provider switching ✅
+- [x] Create `tests/test_json_provider_switching.py`
+- [x] Test client.py uses switched provider (convert_response_content)
+- [x] Test aescipher.py uses switched provider (to_file/from_file)
+- [x] Test login.py uses switched provider (build_init_cookies)
+- [x] Test provider switch affects all modules simultaneously
+- [x] Test provider reset restores auto-detection
+- [x] Skip auth.py test (complex token validation requirements)
+
+**Test Results**: 5 passed, 1 skipped
+
+**Checkpoint**: Provider switching tests complete ✅ COMPLETED
+
+---
+
+#### Step 4.5.4: Run full test suite ✅
+- [x] Run complete test suite with nox
+- [x] Verify no regressions
+
+**Test Command**:
+```bash
+uv run nox --session=tests-3.13
+```
+
+**Result**: 121 tests passed, 5 skipped (rapidjson + 1 auth test)
+
+**Checkpoint**: All tests pass ✅ COMPLETED
+
+---
+
+**Summary**: Successfully fixed module-level caching issue. All modules now call `get_json_provider()` directly, allowing `set_default_json_provider()` to work correctly across the entire codebase. This matches the crypto system's architecture and provides the flexibility users expect.
+
+---
+
 ### PHASE 5: Dependencies & Configuration ✅ COMPLETED
 
 #### Step 5.1: Update pyproject.toml ✅
