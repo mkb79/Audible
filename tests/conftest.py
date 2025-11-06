@@ -117,6 +117,24 @@ def rsa_private_key(auth_fixture_data: dict[str, Any]) -> str:
     return cast(str, auth_fixture_data["device_private_key"])
 
 
+@pytest.fixture
+def access_token(auth_fixture_data: dict[str, Any]) -> str:
+    """Access token from auth fixture data."""
+    return cast(str, auth_fixture_data["access_token"])
+
+
+@pytest.fixture
+def refresh_token(auth_fixture_data: dict[str, Any]) -> str:
+    """Refresh token from auth fixture data."""
+    return cast(str, auth_fixture_data["refresh_token"])
+
+
+@pytest.fixture
+def adp_token(auth_fixture_data: dict[str, Any]) -> str:
+    """ADP token from auth fixture data."""
+    return cast(str, auth_fixture_data["adp_token"])
+
+
 @pytest.fixture(autouse=True)
 def reset_crypto_provider_state() -> Generator[None, None, None]:
     """Ensure crypto registry overrides are cleared between tests."""

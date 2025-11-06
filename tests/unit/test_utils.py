@@ -27,25 +27,17 @@ class TestTestConvertSuccess:
     def test_unknown_key_returns_value(self) -> None:
         assert utils_convert("unknown", "value") == "value"
 
-    def test_access_token_passthrough(self) -> None:
-        token = "Atna|abcdef"  # noqa: S105
-        assert utils_convert("access_token", token) == token
+    def test_access_token_passthrough(self, access_token: str) -> None:
+        assert utils_convert("access_token", access_token) == access_token
 
-    def test_refresh_token_passthrough(self) -> None:
-        token = "Atnr|12345"  # noqa: S105
-        assert utils_convert("refresh_token", token) == token
+    def test_refresh_token_passthrough(self, refresh_token: str) -> None:
+        assert utils_convert("refresh_token", refresh_token) == refresh_token
 
-    def test_adp_token_pattern(self) -> None:
-        token = "{enc:encrypted}{key:keydata}{iv:initial}{name:device}{serial:Mg==}"  # noqa: S105
-        assert utils_convert("adp_token", token) == token
+    def test_adp_token_pattern(self, adp_token: str) -> None:
+        assert utils_convert("adp_token", adp_token) == adp_token
 
-    def test_device_private_key_pattern(self) -> None:
-        private_key = (
-            "-----BEGIN RSA PRIVATE KEY-----\n"
-            "MIICWwIBAAKBgQC3kjHQm...\n"
-            "-----END RSA PRIVATE KEY-----\n"
-        )
-        assert utils_convert("device_private_key", private_key) == private_key
+    def test_device_private_key_pattern(self, rsa_private_key: str) -> None:
+        assert utils_convert("device_private_key", rsa_private_key) == rsa_private_key
 
     def test_website_cookies_validates_dict(self) -> None:
         cookies = {"session": "abc123"}

@@ -86,6 +86,8 @@ def test_rsa_key_cache_invalidation(auth_fixture_data: dict[str, str]) -> None:
 
 def test_rsa_key_cache_not_invalidated_for_other_attributes(
     auth_fixture_data: dict[str, str],
+    access_token: str,
+    refresh_token: str,
 ) -> None:
     """Test that cached RSA key is NOT invalidated when other attributes change."""
     auth = Authenticator.from_dict(auth_fixture_data)
@@ -104,8 +106,8 @@ def test_rsa_key_cache_not_invalidated_for_other_attributes(
 
     auth._apply_test_convert = False  # Disable validation for test
     # Modify other attributes
-    auth.access_token = "new_access_token"  # noqa: S105
-    auth.refresh_token = "new_refresh_token"  # noqa: S105
+    auth.access_token = access_token
+    auth.refresh_token = refresh_token
 
     # Verify cache is still intact
     assert auth._cached_rsa_key is cached_key
