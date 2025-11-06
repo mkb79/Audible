@@ -3,7 +3,8 @@
 **Project Goal:** Increase code coverage from 21% to near 100%
 
 **Created:** October 25, 2025
-**Status:** Phase 1 in progress — combined coverage at 50%
+**Updated:** November 6, 2025
+**Status:** Phase 1 complete — Master merged — Test structure unified — Coverage at 50%
 **Branch:** `feat/coverage-improvement` ✅
 
 ---
@@ -57,15 +58,19 @@ git commit -m "chore: update fail_under to XX% after Phase Y"
 
 **Overall Target: 85-90% Code Coverage**
 
-### Progress Update (October 25, 2025)
+### Progress Update (November 6, 2025)
 
-- Quick-win test suites for exceptions, localization, and logging are implemented and now pass
-  on Python 3.10–3.13.
-- Targeted helpers in `audible.utils` and `audible.client` received tests to lift combined
-  coverage to 50%.
-- `fail_under` in `pyproject.toml` is now set to 50%.
-- Upcoming tasks: commit the new test suites, and prepare for Phase 2
-  planning.
+- ✅ Phase 1 complete: exceptions, localization, logging, utils (partial), client_helpers (partial)
+- ✅ Master branch merged bringing:
+  - test_crypto.py (comprehensive crypto provider tests)
+  - test_json.py + test_json_*.py (JSON provider tests)
+  - test_auth.py (crypto provider integration tests)
+  - Comprehensive fixtures (auth_fixture_data, encrypted fixtures, crypto/json providers)
+- ✅ Test structure unified: All 14 test files now in tests/unit/
+- ✅ Hardcoded credentials replaced with centralized fixtures
+- ✅ All 244 tests passing on Python 3.10-3.13
+- ✅ `fail_under` in `pyproject.toml` set to 50%
+- 🚀 Ready for Phase 2: Completing client sync/async and auth flow tests
 
 ---
 
@@ -232,28 +237,34 @@ ai-plans/                          # All plans and scripts
 ├── README.md
 └── EXECUTIVE_SUMMARY.md
 
-tests/                             # Test directory (to be created)
-├── __init__.py
-├── conftest.py                    # Fixtures and helpers
-├── unit/
-│   ├── test_exceptions.py         # Phase 1
-│   ├── test_localization.py       # Phase 1
-│   ├── test_logging.py            # Phase 1
-│   ├── test_utils.py              # Phase 2
-│   ├── test_client.py             # Phase 2
-│   ├── test_auth.py               # Phase 2
-│   ├── test_aescipher.py          # Phase 3
-│   ├── test_metadata.py           # Phase 3
-│   ├── test_activation_bytes.py   # Phase 3
-│   ├── test_register.py           # Phase 3
-│   └── test_login.py              # Phase 3
-├── integration/
-│   ├── test_auth_flow.py
-│   └── test_api_client.py
-└── fixtures/
-    ├── sample_responses.json
-    ├── test_credentials.json
-    └── mock_data.py
+tests/                             # Test directory ✅ Created
+├── __init__.py                    # ✅
+├── conftest.py                    # ✅ Fixtures from master (auth, crypto, json)
+├── unit/                          # ✅ All tests unified here
+│   ├── test_auth.py               # ✅ Phase 2 (partial - crypto provider tests)
+│   ├── test_client_helpers.py     # ✅ Phase 1 (partial)
+│   ├── test_crypto.py             # ✅ From master (comprehensive)
+│   ├── test_exceptions.py         # ✅ Phase 1 (complete)
+│   ├── test_json.py               # ✅ From master (provider tests)
+│   ├── test_json_fallback.py      # ✅ From master
+│   ├── test_json_integration.py   # ✅ From master
+│   ├── test_json_provider_switching.py  # ✅ From master
+│   ├── test_localization.py       # ✅ Phase 1 (complete)
+│   ├── test_logging.py            # ✅ Phase 1 (complete)
+│   ├── test_main.py               # ✅ Basic sanity test
+│   ├── test_utils.py              # ✅ Phase 1 (88% - needs completion)
+│   ├── test_client.py             # ⬜ Phase 2 TODO (full sync/async)
+│   ├── test_aescipher.py          # ⬜ Phase 3 TODO
+│   ├── test_metadata.py           # ⬜ Phase 3 TODO
+│   ├── test_activation_bytes.py   # ⬜ Phase 3 TODO
+│   ├── test_register.py           # ⬜ Phase 3 TODO
+│   └── test_login.py              # ⬜ Phase 3 TODO
+├── integration/                   # ✅ Created (empty, ready for future)
+│   └── __init__.py
+└── fixtures/                      # ✅ From master
+    ├── auth_fixture.json
+    ├── auth_fixture_encrypted_json.json
+    └── auth_fixture_encrypted_bytes.bin
 ```
 
 ### Required Tools & Dependencies
@@ -268,13 +279,18 @@ tests/                             # Test directory (to be created)
 
 ## 📈 Milestones
 
-### Milestone 1: Phase 1 Complete
+### Milestone 1: Phase 1 Complete ✅
 
-- `exceptions.py`: 100% coverage
-- `localization.py`: 95% coverage
-- `_logging.py`: 90% coverage
-- Overall coverage: ≥46% (currently 50%)
-- `fail_under` updated to 50
+- ✅ `exceptions.py`: 100% coverage
+- ✅ `localization.py`: 99% coverage
+- ✅ `_logging.py`: 100% coverage
+- ✅ `utils.py`: 88% coverage (partial)
+- ✅ `client_helpers.py`: Partial coverage
+- ✅ Overall coverage: 50% (target ≥46%)
+- ✅ `fail_under` updated to 50
+- ✅ Master branch merged
+- ✅ Test structure unified
+- ✅ Fixtures centralized
 
 ### Milestone 2: Phase 2 Complete
 
