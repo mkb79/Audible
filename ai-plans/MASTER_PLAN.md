@@ -63,7 +63,7 @@ git commit -m "chore: update fail_under to XX% after Phase Y"
 - ✅ Phase 1 complete: exceptions, localization, logging, utils (partial), client_helpers (partial)
 - ✅ Master branch merged bringing:
   - test_crypto.py (comprehensive crypto provider tests)
-  - test_json.py + test_json_*.py (JSON provider tests)
+  - test*json.py + test_json*\*.py (JSON provider tests)
   - test_auth.py (crypto provider integration tests)
   - Comprehensive fixtures (auth_fixture_data, encrypted fixtures, crypto/json providers)
 - ✅ Test structure unified: All 14 test files now in tests/unit/

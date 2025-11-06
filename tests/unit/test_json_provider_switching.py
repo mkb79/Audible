@@ -83,9 +83,7 @@ class TestProviderSwitching:
             if temp_path.exists():
                 temp_path.unlink()
 
-    def test_aescipher_uses_switched_provider(
-        self, auth_fixture_password: str
-    ) -> None:
+    def test_aescipher_uses_switched_provider(self, auth_fixture_password: str) -> None:
         """Test that aescipher.py uses switched provider."""
         import tempfile
         from pathlib import Path

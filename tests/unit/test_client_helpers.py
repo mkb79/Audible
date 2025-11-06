@@ -38,7 +38,7 @@ class TestRaiseForStatus:
 
     def test_success_does_not_raise(self) -> None:
         response = make_response(200, json_data={"value": 1})
-        assert raise_for_status(response) is None
+        raise_for_status(response)  # Should not raise
 
     def test_bad_request_raises_custom_exception(self) -> None:
         response = make_response(400, json_data={"error": "missing"})

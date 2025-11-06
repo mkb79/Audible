@@ -14,7 +14,7 @@ from audible.utils import ElapsedTime, test_convert as utils_convert
 try:
     from typeguard import TypeCheckError
 except ImportError:  # pragma: no cover - fallback when typeguard absent
-    TypeCheckError = TypeError  # type: ignore[assignment]
+    TypeCheckError = TypeError
 
 
 TYPE_ERRORS = (TypeError, TypeCheckError)
@@ -35,10 +35,7 @@ class TestTestConvertSuccess:
         assert utils_convert("refresh_token", token) == token
 
     def test_adp_token_pattern(self) -> None:
-        token = (
-            "{enc:encrypted}{key:keydata}{iv:initial}"
-            "{name:device}{serial:Mg==}"
-        )
+        token = "{enc:encrypted}{key:keydata}{iv:initial}{name:device}{serial:Mg==}"
         assert utils_convert("adp_token", token) == token
 
     def test_device_private_key_pattern(self) -> None:
@@ -91,7 +88,7 @@ class TestTestConvertFailures:
 
     def test_adp_token_requires_string(self) -> None:
         with pytest.raises(TYPE_ERRORS):
-            utils_convert("adp_token", 123)  # type: ignore[arg-type]
+            utils_convert("adp_token", 123)
 
     def test_adp_token_requires_pattern(self) -> None:
         with pytest.raises(ValueError):
@@ -123,11 +120,11 @@ class TestTestConvertFailures:
 
     def test_locale_requires_locale_or_string(self) -> None:
         with pytest.raises(TYPE_ERRORS):
-            utils_convert("locale", ["invalid"])  # type: ignore[arg-type]
+            utils_convert("locale", ["invalid"])
 
     def test_filename_requires_path_like(self) -> None:
         with pytest.raises(TYPE_ERRORS):
-            utils_convert("filename", 123)  # type: ignore[arg-type]
+            utils_convert("filename", 123)
 
     def test_crypter_requires_aescipher(self) -> None:
         with pytest.raises(TYPE_ERRORS):
@@ -139,7 +136,7 @@ class TestTestConvertFailures:
 
     def test_encryption_requires_bool_or_string(self) -> None:
         with pytest.raises(TYPE_ERRORS):
-            utils_convert("encryption", 1)  # type: ignore[arg-type]
+            utils_convert("encryption", 1)
 
 
 class TestElapsedTime:
