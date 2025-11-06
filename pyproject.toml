@@ -39,6 +39,22 @@ cryptography = [
 pycryptodome = [
     "pycryptodome (>=3.20.0)",
 ]
+orjson = [
+    "orjson (>=3.9.0)",
+]
+ujson = [
+    "ujson (>=5.8.0)",
+]
+rapidjson = [
+    "python-rapidjson (>=1.10)",
+]
+json-fast = [
+    "orjson (>=3.9.0)",
+]
+json-full = [
+    "orjson (>=3.9.0)",
+    "ujson (>=5.8.0)",
+]
 
 [project.urls]
 Changelog = "https://github.com/mkb79/Audible/releases"
@@ -92,6 +108,14 @@ typeguard = [
 
 xdocs = [
     "xdoctest[colors]>=0.15.10",
+]
+
+extra-deps = [
+    "cryptography>=42.0.0",
+    "pycryptodome>=3.20.0",
+    "orjson>=3.9.0",
+    "ujson>=5.8.0",
+    "python-rapidjson>=1.10",
 ]
 
 [tool.hatch.build.targets.sdist]
@@ -189,7 +213,11 @@ known-first-party = ["audible"]
 lines-after-imports = 2
 
 [tool.ruff.lint.per-file-ignores]
-"tests/*" = ["S101"]
+"tests/*" = ["S101", "PLC0415", "S106"]
+"examples/*" = ["S101", "PLC0415"]
+"src/audible/json/protocols.py" = ["D417"]
+"src/audible/json/*_provider.py" = ["PLC0415"]
+"src/audible/json/registry.py" = ["PLC0415"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests", "src/audible"]

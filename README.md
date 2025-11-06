@@ -120,6 +120,98 @@ set_default_crypto_provider()
 `get_crypto_providers()` remains available for internal use, but it is not part of
 the supported public API.
 
+### Optional: High-Performance JSON Backends
+
+**Available in audible >= 0.11.0**
+
+For improved JSON serialization/deserialization performance (2-5x faster),
+install with optional high-performance JSON backends.
+
+**Option 1: json-full (recommended)**
+
+Complete coverage with best performance for all use cases:
+
+```bash
+pip install audible[json-full]
+```
+
+Includes:
+
+- `orjson`: 4-5x faster for compact JSON (API responses, metadata)
+- `ujson`: 2-3x faster with indent=4 support (auth files, library exports)
+
+**Option 2: json-fast**
+
+Optimized for compact JSON only:
+
+```bash
+pip install audible[json-fast]
+```
+
+Includes:
+
+- `orjson`: 4-5x faster for compact JSON
+
+**Option 3: Individual providers**
+
+```bash
+# orjson (Rust-based, fastest for compact JSON)
+pip install audible[orjson]
+
+# ujson (C-based, excellent for pretty-printed output)
+pip install audible[ujson]
+
+# rapidjson (C++ based, alternative to ujson)
+pip install audible[rapidjson]
+```
+
+**Using uv:**
+
+```bash
+# json-full (recommended)
+uv pip install audible[json-full]
+
+# json-fast
+uv pip install audible[json-fast]
+
+# Or run with extras (in project context)
+uv run --extra json-full your_script.py
+```
+
+The library automatically selects the best available provider:
+
+1. orjson (Rust-based, 4-5x faster for compact JSON)
+2. ujson (C-based, 2-3x faster with indent support)
+3. rapidjson (C++ based, 2-3x faster)
+4. stdlib json (always available)
+
+Performance improvements with optimized backends:
+
+- **4-5x faster** compact JSON (orjson)
+- **2-3x faster** pretty-printed JSON (ujson/rapidjson)
+- **Smart fallback**: orjson automatically uses ujson/rapidjson for indent=4
+
+**Provider Overrides (advanced)**
+
+Most applications do not need to interact with the JSON layer directly.
+The library automatically uses the best provider. However, you can override:
+
+```python
+from audible.json import OrjsonProvider, get_json_provider, set_default_json_provider
+
+# Get auto-detected provider
+provider = get_json_provider()
+print(f"Using: {provider.provider_name}")
+
+# Force a specific provider
+data = {"key": "value"}
+orjson = get_json_provider(OrjsonProvider)
+json_str = orjson.dumps(data)
+
+# Optional: set a process-wide default provider
+set_default_json_provider(OrjsonProvider)
+```
+
 ## Read the Doc
 
 The documentation can be found at [Read the Docs](https://audible.readthedocs.io/en/latest)

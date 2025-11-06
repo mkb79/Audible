@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import base64
 import hmac
-import json
 import logging
 import pathlib
 import re
@@ -13,6 +12,7 @@ from hashlib import sha256
 from typing import TYPE_CHECKING, Any, Literal, cast
 
 from .crypto import get_crypto_providers
+from .json import JSONDecodeError, get_json_provider
 
 
 if TYPE_CHECKING:
@@ -342,7 +342,7 @@ class AESCipher:
         """
         if encryption == "json":
             encrypted_dict = self.to_dict(data)
-            data_json = json.dumps(encrypted_dict, indent=indent)
+            data_json = get_json_provider().dumps(encrypted_dict, indent=indent)
             filename.write_text(data_json)
 
         elif encryption == "bytes":
@@ -368,7 +368,7 @@ class AESCipher:
         """
         if encryption == "json":
             encrypted_json = filename.read_text()
-            encrypted_dict = json.loads(encrypted_json)
+            encrypted_dict = get_json_provider().loads(encrypted_json)
             return self.from_dict(encrypted_dict)
 
         if encryption == "bytes":
@@ -393,12 +393,12 @@ def detect_file_encryption(
     encryption: Literal[False, "json", "bytes"] | None = None
 
     try:
-        file_json = json.loads(file)
+        file_json = get_json_provider().loads(file)
         if "adp_token" in file_json:
             encryption = False
         elif "ciphertext" in file_json:
             encryption = "json"
-    except UnicodeDecodeError:
+    except (UnicodeDecodeError, JSONDecodeError):
         encryption = "bytes"
 
     return encryption
@@ -458,9 +458,9 @@ def _decrypt_voucher(
     ).rstrip("\x00")
 
     try:
-        voucher_dict: dict[str, Any] = json.loads(plaintext)
+        voucher_dict: dict[str, Any] = get_json_provider().loads(plaintext)
         return voucher_dict
-    except json.JSONDecodeError:
+    except JSONDecodeError:
         fmt = r"^{\"key\":\"(?P<key>.*?)\",\"iv\":\"(?P<iv>.*?)\","
         match = re.match(fmt, plaintext)
         if match is None:
