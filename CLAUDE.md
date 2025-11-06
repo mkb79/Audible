@@ -182,6 +182,43 @@ The library uses AES encryption for credential storage:
 - Use pytest framework
 - Coverage tracking with `coverage.py`
 
+## Pre-Push Requirements
+
+**CRITICAL: Before every `git push`, you MUST run the full test suite:**
+
+```bash
+uv run nox
+```
+
+This ensures all quality gates pass before code reaches the remote repository:
+
+- ✅ **pre-commit**: Code formatting (ruff), linting, docstring validation (pydoclint)
+- ✅ **mypy**: Type checking across Python 3.10-3.13
+- ✅ **tests**: Unit tests with coverage across all supported Python versions
+- ✅ **typeguard**: Runtime type validation
+- ✅ **xdoctest**: Documentation example validation
+- ✅ **docs-build**: Sphinx documentation builds without errors
+
+### Failure Handling
+
+**If `uv run nox` reports ANY failures:**
+
+1. ❌ **DO NOT push** to the remote repository
+2. 🔧 **Fix the failing tests** or code quality issues
+3. ✅ **Re-run `uv run nox`** to verify fixes
+4. 💬 **If you cannot fix the issue**, ask the repository maintainer for guidance before pushing
+
+**Exception:** The `safety` session may fail due to external API issues (rate limits, service unavailable). This is acceptable and does not block pushing.
+
+### Why This Matters
+
+- Prevents breaking changes from entering the repository
+- Ensures consistent code quality across all contributors
+- Catches issues early before CI/CD pipeline failures
+- Maintains documentation accuracy (xdoctest validates all examples)
+
+**This requirement applies to everyone working on the repository, including AI assistants like Claude.**
+
 ## Python Version Support
 
 Requires Python 3.10-3.13 (3.14 not yet supported per pyproject.toml)
