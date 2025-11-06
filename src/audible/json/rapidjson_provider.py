@@ -15,6 +15,7 @@ This serves as an alternative fallback provider to ujson.
 
 from __future__ import annotations
 
+import json
 import logging
 from typing import Any
 
@@ -94,8 +95,6 @@ class RapidjsonProvider:
         """
         # Fallback to stdlib for separators (rapidjson doesn't support this)
         if separators is not None:
-            import json
-
             logger.debug("rapidjson -> stdlib fallback (separators not supported)")
             return json.dumps(
                 obj,

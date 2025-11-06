@@ -72,7 +72,7 @@ def convert_response_content(resp: httpx.Response) -> Any:
     try:
         return get_json_provider().loads(resp.text)
     except (json.JSONDecodeError, ValueError) as e:
-        # Catches JSONDecodeError (stdlib, orjson) and ValueError (ujson, rapidjson)
+        # Catches JSONDecodeError (stdlib) and ValueError (orjson, ujson, rapidjson)
         # Falls back to returning raw text if JSON parsing fails
         logger.debug("JSON parsing failed: %s", e, exc_info=True)
         return resp.text

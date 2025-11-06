@@ -15,6 +15,7 @@ This is the preferred fallback provider for orjson when indent=4 is needed.
 
 from __future__ import annotations
 
+import json
 import logging
 from typing import Any
 
@@ -94,8 +95,6 @@ class UjsonProvider:
         """
         # Fallback to stdlib for separators (ujson doesn't support this)
         if separators is not None:
-            import json
-
             logger.debug("ujson -> stdlib fallback (separators not supported)")
             return json.dumps(
                 obj,
