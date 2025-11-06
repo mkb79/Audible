@@ -240,7 +240,9 @@ def set_default_json_provider(
             _STATE["default"] = _coerce_provider(provider)
         except ImportError as e:
             name = (
-                provider.__name__ if isinstance(provider, type) else type(provider).__name__
+                provider.__name__
+                if isinstance(provider, type)
+                else type(provider).__name__
             )
             raise ImportError(
                 f"Failed to initialize {name}: {e}. Install the required library or pass an instantiated provider."
