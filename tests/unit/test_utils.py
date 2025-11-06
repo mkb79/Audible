@@ -9,7 +9,9 @@ import pytest
 
 from audible.aescipher import AESCipher
 from audible.localization import Locale
-from audible.utils import ElapsedTime, test_convert as utils_convert
+from audible.utils import ElapsedTime
+from audible.utils import test_convert as utils_convert
+
 
 try:
     from typeguard import TypeCheckError
@@ -26,15 +28,15 @@ class TestTestConvertSuccess:
         assert utils_convert("unknown", "value") == "value"
 
     def test_access_token_passthrough(self) -> None:
-        token = "Atna|abcdef"
+        token = "Atna|abcdef"  # noqa: S105
         assert utils_convert("access_token", token) == token
 
     def test_refresh_token_passthrough(self) -> None:
-        token = "Atnr|12345"
+        token = "Atnr|12345"  # noqa: S105
         assert utils_convert("refresh_token", token) == token
 
     def test_adp_token_pattern(self) -> None:
-        token = "{enc:encrypted}{key:keydata}{iv:initial}{name:device}{serial:Mg==}"
+        token = "{enc:encrypted}{key:keydata}{iv:initial}{name:device}{serial:Mg==}"  # noqa: S105
         assert utils_convert("adp_token", token) == token
 
     def test_device_private_key_pattern(self) -> None:

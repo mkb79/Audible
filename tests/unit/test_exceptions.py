@@ -1,7 +1,9 @@
 """Tests for audible.exceptions module."""
 
-import pytest
 from unittest.mock import Mock
+
+import pytest
+
 from audible import exceptions
 
 

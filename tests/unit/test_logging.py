@@ -1,9 +1,11 @@
 """Tests for audible._logging module."""
 
 import logging
-import pytest
 from pathlib import Path
-from audible._logging import AudibleLogHelper, log_helper, logger, log_formatter
+
+import pytest
+
+from audible._logging import AudibleLogHelper, log_formatter, log_helper, logger
 
 
 @pytest.fixture
@@ -52,7 +54,9 @@ class TestAudibleLogHelperSetLevel:
         log_helper_instance.set_level(level_str)
         assert logger.level == level_int
 
-    def test_set_level_case_insensitive(self, log_helper_instance: AudibleLogHelper) -> None:
+    def test_set_level_case_insensitive(
+        self, log_helper_instance: AudibleLogHelper
+    ) -> None:
         """set_level converts string to uppercase."""
         log_helper_instance.set_level("debug")
         assert logger.level == logging.DEBUG
@@ -64,7 +68,9 @@ class TestAudibleLogHelperSetLevel:
 class TestSetConsoleLogger:
     """Tests for set_console_logger method."""
 
-    def test_set_console_logger_creates_handler(self, log_helper_instance: AudibleLogHelper) -> None:
+    def test_set_console_logger_creates_handler(
+        self, log_helper_instance: AudibleLogHelper
+    ) -> None:
         """set_console_logger creates console handler."""
         logger.handlers.clear()
 
@@ -78,7 +84,9 @@ class TestSetConsoleLogger:
         handler = stream_handlers[0]
         assert handler.name == "ConsoleLogger"
 
-    def test_set_console_logger_with_level(self, log_helper_instance: AudibleLogHelper) -> None:
+    def test_set_console_logger_with_level(
+        self, log_helper_instance: AudibleLogHelper
+    ) -> None:
         """set_console_logger respects level parameter."""
         logger.handlers.clear()
 
@@ -90,7 +98,9 @@ class TestSetConsoleLogger:
         handler = stream_handlers[0]
         assert handler.level == logging.DEBUG
 
-    def test_set_console_logger_has_formatter(self, log_helper_instance: AudibleLogHelper) -> None:
+    def test_set_console_logger_has_formatter(
+        self, log_helper_instance: AudibleLogHelper
+    ) -> None:
         """Console handler has formatter."""
         logger.handlers.clear()
 
@@ -106,7 +116,9 @@ class TestSetConsoleLogger:
 class TestSetFileLogger:
     """Tests for set_file_logger method."""
 
-    def test_set_file_logger_with_string_path(self, log_helper_instance: AudibleLogHelper, temp_log_file: Path) -> None:
+    def test_set_file_logger_with_string_path(
+        self, log_helper_instance: AudibleLogHelper, temp_log_file: Path
+    ) -> None:
         """set_file_logger accepts string path."""
         logger.handlers.clear()
 
@@ -119,7 +131,9 @@ class TestSetFileLogger:
         handler = file_handlers[0]
         assert isinstance(handler, logging.FileHandler)
 
-    def test_set_file_logger_with_path_object(self, log_helper_instance: AudibleLogHelper, temp_log_file: Path) -> None:
+    def test_set_file_logger_with_path_object(
+        self, log_helper_instance: AudibleLogHelper, temp_log_file: Path
+    ) -> None:
         """set_file_logger accepts Path object."""
         logger.handlers.clear()
 
@@ -130,7 +144,9 @@ class TestSetFileLogger:
         ]
         assert len(file_handlers) == 1
 
-    def test_set_file_logger_creates_file(self, log_helper_instance: AudibleLogHelper, temp_log_file: Path) -> None:
+    def test_set_file_logger_creates_file(
+        self, log_helper_instance: AudibleLogHelper, temp_log_file: Path
+    ) -> None:
         """File logger creates log file."""
         logger.handlers.clear()
         logger.setLevel(logging.ERROR)
@@ -146,7 +162,9 @@ class TestSetFileLogger:
         content = temp_log_file.read_text()
         assert "Test message" in content
 
-    def test_set_file_logger_with_level(self, log_helper_instance: AudibleLogHelper, temp_log_file: Path) -> None:
+    def test_set_file_logger_with_level(
+        self, log_helper_instance: AudibleLogHelper, temp_log_file: Path
+    ) -> None:
         """set_file_logger respects level parameter."""
         logger.handlers.clear()
 
@@ -158,7 +176,9 @@ class TestSetFileLogger:
         handler = file_handlers[0]
         assert handler.level == logging.WARNING
 
-    def test_set_file_logger_has_name(self, log_helper_instance: AudibleLogHelper, temp_log_file: Path) -> None:
+    def test_set_file_logger_has_name(
+        self, log_helper_instance: AudibleLogHelper, temp_log_file: Path
+    ) -> None:
         """File logger has correct name."""
         logger.handlers.clear()
 
@@ -221,7 +241,9 @@ class TestLoggerConfiguration:
 class TestPrivateSetLevel:
     """Tests for _set_level static method."""
 
-    def test_set_level_with_none_does_nothing(self, log_helper_instance: AudibleLogHelper) -> None:
+    def test_set_level_with_none_does_nothing(
+        self, log_helper_instance: AudibleLogHelper
+    ) -> None:
         """_set_level with None doesn't change level."""
         test_logger = logging.getLogger("test")
         original_level = test_logger.level

@@ -2,15 +2,16 @@
 
 from __future__ import annotations
 
-import pytest
-from typing import Any
 from unittest.mock import Mock, patch
+
+import pytest
 from httpcore import ConnectError
+
 from audible.localization import (
     LOCALE_TEMPLATES,
-    search_template,
-    autodetect_locale,
     Locale,
+    autodetect_locale,
+    search_template,
 )
 
 
@@ -40,7 +41,7 @@ class TestLocaleTemplates:
         """Each template has required fields."""
         required_keys = {"country_code", "domain", "market_place_id"}
 
-        for country, locale in LOCALE_TEMPLATES.items():
+        for _country, locale in LOCALE_TEMPLATES.items():
             assert set(locale.keys()) == required_keys
 
 
@@ -89,7 +90,9 @@ def mock_httpx_response() -> Mock:
 class TestAutodetectLocale:
     """Tests for autodetect_locale function."""
 
-    def test_autodetect_locale_extracts_correctly(self, mock_httpx_response: Mock) -> None:
+    def test_autodetect_locale_extracts_correctly(
+        self, mock_httpx_response: Mock
+    ) -> None:
         """autodetect_locale extracts locale correctly."""
         with patch("audible.localization.httpx.get") as mock_get:
             mock_get.return_value = mock_httpx_response
@@ -130,7 +133,9 @@ class TestAutodetectLocale:
             with pytest.raises(Exception, match="can't find country code"):
                 autodetect_locale("test.com")
 
-    def test_autodetect_locale_strips_leading_dot(self, mock_httpx_response: Mock) -> None:
+    def test_autodetect_locale_strips_leading_dot(
+        self, mock_httpx_response: Mock
+    ) -> None:
         """autodetect_locale strips leading dot from domain."""
         with patch("audible.localization.httpx.get") as mock_get:
             mock_get.return_value = mock_httpx_response
