@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import base64
 import hmac
-import json
 import logging
 import pathlib
 import re
@@ -13,7 +12,7 @@ from hashlib import sha256
 from typing import TYPE_CHECKING, Any, Literal, cast
 
 from .crypto import get_crypto_providers
-from .json import get_json_provider
+from .json import JSONDecodeError, get_json_provider
 
 
 if TYPE_CHECKING:
@@ -399,7 +398,7 @@ def detect_file_encryption(
             encryption = False
         elif "ciphertext" in file_json:
             encryption = "json"
-    except UnicodeDecodeError:
+    except (UnicodeDecodeError, JSONDecodeError):
         encryption = "bytes"
 
     return encryption
@@ -461,7 +460,7 @@ def _decrypt_voucher(
     try:
         voucher_dict: dict[str, Any] = get_json_provider().loads(plaintext)
         return voucher_dict
-    except json.JSONDecodeError:
+    except JSONDecodeError:
         fmt = r"^{\"key\":\"(?P<key>.*?)\",\"iv\":\"(?P<iv>.*?)\","
         match = re.match(fmt, plaintext)
         if match is None:

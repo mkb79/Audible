@@ -1,5 +1,4 @@
 import inspect
-import json
 import logging
 from abc import ABCMeta, abstractmethod
 from collections.abc import Callable, Coroutine
@@ -30,7 +29,7 @@ from .exceptions import (
     Unauthorized,
     UnexpectedError,
 )
-from .json import get_json_provider
+from .json import JSONDecodeError, get_json_provider
 from .localization import LOCALE_TEMPLATES, Locale
 
 
@@ -71,8 +70,8 @@ def raise_for_status(resp: httpx.Response) -> None:
 def convert_response_content(resp: httpx.Response) -> Any:
     try:
         return get_json_provider().loads(resp.text)
-    except (json.JSONDecodeError, ValueError) as e:
-        # Catches JSONDecodeError (stdlib) and ValueError (orjson, ujson, rapidjson)
+    except JSONDecodeError as e:
+        # All JSON providers raise JSONDecodeError for invalid JSON
         # Falls back to returning raw text if JSON parsing fails
         logger.debug("JSON parsing failed: %s", e, exc_info=True)
         return resp.text

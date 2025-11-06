@@ -20,6 +20,29 @@ class JSONProvider(Protocol):
     - Custom indentation (for human-readable output)
     - Custom separators (for compact output)
     - ASCII vs Unicode output control
+
+    Exception Handling:
+        All implementations MUST raise :exc:`audible.json.JSONDecodeError` when
+        JSON parsing fails, and :exc:`audible.json.JSONEncodeError` when
+        serialization fails. This ensures consistent error handling across
+        all providers and calling code.
+
+        Custom providers should wrap library-specific exceptions::
+
+            from audible.json import JSONDecodeError, JSONEncodeError
+            import some_json_lib
+
+            def loads(self, s: str | bytes) -> Any:
+                try:
+                    return some_json_lib.loads(s)
+                except some_json_lib.DecodeError as e:
+                    raise JSONDecodeError(str(e)) from e
+
+            def dumps(self, obj: Any, ...) -> str:
+                try:
+                    return some_json_lib.dumps(obj, ...)
+                except some_json_lib.EncodeError as e:
+                    raise JSONEncodeError(str(e)) from e
     """
 
     def dumps(

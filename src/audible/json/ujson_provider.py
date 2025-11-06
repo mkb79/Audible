@@ -19,6 +19,8 @@ import json
 import logging
 from typing import Any
 
+from .exceptions import JSONDecodeError, JSONEncodeError
+
 
 # Optional import - only available if ujson is installed
 try:
@@ -89,6 +91,9 @@ class UjsonProvider:
         Returns:
             JSON string representation.
 
+        Raises:
+            JSONEncodeError: If obj cannot be serialized to JSON.
+
         Note:
             Falls back to stdlib json if separators are specified, as ujson
             doesn't support custom separators.
@@ -96,19 +101,25 @@ class UjsonProvider:
         # Fallback to stdlib for separators (ujson doesn't support this)
         if separators is not None:
             logger.debug("ujson -> stdlib fallback (separators not supported)")
-            return json.dumps(
-                obj,
-                indent=indent,
-                separators=separators,
-                ensure_ascii=ensure_ascii,
-            )
+            try:
+                return json.dumps(
+                    obj,
+                    indent=indent,
+                    separators=separators,
+                    ensure_ascii=ensure_ascii,
+                )
+            except (TypeError, ValueError) as e:
+                raise JSONEncodeError(f"Object not JSON serializable: {e}") from e
 
         # ujson native handling
-        return ujson.dumps(
-            obj,
-            indent=indent if indent is not None else 0,
-            ensure_ascii=ensure_ascii,
-        )
+        try:
+            return ujson.dumps(
+                obj,
+                indent=indent if indent is not None else 0,
+                ensure_ascii=ensure_ascii,
+            )
+        except (TypeError, ValueError, OverflowError) as e:
+            raise JSONEncodeError(f"Object not JSON serializable: {e}") from e
 
     def loads(self, s: str | bytes) -> Any:
         """Deserialize JSON string using ujson.
@@ -120,14 +131,18 @@ class UjsonProvider:
             Deserialized Python object.
 
         Raises:
-            ValueError: If bytes contain invalid UTF-8 sequences.
+            JSONDecodeError: If s contains invalid JSON or invalid UTF-8.
         """
         if isinstance(s, bytes):
             try:
                 s = s.decode("utf-8")
             except UnicodeDecodeError as e:
-                raise ValueError(f"Invalid UTF-8 in JSON bytes: {e}") from e
-        return ujson.loads(s)
+                raise JSONDecodeError(f"Invalid UTF-8 in JSON bytes: {e}") from e
+
+        try:
+            return ujson.loads(s)
+        except (ujson.JSONDecodeError, ValueError) as e:
+            raise JSONDecodeError(str(e)) from e
 
     @property
     def provider_name(self) -> str:

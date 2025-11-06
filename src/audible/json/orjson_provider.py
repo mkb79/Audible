@@ -22,6 +22,8 @@ import json
 import logging
 from typing import TYPE_CHECKING, Any
 
+from .exceptions import JSONDecodeError, JSONEncodeError
+
 
 if TYPE_CHECKING:
     from .protocols import JSONProvider
@@ -146,6 +148,9 @@ class OrjsonProvider:
         Returns:
             JSON string representation.
 
+        Raises:
+            JSONEncodeError: If obj cannot be serialized to JSON.
+
         Note:
             - separators -> stdlib fallback (orjson doesn't support)
             - indent=4 or other -> ujson/rapidjson/stdlib fallback
@@ -156,12 +161,15 @@ class OrjsonProvider:
             logger.debug(
                 "orjson -> stdlib fallback (separators requested, rare use case)"
             )
-            return json.dumps(
-                obj,
-                indent=indent,
-                separators=separators,
-                ensure_ascii=ensure_ascii,
-            )
+            try:
+                return json.dumps(
+                    obj,
+                    indent=indent,
+                    separators=separators,
+                    ensure_ascii=ensure_ascii,
+                )
+            except (TypeError, ValueError) as e:
+                raise JSONEncodeError(f"Object not JSON serializable: {e}") from e
 
         # Case 2: indent != 2 and indent != None -> use fallback provider
         if indent is not None and indent != 2:
@@ -177,8 +185,11 @@ class OrjsonProvider:
             option |= orjson.OPT_INDENT_2
 
         # orjson always returns bytes, decode to str
-        result = orjson.dumps(obj, option=option)
-        return result.decode("utf-8")
+        try:
+            result = orjson.dumps(obj, option=option)
+            return result.decode("utf-8")
+        except (TypeError, ValueError) as e:
+            raise JSONEncodeError(f"Object not JSON serializable: {e}") from e
 
     def loads(self, s: str | bytes) -> Any:
         """Deserialize JSON string using orjson.
@@ -190,7 +201,7 @@ class OrjsonProvider:
             Deserialized Python object.
 
         Raises:
-            ValueError: If string cannot be encoded to UTF-8.
+            JSONDecodeError: If s contains invalid JSON or invalid UTF-8.
 
         Note:
             orjson handles all deserialization cases natively (no fallback needed).
@@ -199,8 +210,12 @@ class OrjsonProvider:
             try:
                 s = s.encode("utf-8")
             except UnicodeEncodeError as e:
-                raise ValueError(f"Invalid characters in JSON string: {e}") from e
-        return orjson.loads(s)
+                raise JSONDecodeError(f"Invalid UTF-8 in JSON string: {e}") from e
+
+        try:
+            return orjson.loads(s)
+        except (orjson.JSONDecodeError, ValueError) as e:
+            raise JSONDecodeError(str(e)) from e
 
     @property
     def provider_name(self) -> str:

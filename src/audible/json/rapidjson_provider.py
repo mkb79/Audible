@@ -19,6 +19,8 @@ import json
 import logging
 from typing import Any
 
+from .exceptions import JSONDecodeError, JSONEncodeError
+
 
 # Optional import - only available if python-rapidjson is installed
 try:
@@ -89,6 +91,9 @@ class RapidjsonProvider:
         Returns:
             JSON string representation.
 
+        Raises:
+            JSONEncodeError: If obj cannot be serialized to JSON.
+
         Note:
             Falls back to stdlib json if separators are specified, as rapidjson
             doesn't support custom separators.
@@ -96,18 +101,24 @@ class RapidjsonProvider:
         # Fallback to stdlib for separators (rapidjson doesn't support this)
         if separators is not None:
             logger.debug("rapidjson -> stdlib fallback (separators not supported)")
-            return json.dumps(
-                obj,
-                indent=indent,
-                separators=separators,
-                ensure_ascii=ensure_ascii,
-            )
+            try:
+                return json.dumps(
+                    obj,
+                    indent=indent,
+                    separators=separators,
+                    ensure_ascii=ensure_ascii,
+                )
+            except (TypeError, ValueError) as e:
+                raise JSONEncodeError(f"Object not JSON serializable: {e}") from e
 
         # rapidjson native handling
         # Note: rapidjson uses different parameter names
-        if indent is not None:
-            return rapidjson.dumps(obj, indent=indent, ensure_ascii=ensure_ascii)
-        return rapidjson.dumps(obj, ensure_ascii=ensure_ascii)
+        try:
+            if indent is not None:
+                return rapidjson.dumps(obj, indent=indent, ensure_ascii=ensure_ascii)
+            return rapidjson.dumps(obj, ensure_ascii=ensure_ascii)
+        except (TypeError, ValueError, OverflowError) as e:
+            raise JSONEncodeError(f"Object not JSON serializable: {e}") from e
 
     def loads(self, s: str | bytes) -> Any:
         """Deserialize JSON string using python-rapidjson.
@@ -119,14 +130,18 @@ class RapidjsonProvider:
             Deserialized Python object.
 
         Raises:
-            ValueError: If bytes contain invalid UTF-8 sequences.
+            JSONDecodeError: If s contains invalid JSON or invalid UTF-8.
         """
         if isinstance(s, bytes):
             try:
                 s = s.decode("utf-8")
             except UnicodeDecodeError as e:
-                raise ValueError(f"Invalid UTF-8 in JSON bytes: {e}") from e
-        return rapidjson.loads(s)
+                raise JSONDecodeError(f"Invalid UTF-8 in JSON bytes: {e}") from e
+
+        try:
+            return rapidjson.loads(s)
+        except (rapidjson.JSONDecodeError, ValueError) as e:
+            raise JSONDecodeError(str(e)) from e
 
     @property
     def provider_name(self) -> str:

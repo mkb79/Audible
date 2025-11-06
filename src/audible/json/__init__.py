@@ -26,6 +26,7 @@ Example:
     'orjson'
 """
 
+from .exceptions import JSONDecodeError, JSONEncodeError
 from .orjson_provider import OrjsonProvider
 from .protocols import JSONProvider
 from .rapidjson_provider import RapidjsonProvider
@@ -35,6 +36,8 @@ from .ujson_provider import UjsonProvider
 
 
 __all__ = [
+    "JSONDecodeError",
+    "JSONEncodeError",
     "JSONProvider",
     "OrjsonProvider",
     "RapidjsonProvider",
