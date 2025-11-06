@@ -13,11 +13,10 @@ from audible.utils import ElapsedTime, test_convert as utils_convert
 
 try:
     from typeguard import TypeCheckError
+
+    TYPE_ERRORS = (TypeError, TypeCheckError)
 except ImportError:  # pragma: no cover - fallback when typeguard absent
-    TypeCheckError = TypeError
-
-
-TYPE_ERRORS = (TypeError, TypeCheckError)
+    TYPE_ERRORS = (TypeError,)  # type: ignore[assignment]
 
 
 class TestTestConvertSuccess:
