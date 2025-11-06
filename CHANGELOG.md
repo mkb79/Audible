@@ -6,6 +6,80 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## Unreleased
 
+### Added
+
+- Optional high-performance crypto backends for significantly improved performance:
+  - `cryptography` (Rust-accelerated, recommended) - install with `pip install audible[cryptography]`
+  - `pycryptodome` (C-based) - install with `pip install audible[pycryptodome]`
+  - Automatic provider selection: cryptography → pycryptodome → legacy (pure Python fallback)
+  - Performance improvements: 5-10x faster AES operations, 10-20x faster RSA operations, 3-5x faster PBKDF2, 5-10x faster hashing
+- New `audible.crypto` module with protocol-based provider abstraction layer:
+  - `protocols.py` - Type-safe Protocol definitions for crypto operations
+  - `cryptography_provider.py` - High-performance implementation using cryptography library
+  - `pycryptodome_provider.py` - High-performance implementation using pycryptodome library
+  - `legacy_provider.py` - Pure-Python implementation wrapper (pyaes, rsa, pbkdf2)
+  - `registry.py` - Provider selection and caching with lazy initialization
+- RSA key caching in `Authenticator` for improved performance on repeated API requests
+- Provider override capability: pass `crypto_provider` parameter to `Authenticator.from_file()` and related methods
+- Process-wide default provider configuration via `set_default_crypto_provider()`
+- Optional high-performance JSON backends for significantly improved JSON serialization performance:
+  - `orjson` (Rust-based, 4-5x faster for compact JSON) - install with `pip install audible[orjson]`
+  - `ujson` (C-based, 2-3x faster with indent=4 support) - install with `pip install audible[ujson]`
+  - `rapidjson` (C++ based, 2-3x faster) - install with `pip install audible[rapidjson]`
+  - `json-full` extra (recommended) - install with `pip install audible[json-full]` for complete coverage (orjson + ujson)
+  - `json-fast` extra - install with `pip install audible[json-fast]` for orjson only
+  - Automatic provider selection: orjson → ujson → rapidjson → stdlib (pure Python fallback)
+  - Performance improvements: 4-5x faster compact JSON (orjson), 2-3x faster pretty-printed JSON (ujson/rapidjson)
+  - Smart fallback logic: orjson automatically uses ujson/rapidjson for indent=4
+- New `audible.json` module with protocol-based provider abstraction layer:
+  - `protocols.py` - Type-safe Protocol definition for JSON operations
+  - `orjson_provider.py` - High-performance implementation using orjson library with smart fallback logic
+  - `ujson_provider.py` - High-performance implementation using ujson library
+  - `rapidjson_provider.py` - High-performance implementation using python-rapidjson library
+  - `stdlib_provider.py` - Standard library json wrapper (always available)
+  - `registry.py` - Provider selection and caching with auto-detection
+- Process-wide default JSON provider configuration via `set_default_json_provider()`
+
+### Changed
+
+- **Replaced `darglint` with `pydoclint` for docstring validation** - modern, actively maintained alternative with better Protocol support
+- `aescipher.py` now uses crypto providers for AES, PBKDF2, and hashing operations
+- `aescipher.py` now uses JSON providers for JSON serialization/deserialization
+- `auth.py` now uses crypto providers for RSA signing operations
+- `auth.py` now uses JSON providers for JSON serialization/deserialization
+- `login.py` now uses JSON providers for JSON serialization
+- `client.py` now uses JSON providers for HTTP response deserialization (replaces httpx's internal json.loads())
+- `metadata.py` still uses stdlib json directly for separators (edge case)
+- **Performance optimization**: Request parameter lookup now uses `frozenset` instead of `list` for O(1) membership testing (previously O(n))
+- **Performance optimization**: Debug logging in `client.py` now uses lazy evaluation with `isEnabledFor(logging.DEBUG)` to avoid expensive response text formatting when debug logging is disabled
+- Replaced `os.urandom` with `secrets.token_bytes` for better cryptographic randomness
+- Improved error messages and type annotations throughout crypto layer
+- Improved error messages and type annotations throughout JSON layer
+- Simplified RSA key loading by removing redundant module-level cache (Authenticator-level caching remains)
+- Improved docstring quality across codebase:
+  - Added missing return type documentation in Protocol definitions
+  - Moved `__init__` docstrings to class-level (Google Style Guide compliant)
+  - Added explicit type hints for `hashmod` and `mac` parameters
+  - Fixed argument order mismatches between signatures and docstrings
+  - Added missing exception documentation
+
+### Fixed
+
+- Prevent SHA-1 deprecation warning spam from cryptography library
+- Security vulnerabilities in crypto handling
+- MyPy typing issues in crypto provider implementations
+
+### Documentation
+
+- Added comprehensive installation guide for crypto extras in README and docs
+- Added comprehensive installation guide for JSON extras in README
+- Added performance benchmarks and provider selection documentation for crypto providers
+- Added performance benchmarks and provider selection documentation for JSON providers
+- Added version requirement notes (crypto features available in audible >= 0.11.0)
+- Added version requirement notes (JSON features available in audible >= 0.11.0)
+- Added example scripts for crypto provider usage
+- Added example scripts for JSON provider usage (`examples/test_json_autodetect.py`, `examples/test_json_explicit.py`)
+
 ### Bugfix
 
 - Make register() resilient to missing fields in the registration response:

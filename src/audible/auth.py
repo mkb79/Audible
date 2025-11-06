@@ -1,5 +1,6 @@
+from __future__ import annotations
+
 import base64
-import json
 import logging
 from collections.abc import Callable, Generator, Iterator
 from datetime import datetime, timedelta, timezone
@@ -7,19 +8,18 @@ from typing import (
     TYPE_CHECKING,
     Any,
     Literal,
-    Optional,
-    Union,
     cast,
     overload,
 )
 
 import httpx
-import rsa
 from httpx import Cookies
 
 from .activation_bytes import get_activation_bytes as get_ab
 from .aescipher import AESCipher, detect_file_encryption
+from .crypto import get_crypto_providers
 from .exceptions import AuthFlowError, FileEncryptionError, NoRefreshToken
+from .json import get_json_provider
 from .login import external_login, login
 from .register import deregister as deregister_
 from .register import register as register_
@@ -30,6 +30,7 @@ if TYPE_CHECKING:
     import pathlib
 
     from ._types import TrueFalseT
+    from .crypto.protocols import CryptoProvider
     from .localization import Locale
 
 
@@ -179,16 +180,25 @@ def user_profile_audible(access_token: str, domain: str) -> dict[str, Any]:
 
 
 def sign_request(
-    method: str, path: str, body: bytes, adp_token: str, private_key: str
+    method: str,
+    path: str,
+    body: bytes,
+    adp_token: str,
+    private_key: str,
+    cached_key: Any = None,
+    crypto_provider: CryptoProvider | type[CryptoProvider] | None = None,
 ) -> dict[str, str]:
     """Helper function who creates signed headers for http requests.
 
     Args:
-        path: The requested http url path and query.
         method: The http request method (GET, POST, DELETE, ...).
+        path: The requested http url path and query.
         body: The http message body.
         adp_token: The adp token obtained after a device registration.
         private_key: The rsa key obtained after device registration.
+        cached_key: Optional pre-loaded RSA key object for performance.
+            If provided, private_key parsing is skipped.
+        crypto_provider: Optional provider override (class or instance).
 
     Returns:
         A dict with the signed headers.
@@ -198,8 +208,15 @@ def sign_request(
 
     data = f"{method}\n{path}\n{date}\n{str_body}\n{adp_token}"
 
-    key = rsa.PrivateKey.load_pkcs1(private_key.encode("utf-8"))
-    cipher = rsa.pkcs1.sign(data.encode(), key, "SHA-256")
+    providers = get_crypto_providers(crypto_provider)
+
+    # Use cached key if provided, otherwise load from PEM
+    if cached_key is None:
+        key = providers.rsa.load_private_key(private_key)
+    else:
+        key = cached_key
+
+    cipher = providers.rsa.sign(key, data.encode(), "SHA-256")
     signed_encoded = base64.b64encode(cipher)
 
     signature = f"{signed_encoded.decode()}:{date}"
@@ -229,6 +246,22 @@ class Authenticator(httpx.Auth):
         save the data again. After this deregistration, refreshing access
         tokens and requesting cookies for another domain will work for
         pre-Amazon accounts.
+
+    Thread Safety:
+        Authenticator instances are **not thread-safe** and should not be
+        shared across threads. The internal state (access tokens, RSA key cache)
+        can be modified during request signing and token refresh operations,
+        leading to race conditions.
+
+        For multi-threaded applications, create separate Authenticator instances
+        per thread, or use appropriate locking mechanisms around Authenticator
+        usage.
+
+    Note:
+        The ``device_private_key`` attribute is monitored for changes.
+        When modified, the cached RSA key is automatically invalidated to
+        ensure the correct key is used for signing. The new key will be
+        loaded and cached on the next signing operation.
     """
 
     access_token: str | None = None
@@ -240,8 +273,8 @@ class Authenticator(httpx.Auth):
     device_private_key: str | None = None
     encryption: str | bool | None = None
     expires: float | None = None
-    filename: Optional["pathlib.Path"] = None
-    locale: Optional["Locale"] = None
+    filename: pathlib.Path | None = None
+    locale: Locale | None = None
     refresh_token: str | None = None
     store_authentication_cookie: dict[str, Any] | None = None
     website_cookies: dict[str, Any] | None = None
@@ -249,6 +282,18 @@ class Authenticator(httpx.Auth):
     requires_request_body: bool = True
     _forbid_new_attrs: bool = True
     _apply_test_convert: bool = True
+    _cached_rsa_key: Any = None
+    _crypto_provider: CryptoProvider | None = None
+
+    def __init__(
+        self,
+        *,
+        crypto_provider: CryptoProvider | type[CryptoProvider] | None = None,
+    ) -> None:
+        super().__init__()
+
+        if crypto_provider is not None:
+            self._crypto_provider = get_crypto_providers(crypto_provider)
 
     def __setattr__(self, attr: str, value: Any) -> None:
         if self._forbid_new_attrs and not hasattr(self, attr):
@@ -258,6 +303,12 @@ class Authenticator(httpx.Auth):
 
         if self._apply_test_convert:
             value = test_convert(attr, value)
+
+        # Invalidate RSA key cache if device_private_key changes
+        if attr == "device_private_key" and hasattr(self, "_cached_rsa_key"):
+            object.__setattr__(self, "_cached_rsa_key", None)
+            logger.debug("Invalidated cached RSA key due to device_private_key change")
+
         object.__setattr__(self, attr, value)
 
     def __iter__(self) -> Iterator[str]:
@@ -275,10 +326,22 @@ class Authenticator(httpx.Auth):
         for attr, value in kwargs.items():
             setattr(self, attr, value)
 
+    def _get_crypto(self) -> CryptoProvider:
+        """Return the configured crypto provider for this authenticator."""
+        if self._crypto_provider is not None:
+            return self._crypto_provider
+
+        self._crypto_provider = get_crypto_providers()
+        return self._crypto_provider
+
     @classmethod
     def from_dict(
-        cls, data: dict[str, Any], locale: Union[str, "Locale"] | None = None
-    ) -> "Authenticator":
+        cls,
+        data: dict[str, Any],
+        locale: str | Locale | None = None,
+        *,
+        crypto_provider: CryptoProvider | type[CryptoProvider] | None = None,
+    ) -> Authenticator:
         """Instantiate an Authenticator from authentication file.
 
         .. versionadded:: v0.7.1
@@ -287,11 +350,12 @@ class Authenticator(httpx.Auth):
             data: A dictionary with the authentication data
             locale: The country code of the Audible marketplace to interact
                 with. If ``None`` the country code from file is used.
+            crypto_provider: Optional provider override (class or instance).
 
         Returns:
             A new Authenticator instance.
         """
-        auth = cls()
+        auth = cls(crypto_provider=crypto_provider)
 
         locale_code: str | None = data.pop("locale_code", None)
         auth.locale = cast("Locale", locale or locale_code)
@@ -308,12 +372,13 @@ class Authenticator(httpx.Auth):
     @classmethod
     def from_file(
         cls,
-        filename: Union[str, "pathlib.Path"],
+        filename: str | pathlib.Path,
         password: str | None = None,
-        locale: Union[str, "Locale"] | None = None,
+        locale: str | Locale | None = None,
         encryption: bool | str | None = None,
+        crypto_provider: CryptoProvider | type[CryptoProvider] | None = None,
         **kwargs: Any,
-    ) -> "Authenticator":
+    ) -> Authenticator:
         """Instantiate an Authenticator from authentication file.
 
         .. versionadded:: v0.5.0
@@ -326,6 +391,7 @@ class Authenticator(httpx.Auth):
                 with. If ``None`` the country code from file is used.
             encryption: The encryption style to use. Can be ``json`` or
                 ``bytes``. If ``None``, encryption will be auto detected.
+            crypto_provider: Optional provider override (class or instance).
             **kwargs: Keyword arguments are passed to the
                 :class:`~audible.aescipher.AESCipher` class. See below.
 
@@ -342,7 +408,7 @@ class Authenticator(httpx.Auth):
         Raises:
             FileEncryptionError: If file ist encrypted without providing a password
         """
-        auth = cls()
+        auth = cls(crypto_provider=crypto_provider)
         auth.filename = cast("pathlib.Path", filename)
         auth.encryption = encryption or detect_file_encryption(auth.filename)
 
@@ -351,12 +417,15 @@ class Authenticator(httpx.Auth):
                 message = "File is encrypted but no password provided."
                 logger.critical(message)
                 raise FileEncryptionError(message)
-            auth.crypter = AESCipher(password, **kwargs)
+            cipher_kwargs = dict(kwargs)
+            if "crypto_provider" not in cipher_kwargs:
+                cipher_kwargs["crypto_provider"] = auth._get_crypto()
+            auth.crypter = AESCipher(password, **cipher_kwargs)
             file_data = auth.crypter.from_file(auth.filename, auth.encryption)
         else:
             file_data = auth.filename.read_text()
 
-        json_data = json.loads(file_data)
+        json_data = get_json_provider().loads(file_data)
 
         locale_code = json_data.pop("locale_code", None)
         locale = locale or locale_code
@@ -381,14 +450,15 @@ class Authenticator(httpx.Auth):
         cls,
         username: str,
         password: str,
-        locale: Union[str, "Locale"],
+        locale: str | Locale,
         serial: str | None = None,
         with_username: bool = False,
         captcha_callback: Callable[[str], str] | None = None,
         otp_callback: Callable[[], str] | None = None,
         cvf_callback: Callable[[], str] | None = None,
         approval_callback: Callable[[], Any] | None = None,
-    ) -> "Authenticator":
+        crypto_provider: CryptoProvider | type[CryptoProvider] | None = None,
+    ) -> Authenticator:
         """Instantiate a new Authenticator with authentication data from login.
 
         .. versionadded:: v0.5.0
@@ -412,11 +482,12 @@ class Authenticator(httpx.Auth):
             cvf_callback: A custom callback to handle verify code requests
                 during login.
             approval_callback: A custom Callable for handling approval alerts.
+            crypto_provider: Optional provider override (class or instance).
 
         Returns:
-            An :class:`~audible.auth.Authenticator` instance.
+            Authenticator: New authenticator populated with registration data.
         """
-        auth = cls()
+        auth = cls(crypto_provider=crypto_provider)
         auth.locale = cast("Locale", locale)
 
         login_device = login(
@@ -443,11 +514,12 @@ class Authenticator(httpx.Auth):
     @classmethod
     def from_login_external(
         cls,
-        locale: Union[str, "Locale"],
+        locale: str | Locale,
         serial: str | None = None,
         with_username: bool = False,
         login_url_callback: Callable[[str], str] | None = None,
-    ) -> "Authenticator":
+        crypto_provider: CryptoProvider | type[CryptoProvider] | None = None,
+    ) -> Authenticator:
         """Instantiate a new Authenticator from login with external browser.
 
         .. versionadded:: v0.5.1
@@ -464,11 +536,12 @@ class Authenticator(httpx.Auth):
                 of Amazon account.
             login_url_callback: A custom Callable for handling login with
                 external browsers.
+            crypto_provider: Optional provider override (class or instance).
 
         Returns:
-            An :class:`~audible.auth.Authenticator` instance.
+            Authenticator: New authenticator populated with registration data.
         """
-        auth = cls()
+        auth = cls(crypto_provider=crypto_provider)
         auth.locale = cast("Locale", locale)
 
         login_device = external_login(
@@ -497,7 +570,7 @@ class Authenticator(httpx.Auth):
             request: The request made by ``httpx``.
 
         Yields:
-            The next request
+            httpx.Request: The authenticated request with signed headers.
 
         Raises:
             AuthFlowError: If no auth flow is available.
@@ -519,12 +592,23 @@ class Authenticator(httpx.Auth):
         if self.adp_token is None or self.device_private_key is None:
             raise Exception("No signing data found.")
 
+        providers = self._get_crypto()
+
+        # Load and cache RSA key on first use for performance
+        if self._cached_rsa_key is None:
+            self._cached_rsa_key = providers.rsa.load_private_key(
+                self.device_private_key
+            )
+            logger.debug("Loaded and cached RSA private key")
+
         headers = sign_request(
             method=request.method,
             path=request.url.raw_path.decode(),
             body=request.content,
             adp_token=self.adp_token,
             private_key=self.device_private_key,
+            cached_key=self._cached_rsa_key,
+            crypto_provider=providers,
         )
 
         request.headers.update(headers)
@@ -601,7 +685,7 @@ class Authenticator(httpx.Auth):
 
     def to_file(
         self,
-        filename: Union["pathlib.Path", str] | None = None,
+        filename: pathlib.Path | str | None = None,
         password: str | None = None,
         encryption: bool | str = "default",
         indent: int = 4,
@@ -632,14 +716,17 @@ class Authenticator(httpx.Auth):
             encryption = self.encryption or False
 
         data = self.to_dict()
-        json_data = json.dumps(data, indent=indent)
+        json_data = get_json_provider().dumps(data, indent=indent)
 
         if encryption is False:
             target_file.write_text(json_data)
             crypter = None
         else:
             if password:
-                crypter = test_convert("crypter", AESCipher(password, **kwargs))
+                cipher_kwargs = dict(kwargs)
+                if "crypto_provider" not in cipher_kwargs:
+                    cipher_kwargs["crypto_provider"] = self._get_crypto()
+                crypter = test_convert("crypter", AESCipher(password, **cipher_kwargs))
             elif self.crypter:
                 crypter = self.crypter
             else:
@@ -716,7 +803,7 @@ class Authenticator(httpx.Auth):
     @overload
     def get_activation_bytes(
         self,
-        filename: Union["pathlib.Path", str] | None = ...,
+        filename: pathlib.Path | str | None = ...,
         extract: Literal[True] = ...,
         force_refresh: bool = ...,
     ) -> str: ...
@@ -724,7 +811,7 @@ class Authenticator(httpx.Auth):
     @overload
     def get_activation_bytes(
         self,
-        filename: Union["pathlib.Path", str] | None = ...,
+        filename: pathlib.Path | str | None = ...,
         *,
         extract: Literal[False],
         force_refresh: bool = ...,
@@ -732,8 +819,8 @@ class Authenticator(httpx.Auth):
 
     def get_activation_bytes(
         self,
-        filename: Union["pathlib.Path", str] | None = None,
-        extract: "TrueFalseT" = True,
+        filename: pathlib.Path | str | None = None,
+        extract: TrueFalseT = True,
         force_refresh: bool = False,
     ) -> str | bytes:
         """Get Activation bytes from Audible.

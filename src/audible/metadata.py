@@ -96,17 +96,18 @@ class XXTEA:
 
     Easy to use and compatible (by duck typing) with the Blowfish class.
 
+    Args:
+        key: The encryption key (must be 128-bit / 16 characters).
+
+    Raises:
+        XXTEAException: If the key is not exactly 16 bytes long.
+
     Note:
         Partial copied from https://github.com/andersekbom/prycut and ported
         from PY2 to PY3
     """
 
     def __init__(self, key: str | bytes) -> None:
-        """Initializes the inner class data with the given key.
-
-        Note:
-            The key must be 128-bit (16 characters) in length.
-        """
         key = key.encode() if isinstance(key, str) else key
         if len(key) != 16:
             raise XXTEAException("Invalid key")

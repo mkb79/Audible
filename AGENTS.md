@@ -16,6 +16,13 @@
 - `uv run nox --session=pre-commit` executes the lint/format pipeline (ruff, docstring checks, etc.).
 - `uv run nox --session=docs-build` builds the Sphinx site into `docs/_build`.
 
+## Crypto Providers & Optional Dependencies
+
+- Install high-performance backends with `uv pip install audible[cryptography]`, `audible[pycryptodome]`, or both.
+- Auto-detection order is `cryptography` → `pycryptodome` → legacy (pure Python).
+- Prefer provider overrides via high-level APIs (e.g. `Authenticator.from_file(..., crypto_provider=CryptographyProvider)`); `get_crypto_providers()` is internal and should not be exposed in docs.
+- For global overrides use `set_default_crypto_provider(...)` and reset with `set_default_crypto_provider()`.
+
 ## Coding Style & Naming Conventions
 
 - Follow 4-space indentation, keep lines ≤88 characters, and include type hints; `pyproject.toml` enforces these via Ruff and mypy.
@@ -34,5 +41,13 @@
 
 - Follow the Conventional Commit style seen in history (`fix(register): handle missing fields (#797)`); scope names should match module directories.
 - Group related changes per commit, keep subject lines ≤72 characters, and include a concise body when context is non-trivial.
-- Run `uv run nox` before opening a pull request, link any related GitHub issues, and attach docs or CLI output screenshots when behavior changes.
+- **CRITICAL: Before every `git push`, run `uv run nox` to execute the full test suite.** This includes:
+  - pre-commit (formatting, linting)
+  - mypy (type checking)
+  - tests (unit tests across Python 3.10-3.13)
+  - typeguard (runtime type validation)
+  - xdoctest (documentation examples)
+  - docs-build (Sphinx documentation)
+- **If `uv run nox` reports failures, you MUST NOT push without explicit confirmation from the repository maintainer.** Fix the failures first or seek approval.
+- The only acceptable exception is the `safety` session (dependency vulnerability checks), which may fail due to external API issues.
 - Pull requests should summarize intent, list validation steps, and call out testing gaps or follow-up tasks so reviewers can respond quickly.

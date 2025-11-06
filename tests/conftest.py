@@ -1,49 +1,142 @@
-"""Shared fixtures and configuration for all tests.
+"""Pytest configuration and fixtures for audible tests."""
 
-This file contains common fixtures used across multiple test modules.
-pytest automatically discovers and loads this file.
-"""
+from __future__ import annotations
 
-from unittest.mock import Mock
+import json
+from collections.abc import Generator
+from pathlib import Path
+from typing import Any, cast
 
 import pytest
 
+from audible.crypto import set_default_crypto_provider
+from audible.json import set_default_json_provider
+
+
+try:
+    from audible.crypto.cryptography_provider import CRYPTOGRAPHY_AVAILABLE
+except ImportError:  # pragma: no cover - module missing when extra absent
+    CRYPTOGRAPHY_AVAILABLE = False
+
+try:
+    from audible.crypto.pycryptodome_provider import PYCRYPTODOME_AVAILABLE
+except ImportError:  # pragma: no cover - module missing when extra absent
+    PYCRYPTODOME_AVAILABLE = False
+
+
+# Test password for encrypted fixtures
+TEST_AUTH_PASSWORD = "test_password_123"  # noqa: S105
+
 
 @pytest.fixture
-def mock_response():
-    """Create a mock HTTP response object.
+def auth_fixture_path() -> Path:
+    """Path to unencrypted auth fixture.
 
     Returns:
-        Mock object configured to simulate an httpx Response.
+        Path to the unencrypted auth fixture JSON file.
     """
-    response = Mock()
-    response.status_code = 200
-    response.reason_phrase = "OK"
-    response.method = "GET"
-    response.json = Mock(return_value={})
-    return response
+    return Path(__file__).parent / "fixtures" / "auth_fixture.json"
 
 
 @pytest.fixture
-def sample_credentials():
-    """Provide sample authentication credentials for testing.
+def auth_fixture_encrypted_json_path() -> Path:
+    """Path to JSON-encrypted auth fixture.
 
     Returns:
-        Dictionary with test credentials.
+        Path to the JSON-encrypted auth fixture file.
     """
-    return {
-        "access_token": "test_access_token_123",
-        "refresh_token": "test_refresh_token_456",
-        "device_private_key": "test_private_key_789",
-        "adp_token": "test_adp_token_abc",
-        "expires": 3600,
-    }
+    return Path(__file__).parent / "fixtures" / "auth_fixture_encrypted_json.json"
 
 
-# Configure pytest
-def pytest_configure(config):
-    """Configure pytest with custom markers."""
-    config.addinivalue_line(
-        "markers", "slow: marks tests as slow (deselect with '-m \"not slow\"')"
+@pytest.fixture
+def auth_fixture_encrypted_bytes_path() -> Path:
+    """Path to bytes-encrypted auth fixture.
+
+    Returns:
+        Path to the bytes-encrypted auth fixture file.
+    """
+    return Path(__file__).parent / "fixtures" / "auth_fixture_encrypted_bytes.bin"
+
+
+@pytest.fixture
+def auth_fixture_data(auth_fixture_path: Path) -> dict[str, Any]:
+    """Load unencrypted auth fixture data.
+
+    Args:
+        auth_fixture_path: Path to the unencrypted fixture file.
+
+    Returns:
+        Dictionary containing the auth fixture data.
+    """
+    return cast(dict[str, Any], json.loads(auth_fixture_path.read_text()))
+
+
+@pytest.fixture
+def auth_fixture_encrypted_json_data(
+    auth_fixture_encrypted_json_path: Path,
+) -> dict[str, Any]:
+    """Load JSON-encrypted auth fixture data (encrypted content).
+
+    Args:
+        auth_fixture_encrypted_json_path: Path to the JSON-encrypted fixture file.
+
+    Returns:
+        Dictionary containing salt, iv, and ciphertext.
+    """
+    return cast(
+        dict[str, Any], json.loads(auth_fixture_encrypted_json_path.read_text())
     )
-    config.addinivalue_line("markers", "integration: marks tests as integration tests")
+
+
+@pytest.fixture
+def auth_fixture_encrypted_bytes_data(auth_fixture_encrypted_bytes_path: Path) -> bytes:
+    """Load bytes-encrypted auth fixture data (raw encrypted bytes).
+
+    Args:
+        auth_fixture_encrypted_bytes_path: Path to the bytes-encrypted fixture file.
+
+    Returns:
+        Raw bytes of the encrypted fixture.
+    """
+    return auth_fixture_encrypted_bytes_path.read_bytes()
+
+
+@pytest.fixture
+def auth_fixture_password() -> str:
+    """Password for encrypted auth fixtures.
+
+    Returns:
+        The test password used for encryption/decryption.
+    """
+    return TEST_AUTH_PASSWORD
+
+
+@pytest.fixture
+def rsa_private_key(auth_fixture_data: dict[str, Any]) -> str:
+    """RSA private key from auth fixture data."""
+    return cast(str, auth_fixture_data["device_private_key"])
+
+
+@pytest.fixture(autouse=True)
+def reset_crypto_provider_state() -> Generator[None, None, None]:
+    """Ensure crypto registry overrides are cleared between tests."""
+    set_default_crypto_provider()
+    yield
+    set_default_crypto_provider()
+
+
+@pytest.fixture(autouse=True)
+def reset_json_provider_state() -> Generator[None, None, None]:
+    """Ensure JSON registry overrides are cleared between tests."""
+    set_default_json_provider()
+    yield
+    set_default_json_provider()
+
+
+@pytest.fixture
+def crypto_provider_availability() -> dict[str, bool]:
+    """Report availability of optional crypto backends."""
+    return {
+        "cryptography": CRYPTOGRAPHY_AVAILABLE,
+        "pycryptodome": PYCRYPTODOME_AVAILABLE,
+    }

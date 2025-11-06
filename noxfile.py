@@ -39,6 +39,7 @@ TESTS_GROUP = "tests"
 COVERAGE_GROUP = TESTS_GROUP
 TYPEGUARD_GROUP = "typeguard"
 XDOCTEST_GROUP = "xdocs"
+EXTRA_DEPS_GROUP = "extra-deps"
 
 
 def activate_virtualenv_in_precommit_hooks(s: nox.Session) -> None:
@@ -154,7 +155,10 @@ def safety(s: nox.Session) -> None:
     )
 
 
-@session(python=PYTHON_VERSIONS, uv_groups=[MYPY_GROUP])
+@session(
+    python=PYTHON_VERSIONS,
+    uv_groups=[MYPY_GROUP, TESTS_GROUP, EXTRA_DEPS_GROUP],
+)
 def mypy(s: nox.Session) -> None:
     """Type-check using mypy."""
     default_args = ["src/audible", "tests", "docs/source/conf.py"]
@@ -165,7 +169,10 @@ def mypy(s: nox.Session) -> None:
         s.run("mypy", f"--python-executable={sys.executable}", "noxfile.py")
 
 
-@session(python=PYTHON_VERSIONS, uv_groups=[TESTS_GROUP])
+@session(
+    python=PYTHON_VERSIONS,
+    uv_groups=[TESTS_GROUP, EXTRA_DEPS_GROUP],
+)
 def tests(s: nox.Session) -> None:
     """Run the test suite."""
     try:
@@ -193,13 +200,19 @@ def coverage(s: nox.Session) -> None:
     s.run("coverage", *args)
 
 
-@session(python=DEFAULT_PYTHON_VERSION, uv_groups=[TYPEGUARD_GROUP])
+@session(
+    python=DEFAULT_PYTHON_VERSION,
+    uv_groups=[TYPEGUARD_GROUP, EXTRA_DEPS_GROUP],
+)
 def typeguard(s: nox.Session) -> None:
     """Runtime type checking using Typeguard."""
     s.run("pytest", f"--typeguard-packages={PACKAGE}", *s.posargs)
 
 
-@session(python=PYTHON_VERSIONS, uv_groups=[XDOCTEST_GROUP])
+@session(
+    python=PYTHON_VERSIONS,
+    uv_groups=[XDOCTEST_GROUP, EXTRA_DEPS_GROUP],
+)
 def xdoctest(s: nox.Session) -> None:
     """Run examples with xdoctest."""
     if s.posargs:

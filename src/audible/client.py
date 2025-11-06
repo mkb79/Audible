@@ -1,5 +1,4 @@
 import inspect
-import json
 import logging
 from abc import ABCMeta, abstractmethod
 from collections.abc import Callable, Coroutine
@@ -30,6 +29,7 @@ from .exceptions import (
     Unauthorized,
     UnexpectedError,
 )
+from .json import JSONDecodeError, get_json_provider
 from .localization import LOCALE_TEMPLATES, Locale
 
 
@@ -37,7 +37,7 @@ logger = logging.getLogger("audible.client")
 
 ClientT = TypeVar("ClientT", httpx.AsyncClient, httpx.Client)
 
-httpx_client_request_args = list(
+httpx_client_request_args = frozenset(
     inspect.signature(httpx.Client.request).parameters.keys()
 )
 
@@ -69,8 +69,11 @@ def raise_for_status(resp: httpx.Response) -> None:
 
 def convert_response_content(resp: httpx.Response) -> Any:
     try:
-        return resp.json()
-    except json.JSONDecodeError:
+        return get_json_provider().loads(resp.text)
+    except JSONDecodeError as e:
+        # All JSON providers raise JSONDecodeError for invalid JSON
+        # Falls back to returning raw text if JSON parsing fails
+        logger.debug("JSON parsing failed: %s", e, exc_info=True)
         return resp.text
 
 
@@ -367,11 +370,15 @@ class Client(BaseClient[httpx.Client]):
         try:
             resp = self.session.request(method, url, **kwargs)
 
-            logger.debug(
-                self._REQUEST_LOG.format(
-                    method=method, url=resp.url, text=resp.text, status=resp.status_code
+            if logger.isEnabledFor(logging.DEBUG):
+                logger.debug(
+                    self._REQUEST_LOG.format(
+                        method=method,
+                        url=resp.url,
+                        text=resp.text,
+                        status=resp.status_code,
+                    )
                 )
-            )
 
             return response_callback(resp)
 
@@ -483,11 +490,15 @@ class AsyncClient(BaseClient[httpx.AsyncClient]):
         try:
             resp = await self.session.request(method, url, **kwargs)
 
-            logger.debug(
-                self._REQUEST_LOG.format(
-                    method=method, url=resp.url, text=resp.text, status=resp.status_code
+            if logger.isEnabledFor(logging.DEBUG):
+                logger.debug(
+                    self._REQUEST_LOG.format(
+                        method=method,
+                        url=resp.url,
+                        text=resp.text,
+                        status=resp.status_code,
+                    )
                 )
-            )
 
             return response_callback(resp)
 

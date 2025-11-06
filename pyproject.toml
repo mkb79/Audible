@@ -20,6 +20,9 @@ classifiers = [
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
 ]
+homepage = "https://github.com/mkb79/Audible"
+repository = "https://github.com/mkb79/Audible"
+documentation = "https://audible.readthedocs.io"
 dependencies = [
     "Pillow (>=9.4.0)",
     "beautifulsoup4 (>=4.11.2)",
@@ -28,9 +31,30 @@ dependencies = [
     "pyaes (>=1.6.1)",
     "rsa (>=4.9)",
 ]
-homepage = "https://github.com/mkb79/Audible"
-repository = "https://github.com/mkb79/Audible"
-documentation = "https://audible.readthedocs.io"
+
+[project.optional-dependencies]
+cryptography = [
+    "cryptography (>=42.0.0)",
+]
+pycryptodome = [
+    "pycryptodome (>=3.20.0)",
+]
+orjson = [
+    "orjson (>=3.9.0)",
+]
+ujson = [
+    "ujson (>=5.8.0)",
+]
+rapidjson = [
+    "python-rapidjson (>=1.10)",
+]
+json-fast = [
+    "orjson (>=3.9.0)",
+]
+json-full = [
+    "orjson (>=3.9.0)",
+    "ujson (>=5.8.0)",
+]
 
 [project.urls]
 Changelog = "https://github.com/mkb79/Audible/releases"
@@ -59,7 +83,7 @@ mypy = [
 ]
 
 pre-commit = [
-    "darglint>=1.8.1",
+    "pydoclint>=0.5.0",
     "nox>=2025.5.1",
     "pre-commit>=2.16.0",
     "pre-commit-hooks>=4.1.0",
@@ -84,6 +108,14 @@ typeguard = [
 
 xdocs = [
     "xdoctest[colors]>=0.15.10",
+]
+
+extra-deps = [
+    "cryptography>=42.0.0",
+    "pycryptodome>=3.20.0",
+    "orjson>=3.9.0",
+    "ujson>=5.8.0",
+    "python-rapidjson>=1.10",
 ]
 
 [tool.hatch.build.targets.sdist]
@@ -129,7 +161,7 @@ warn_unreachable = true
 
 [[tool.mypy.overrides]]
 module = "tests.*"
-ignore_errors = true
+disallow_untyped_decorators = false
 
 [tool.ruff]
 #  missing rst-docstrings check, these should be adding through ruff
@@ -181,7 +213,17 @@ known-first-party = ["audible"]
 lines-after-imports = 2
 
 [tool.ruff.lint.per-file-ignores]
-"tests/*" = ["S101"]
+"tests/*" = ["S101", "PLC0415", "S106"]
+"examples/*" = ["S101", "PLC0415"]
+"src/audible/json/protocols.py" = ["D417"]
+"src/audible/json/*_provider.py" = ["PLC0415"]
+"src/audible/json/registry.py" = ["PLC0415"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests", "src/audible"]
+
+[tool.pydoclint]
+style = "google"
+exclude = '\.git|\.nox|\.pytest_cache|__pycache__'
+arg-type-hints-in-docstring = false
+check-return-types = false
