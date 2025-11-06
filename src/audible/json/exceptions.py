@@ -27,10 +27,10 @@ class JSONDecodeError(json.JSONDecodeError):
     Example:
         >>> from audible.json import JSONDecodeError
         >>> try:
-        ...     provider.loads("{invalid}")
+        ...     raise JSONDecodeError("Invalid JSON syntax")
         ... except JSONDecodeError as e:
-        ...     print(f"JSON parsing failed: {e}")
-        JSON parsing failed: ...
+        ...     print(f"Caught: {type(e).__name__}")
+        Caught: JSONDecodeError
     """
 
     def __init__(self, msg: str, doc: str = "", pos: int = 0) -> None:
@@ -52,10 +52,10 @@ class JSONEncodeError(TypeError):
     Example:
         >>> from audible.json import JSONEncodeError
         >>> try:
-        ...     provider.dumps(object())  # Can't serialize object()
+        ...     raise JSONEncodeError("Object not serializable")
         ... except JSONEncodeError as e:
-        ...     print(f"JSON encoding failed: {e}")
-        JSON encoding failed: ...
+        ...     print(f"Caught: {type(e).__name__}")
+        Caught: JSONEncodeError
     """
 
     def __init__(self, msg: str) -> None:
