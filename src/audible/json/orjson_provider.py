@@ -18,6 +18,7 @@ This provider implements smart fallback logic:
 
 from __future__ import annotations
 
+import json
 import logging
 from typing import TYPE_CHECKING, Any
 
@@ -152,8 +153,6 @@ class OrjsonProvider:
         """
         # Case 1: separators requested -> must use stdlib
         if separators is not None:
-            import json
-
             logger.debug(
                 "orjson -> stdlib fallback (separators requested, rare use case)"
             )
@@ -190,11 +189,17 @@ class OrjsonProvider:
         Returns:
             Deserialized Python object.
 
+        Raises:
+            ValueError: If string cannot be encoded to UTF-8.
+
         Note:
             orjson handles all deserialization cases natively (no fallback needed).
         """
         if isinstance(s, str):
-            s = s.encode("utf-8")
+            try:
+                s = s.encode("utf-8")
+            except UnicodeEncodeError as e:
+                raise ValueError(f"Invalid characters in JSON string: {e}") from e
         return orjson.loads(s)
 
     @property

@@ -80,9 +80,15 @@ class StdlibProvider:
 
         Returns:
             Deserialized Python object.
+
+        Raises:
+            ValueError: If bytes contain invalid UTF-8 sequences.
         """
         if isinstance(s, bytes):
-            s = s.decode("utf-8")
+            try:
+                s = s.decode("utf-8")
+            except UnicodeDecodeError as e:
+                raise ValueError(f"Invalid UTF-8 in JSON bytes: {e}") from e
         return json.loads(s)
 
     @property

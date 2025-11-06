@@ -34,6 +34,7 @@ from __future__ import annotations
 
 import inspect
 import logging
+import threading
 from typing import TYPE_CHECKING, Any, cast
 
 
@@ -45,6 +46,8 @@ logger = logging.getLogger("audible.json")
 
 # Registry state shared between helper functions
 _STATE: dict[str, JSONProvider | None] = {"auto": None, "default": None}
+# Thread lock for safe concurrent access to _STATE
+_STATE_LOCK = threading.Lock()
 
 
 def _validate_provider(candidate: Any) -> JSONProvider:
@@ -162,6 +165,10 @@ def get_json_provider(
     Raises:
         ImportError: If specified provider is unavailable.
 
+    Note:
+        This function is thread-safe. Concurrent calls will safely share cached
+        provider instances.
+
     Example:
         >>> from audible.json import get_json_provider
         >>> provider = get_json_provider()  # Auto-detect
@@ -175,17 +182,18 @@ def get_json_provider(
     """
     if provider is None:
         # Use global override if configured
-        default_provider = _STATE["default"]
-        if default_provider is not None:
-            return default_provider
+        with _STATE_LOCK:
+            default_provider = _STATE["default"]
+            if default_provider is not None:
+                return default_provider
 
-        # Use cached auto-detected instance
-        auto_provider = _STATE["auto"]
-        if auto_provider is None:
-            provider_class = _auto_detect_provider_class()
-            auto_provider = provider_class()
-            _STATE["auto"] = auto_provider
-        return auto_provider
+            # Use cached auto-detected instance
+            auto_provider = _STATE["auto"]
+            if auto_provider is None:
+                provider_class = _auto_detect_provider_class()
+                auto_provider = provider_class()
+                _STATE["auto"] = auto_provider
+            return auto_provider
 
     # Create new instance with specified provider
     try:
@@ -212,31 +220,33 @@ def set_default_json_provider(
     Raises:
         ImportError: If the requested provider cannot be initialized.
 
-    Notes:
+    Note:
         When switching providers the cached instances are cleared so the next
         call to :func:`get_json_provider` returns a fresh instance.
+        This function is thread-safe.
 
     Example:
         >>> from audible.json import set_default_json_provider, StdlibProvider
         >>> set_default_json_provider(StdlibProvider)  # Force stdlib
         >>> set_default_json_provider(None)  # Restore auto-detection
     """
-    if provider is None:
-        _STATE["default"] = None
+    with _STATE_LOCK:
+        if provider is None:
+            _STATE["default"] = None
+            _STATE["auto"] = None
+            return
+
+        try:
+            _STATE["default"] = _coerce_provider(provider)
+        except ImportError as e:
+            name = (
+                provider.__name__ if isinstance(provider, type) else type(provider).__name__
+            )
+            raise ImportError(
+                f"Failed to initialize {name}: {e}. Install the required library or pass an instantiated provider."
+            ) from e
+
         _STATE["auto"] = None
-        return
-
-    try:
-        _STATE["default"] = _coerce_provider(provider)
-    except ImportError as e:
-        name = (
-            provider.__name__ if isinstance(provider, type) else type(provider).__name__
-        )
-        raise ImportError(
-            f"Failed to initialize {name}: {e}. Install the required library or pass an instantiated provider."
-        ) from e
-
-    _STATE["auto"] = None
 
 
 __all__ = ["get_json_provider", "set_default_json_provider"]
