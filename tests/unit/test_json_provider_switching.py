@@ -83,7 +83,9 @@ class TestProviderSwitching:
             if temp_path.exists():
                 temp_path.unlink()
 
-    def test_aescipher_uses_switched_provider(self) -> None:
+    def test_aescipher_uses_switched_provider(
+        self, auth_fixture_password: str
+    ) -> None:
         """Test that aescipher.py uses switched provider."""
         import tempfile
         from pathlib import Path
@@ -94,7 +96,7 @@ class TestProviderSwitching:
         set_default_json_provider(StdlibProvider)
 
         # Create cipher
-        cipher = AESCipher(password="test_password")
+        cipher = AESCipher(password=auth_fixture_password)
         test_data = "test_secret_data"
 
         # Save to file (uses dumps internally)

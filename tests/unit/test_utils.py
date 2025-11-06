@@ -66,8 +66,8 @@ class TestTestConvertSuccess:
         assert isinstance(value, pathlib.Path)
         assert value.name == "unit"
 
-    def test_crypter_accepts_aescipher(self) -> None:
-        cipher = AESCipher("secret")
+    def test_crypter_accepts_aescipher(self, auth_fixture_password: str) -> None:
+        cipher = AESCipher(auth_fixture_password)
         assert utils_convert("crypter", cipher) is cipher
 
     @pytest.mark.parametrize("value", [False, "json", "bytes"])
