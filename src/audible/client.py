@@ -37,7 +37,7 @@ logger = logging.getLogger("audible.client")
 
 ClientT = TypeVar("ClientT", httpx.AsyncClient, httpx.Client)
 
-httpx_client_request_args = list(
+httpx_client_request_args = frozenset(
     inspect.signature(httpx.Client.request).parameters.keys()
 )
 
@@ -370,11 +370,15 @@ class Client(BaseClient[httpx.Client]):
         try:
             resp = self.session.request(method, url, **kwargs)
 
-            logger.debug(
-                self._REQUEST_LOG.format(
-                    method=method, url=resp.url, text=resp.text, status=resp.status_code
+            if logger.isEnabledFor(logging.DEBUG):
+                logger.debug(
+                    self._REQUEST_LOG.format(
+                        method=method,
+                        url=resp.url,
+                        text=resp.text,
+                        status=resp.status_code,
+                    )
                 )
-            )
 
             return response_callback(resp)
 
@@ -486,11 +490,15 @@ class AsyncClient(BaseClient[httpx.AsyncClient]):
         try:
             resp = await self.session.request(method, url, **kwargs)
 
-            logger.debug(
-                self._REQUEST_LOG.format(
-                    method=method, url=resp.url, text=resp.text, status=resp.status_code
+            if logger.isEnabledFor(logging.DEBUG):
+                logger.debug(
+                    self._REQUEST_LOG.format(
+                        method=method,
+                        url=resp.url,
+                        text=resp.text,
+                        status=resp.status_code,
+                    )
                 )
-            )
 
             return response_callback(resp)
 
