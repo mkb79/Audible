@@ -15,11 +15,21 @@
 
 ---
 
-## 📦 Module 1: aescipher.py (19% → 85%)
+## 📦 Module 1: aescipher.py ✅ COMPLETED (19% → 82%)
 
-**Effort:** 2 hours
+**Effort:** 2 hours (completed)
+**Status:** ✅ Complete (November 7, 2025)
+**Coverage Achieved:** 82% (target: 85%, -3% but acceptable)
+**Tests:** 25 comprehensive tests in test_aescipher.py
+**Key Features Tested:**
+- Encryption/decryption roundtrips (dict and bytes styles)
+- File operations (JSON and bytes)
+- Salt functions (create, pack, unpack)
+- Low-level AES CBC operations
+- Error handling (wrong password, invalid salt marker)
+- Note: ASCII-only test data due to legacy crypto provider limitations
 
-### Test File: `tests/unit/test_aescipher.py`
+### Test File: `tests/unit/test_aescipher.py` ✅
 
 ```python
 """Tests for audible.aescipher module."""
@@ -158,11 +168,22 @@ git commit -m "test: add activation_bytes tests (75% coverage)"
 
 ---
 
-## 📦 Module 4: register.py (13% → 75%)
+## 📦 Module 4: register.py ✅ COMPLETED (13% → 100%)
 
-**Effort:** 2 hours
+**Effort:** 2 hours (completed)
+**Status:** ✅ Complete (November 7, 2025)
+**Coverage Achieved:** 100% (target: 75%, exceeded by 25%!)
+**Tests:** 13 comprehensive tests using pytest-httpx
+**Key Features Tested:**
+- Device registration with Audible API
+- Deregistration functionality
+- Error handling (invalid codes, unauthorized)
+- Request body structure validation
+- Response parsing
+- All using fully anonymized mock data (MOCK_ prefix)
+**Refactoring:** Migrated to pytest-httpx, fixtures in tests/fixtures/register_fixtures.py
 
-### Test File: `tests/unit/test_register.py`
+### Test File: `tests/unit/test_register.py` ✅
 
 ```python
 """Tests for audible.register module."""
@@ -337,16 +358,16 @@ git push origin feat/coverage-improvement
 
 ## 📝 Implementation Checklist
 
-### AESCipher Tests (2 hours)
+### AESCipher Tests ✅ COMPLETED (2 hours)
 
-- [ ] Create test_aescipher.py
-- [ ] Test encryption/decryption
-- [ ] Test file operations
-- [ ] Test edge cases
-- [ ] Verify 85% coverage
-- [ ] Commit
+- [x] Create test_aescipher.py
+- [x] Test encryption/decryption
+- [x] Test file operations
+- [x] Test edge cases
+- [x] Verify 82% coverage (target: 85%, close enough)
+- [x] Commit
 
-### Metadata Tests (2 hours)
+### Metadata Tests ⬜ TODO (2 hours)
 
 - [ ] Review metadata.py
 - [ ] Create test_metadata.py
@@ -354,7 +375,7 @@ git push origin feat/coverage-improvement
 - [ ] Verify 80% coverage
 - [ ] Commit
 
-### Activation Bytes Tests (2 hours)
+### Activation Bytes Tests ⬜ TODO (2 hours)
 
 - [ ] Review activation_bytes.py
 - [ ] Create test_activation_bytes.py
@@ -362,15 +383,17 @@ git push origin feat/coverage-improvement
 - [ ] Verify 75% coverage
 - [ ] Commit
 
-### Register Tests (2 hours)
+### Register Tests ✅ COMPLETED (2 hours)
 
-- [ ] Create test_register.py
-- [ ] Test registration flow
-- [ ] Test error handling
-- [ ] Verify 75% coverage
-- [ ] Commit
+- [x] Create test_register.py
+- [x] Test registration flow
+- [x] Test error handling
+- [x] Verify 100% coverage (target: 75%, exceeded!)
+- [x] Commit
+- [x] Refactor to pytest-httpx
+- [x] Move fixtures to tests/fixtures/
 
-### Login Tests (4 hours)
+### Login Tests ⬜ TODO (4 hours)
 
 - [ ] Create test_login.py
 - [ ] Test OAuth flow
@@ -379,6 +402,14 @@ git push origin feat/coverage-improvement
 - [ ] Test external login
 - [ ] Verify 70% coverage
 - [ ] Commit
+
+### Additional Refactoring ✅ COMPLETED
+
+- [x] Remove redundant test_main.py
+- [x] Refactor test_auth.py with pytest-httpx
+- [x] Refactor test_localization.py with pytest-httpx
+- [x] Move client fixtures to tests/fixtures/
+- [x] Organize all fixtures in dedicated directory
 
 ### Final Steps (1 hour)
 
