@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import base64
-import hashlib
 import pathlib
 import struct
 from typing import TYPE_CHECKING
@@ -21,7 +20,6 @@ from audible.activation_bytes import (
     get_player_token,
 )
 from audible.exceptions import AuthFlowError
-from audible.localization import Locale
 
 
 if TYPE_CHECKING:
@@ -238,7 +236,7 @@ class TestFetchActivation:
         # First call: deregister (success)
         # Second call: register (fails with exception)
         # Third call: deregister in finally block (success)
-        def get_side_effect(*args, **kwargs):
+        def get_side_effect(*args: object, **kwargs: object) -> Mock:
             call_count = mock_session.get.call_count
             if call_count == 2:  # Register call fails
                 raise Exception("Register failed")
@@ -377,7 +375,9 @@ class TestGetActivationBytes:
 
         # Mock the property to return empty list
         with patch.object(
-            type(auth), "available_auth_modes", new_callable=lambda: property(lambda self: [])
+            type(auth),
+            "available_auth_modes",
+            new_callable=lambda: property(lambda self: []),
         ):
             with pytest.raises(AuthFlowError, match="No valid auth mode"):
                 get_activation_bytes(auth)
