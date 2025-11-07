@@ -23,7 +23,7 @@ class TestAESCipherInitialization:
         """AESCipher initializes with valid parameters."""
         cipher = AESCipher(password="test_password")
 
-        assert cipher.password == "test_password"
+        assert cipher.password == "test_password"  # noqa: S105
         assert cipher.key_size == 32  # default
         assert cipher.salt_marker == b"$"  # default
         assert cipher.kdf_iterations == 1000  # default
@@ -104,7 +104,7 @@ class TestAESCipherDictStyle:
         try:
             decrypted = cipher2.from_dict(encrypted)
             assert decrypted != "test message"
-        except Exception:
+        except Exception:  # noqa: S110
             # Expected - wrong password causes decryption failure
             pass
 
@@ -143,7 +143,7 @@ class TestAESCipherBytesStyle:
         try:
             decrypted = cipher2.from_bytes(encrypted)
             assert decrypted != "test message"
-        except Exception:
+        except Exception:  # noqa: S110
             # Expected - wrong password causes failure
             pass
 
