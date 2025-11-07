@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from datetime import datetime, timedelta, timezone
-from typing import Any
+from typing import TYPE_CHECKING, Any
 from unittest.mock import Mock, patch
 
 import httpx
@@ -11,6 +11,9 @@ import pytest
 
 from audible import auth
 from audible.auth import Authenticator
+
+if TYPE_CHECKING:
+    from pytest_httpx import HTTPXMock
 from audible.crypto import (
     CryptographyProvider,
     CryptoProvider,
@@ -231,32 +234,34 @@ class TestAuthenticatorCredentialStorage:
 class TestRefreshAccessToken:
     """Tests for access token refresh functionality."""
 
-    @patch("audible.auth.httpx.post")
     def test_refresh_access_token_success(
-        self, mock_post: Mock, auth_fixture_data: dict[str, Any]
+        self, httpx_mock: HTTPXMock, auth_fixture_data: dict[str, Any]
     ) -> None:
         """refresh_access_token renews expired token."""
-        mock_response = Mock()
-        mock_response.status_code = 200
-        mock_response.json.return_value = {
-            "access_token": "Atna|new_test_token",
-            "expires_in": 3600,
-        }
-        mock_response.raise_for_status = Mock()
-        mock_post.return_value = mock_response
-
+        # Get locale from auth_fixture_data or default to "com"
         auth = Authenticator.from_dict(auth_fixture_data)
+        domain = auth.locale.domain if hasattr(auth, "locale") and auth.locale else "com"
+
+        httpx_mock.add_response(
+            url=f"https://api.amazon.{domain}/auth/token",
+            method="POST",
+            json={
+                "access_token": "Atna|new_test_token",
+                "expires_in": 3600,
+            },
+            status_code=200,
+        )
+
         old_token = auth.access_token
 
         auth.refresh_access_token(force=True)
 
         assert auth.access_token != old_token
         assert auth.access_token == "Atna|new_test_token"  # noqa: S105
-        mock_post.assert_called_once()
+        assert len(httpx_mock.get_requests()) == 1
 
-    @patch("audible.auth.httpx.post")
     def test_refresh_access_token_not_forced_when_valid(
-        self, mock_post: Mock, auth_fixture_data: dict[str, Any]
+        self, httpx_mock: HTTPXMock, auth_fixture_data: dict[str, Any]
     ) -> None:
         """refresh_access_token skips refresh if token still valid."""
         auth = Authenticator.from_dict(auth_fixture_data)
@@ -266,25 +271,25 @@ class TestRefreshAccessToken:
         auth.refresh_access_token(force=False)
 
         # Should not make HTTP call
-        mock_post.assert_not_called()
+        assert len(httpx_mock.get_requests()) == 0
 
-    def test_module_level_refresh_access_token(self) -> None:
+    def test_module_level_refresh_access_token(self, httpx_mock: HTTPXMock) -> None:
         """Module-level refresh_access_token function works."""
-        with patch("audible.auth.httpx.post") as mock_post:
-            mock_response = Mock()
-            mock_response.status_code = 200
-            mock_response.json.return_value = {
+        httpx_mock.add_response(
+            url="https://api.amazon.com/auth/token",
+            method="POST",
+            json={
                 "access_token": "Atna|new_token",
                 "expires_in": 3600,
-            }
-            mock_response.raise_for_status = Mock()
-            mock_post.return_value = mock_response
+            },
+            status_code=200,
+        )
 
-            result = auth.refresh_access_token("test_refresh_token", "com")
+        result = auth.refresh_access_token("test_refresh_token", "com")
 
-            assert "access_token" in result
-            assert "expires" in result
-            assert result["access_token"] == "Atna|new_token"  # noqa: S105
+        assert "access_token" in result
+        assert "expires" in result
+        assert result["access_token"] == "Atna|new_token"  # noqa: S105
 
 
 class TestTokenExpiration:
@@ -327,32 +332,34 @@ class TestTokenExpiration:
 class TestUserProfile:
     """Tests for user profile operations."""
 
-    @patch("audible.auth.httpx.get")
     def test_user_profile(
-        self, mock_get: Mock, auth_fixture_data: dict[str, Any]
+        self, httpx_mock: HTTPXMock, auth_fixture_data: dict[str, Any]
     ) -> None:
         """user_profile fetches profile from Amazon."""
-        mock_response = Mock()
-        mock_response.status_code = 200
-        mock_response.json.return_value = {"user_id": "123", "name": "Test User"}
-        mock_response.raise_for_status = Mock()
-        mock_get.return_value = mock_response
-
         auth = Authenticator.from_dict(auth_fixture_data)
+        domain = auth.locale.domain if hasattr(auth, "locale") and auth.locale else "com"
+
+        httpx_mock.add_response(
+            url=f"https://api.amazon.{domain}/user/profile",
+            method="GET",
+            json={"user_id": "123", "name": "Test User"},
+            status_code=200,
+        )
+
         with patch.object(auth, "refresh_access_token"):
             profile = auth.user_profile()
 
         assert profile["name"] == "Test User"
         assert profile["user_id"] == "123"
 
-    @patch("audible.auth.httpx.get")
-    def test_module_level_user_profile(self, mock_get: Mock) -> None:
+    def test_module_level_user_profile(self, httpx_mock: HTTPXMock) -> None:
         """Module-level user_profile function works."""
-        mock_response = Mock()
-        mock_response.status_code = 200
-        mock_response.json.return_value = {"user_id": "456", "name": "Another User"}
-        mock_response.raise_for_status = Mock()
-        mock_get.return_value = mock_response
+        httpx_mock.add_response(
+            url="https://api.amazon.com/user/profile",
+            method="GET",
+            json={"user_id": "456", "name": "Another User"},
+            status_code=200,
+        )
 
         result = auth.user_profile("test_access_token", "com")
 
@@ -363,29 +370,31 @@ class TestUserProfile:
 class TestWebsiteCookies:
     """Tests for website cookie operations."""
 
-    @patch("audible.auth.httpx.post")
     def test_refresh_website_cookies(
-        self, mock_post: Mock, auth_fixture_data: dict[str, Any]
+        self, httpx_mock: HTTPXMock, auth_fixture_data: dict[str, Any]
     ) -> None:
         """set_website_cookies_for_country fetches cookies."""
-        mock_response = Mock()
-        mock_response.status_code = 200
-        mock_response.json.return_value = {
-            "response": {
-                "tokens": {
-                    "cookies": {
-                        ".amazon.com": [
-                            {"Name": "session-id", "Value": "abc123"},
-                            {"Name": "ubid-main", "Value": "xyz789"},
-                        ]
+        auth = Authenticator.from_dict(auth_fixture_data)
+        domain = auth.locale.domain if hasattr(auth, "locale") and auth.locale else "com"
+
+        httpx_mock.add_response(
+            url=f"https://www.amazon.{domain}/ap/exchangetoken/cookies",
+            method="POST",
+            json={
+                "response": {
+                    "tokens": {
+                        "cookies": {
+                            ".amazon.com": [
+                                {"Name": "session-id", "Value": "abc123"},
+                                {"Name": "ubid-main", "Value": "xyz789"},
+                            ]
+                        }
                     }
                 }
-            }
-        }
-        mock_response.raise_for_status = Mock()
-        mock_post.return_value = mock_response
+            },
+            status_code=200,
+        )
 
-        auth = Authenticator.from_dict(auth_fixture_data)
         auth.set_website_cookies_for_country("us")
 
         assert auth.website_cookies is not None
@@ -428,8 +437,7 @@ class TestSignRequest:
         # Should add signing headers
         assert "x-adp-token" in mock_request.headers
 
-    @patch("audible.auth.httpx.get")
-    def test_module_level_sign_request(self, mock_get: Mock) -> None:
+    def test_module_level_sign_request(self) -> None:
         """Module-level sign_request function works."""
         with patch("audible.auth.get_crypto_providers") as mock_crypto:
             mock_provider = Mock()

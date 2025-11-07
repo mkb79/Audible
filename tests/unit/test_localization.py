@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from unittest.mock import Mock, patch
+from typing import TYPE_CHECKING
 
 import pytest
 from httpcore import ConnectError
@@ -13,6 +13,11 @@ from audible.localization import (
     autodetect_locale,
     search_template,
 )
+
+if TYPE_CHECKING:
+    from pytest_httpx import HTTPXMock
+
+pytest_plugins = ["tests.fixtures.localization_fixtures"]
 
 
 class TestLocaleTemplates:
@@ -76,77 +81,81 @@ class TestSearchTemplate:
         assert result["country_code"] == "de"
 
 
-@pytest.fixture
-def mock_httpx_response() -> Mock:
-    """Fixture for mock HTTP response."""
-    mock_resp = Mock()
-    mock_resp.text = """
-        var ue_mid = 'AN7V1F1VY261K';
-        autocomplete_config.searchAlias = "audible-de";
-    """
-    return mock_resp
-
-
 class TestAutodetectLocale:
     """Tests for autodetect_locale function."""
 
     def test_autodetect_locale_extracts_correctly(
-        self, mock_httpx_response: Mock
+        self, httpx_mock: HTTPXMock, mock_autodetect_response_de: str
     ) -> None:
         """autodetect_locale extracts locale correctly."""
-        with patch("audible.localization.httpx.get") as mock_get:
-            mock_get.return_value = mock_httpx_response
+        httpx_mock.add_response(
+            url="https://www.audible.de?ipRedirectOverride=true&overrideBaseCountry=true",
+            method="GET",
+            text=mock_autodetect_response_de,
+            status_code=200,
+        )
 
-            result = autodetect_locale("de")
+        result = autodetect_locale("de")
 
-            assert result["country_code"] == "de"
-            assert result["domain"] == "de"
-            assert result["market_place_id"] == "AN7V1F1VY261K"
+        assert result["country_code"] == "de"
+        assert result["domain"] == "de"
+        assert result["market_place_id"] == "AN7V1F1VY261K"
 
-    def test_autodetect_locale_raises_on_network_error(self) -> None:
+    def test_autodetect_locale_raises_on_network_error(
+        self, httpx_mock: HTTPXMock
+    ) -> None:
         """autodetect_locale raises ConnectError on network failure."""
-        with patch("audible.localization.httpx.get") as mock_get:
-            mock_get.side_effect = ConnectError("Connection failed")
+        httpx_mock.add_exception(ConnectError("Connection failed"))
 
-            with pytest.raises(ConnectError):
-                autodetect_locale("invalid.domain")
+        with pytest.raises(ConnectError):
+            autodetect_locale("invalid.domain")
 
-    def test_autodetect_locale_raises_on_missing_marketplace(self) -> None:
+    def test_autodetect_locale_raises_on_missing_marketplace(
+        self, httpx_mock: HTTPXMock
+    ) -> None:
         """autodetect_locale raises Exception when marketplace not found."""
-        mock_resp = Mock()
-        mock_resp.text = "no marketplace here"
+        httpx_mock.add_response(
+            url="https://www.audible.test.com?ipRedirectOverride=true&overrideBaseCountry=true",
+            method="GET",
+            text="no marketplace here",
+            status_code=200,
+        )
 
-        with patch("audible.localization.httpx.get") as mock_get:
-            mock_get.return_value = mock_resp
+        with pytest.raises(Exception, match="can't find marketplace"):
+            autodetect_locale("test.com")
 
-            with pytest.raises(Exception, match="can't find marketplace"):
-                autodetect_locale("test.com")
-
-    def test_autodetect_locale_raises_on_missing_country_code(self) -> None:
+    def test_autodetect_locale_raises_on_missing_country_code(
+        self, httpx_mock: HTTPXMock
+    ) -> None:
         """autodetect_locale raises Exception when country code not found."""
-        mock_resp = Mock()
-        mock_resp.text = "var ue_mid = 'AN7V1F1VY261K';"
+        httpx_mock.add_response(
+            url="https://www.audible.test.com?ipRedirectOverride=true&overrideBaseCountry=true",
+            method="GET",
+            text="var ue_mid = 'AN7V1F1VY261K';",
+            status_code=200,
+        )
 
-        with patch("audible.localization.httpx.get") as mock_get:
-            mock_get.return_value = mock_resp
-
-            with pytest.raises(Exception, match="can't find country code"):
-                autodetect_locale("test.com")
+        with pytest.raises(Exception, match="can't find country code"):
+            autodetect_locale("test.com")
 
     def test_autodetect_locale_strips_leading_dot(
-        self, mock_httpx_response: Mock
+        self, httpx_mock: HTTPXMock, mock_autodetect_response_de: str
     ) -> None:
         """autodetect_locale strips leading dot from domain."""
-        with patch("audible.localization.httpx.get") as mock_get:
-            mock_get.return_value = mock_httpx_response
+        httpx_mock.add_response(
+            url="https://www.audible.de?ipRedirectOverride=true&overrideBaseCountry=true",
+            method="GET",
+            text=mock_autodetect_response_de,
+            status_code=200,
+        )
 
-            result = autodetect_locale(".de")
+        result = autodetect_locale(".de")
 
-            assert result["domain"] == "de"
-            # Verify the correct URL was called (without leading dot)
-            mock_get.assert_called_once()
-            call_args = mock_get.call_args
-            assert call_args[0][0] == "https://www.audible.de"
+        assert result["domain"] == "de"
+        # Verify the correct URL was called (without leading dot)
+        assert len(httpx_mock.get_requests()) == 1
+        request = httpx_mock.get_requests()[0]
+        assert "https://www.audible.de" in str(request.url)
 
 
 class TestLocaleClass:
