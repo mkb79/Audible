@@ -251,7 +251,7 @@ class TestRefreshAccessToken:
         auth.refresh_access_token(force=True)
 
         assert auth.access_token != old_token
-        assert auth.access_token == "Atna|new_test_token"
+        assert auth.access_token == "Atna|new_test_token"  # noqa: S105
         mock_post.assert_called_once()
 
     @patch("audible.auth.httpx.post")
@@ -284,7 +284,7 @@ class TestRefreshAccessToken:
 
             assert "access_token" in result
             assert "expires" in result
-            assert result["access_token"] == "Atna|new_token"
+            assert result["access_token"] == "Atna|new_token"  # noqa: S105
 
 
 class TestTokenExpiration:

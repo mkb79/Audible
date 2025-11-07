@@ -25,8 +25,8 @@ def mock_authenticator() -> Mock:
     """Fixture for mock Authenticator."""
     auth = Mock(spec=Authenticator)
     auth.locale = Locale("us")
-    auth.access_token = "test_access_token"
-    auth.adp_token = "test_adp_token"
+    auth.access_token = "test_access_token"  # noqa: S105
+    auth.adp_token = "test_adp_token"  # noqa: S105
     auth.device_private_key = "test_private_key"
     auth.refresh_access_token = Mock()
     auth.website_cookies = {}
@@ -343,7 +343,7 @@ class TestClientMarketplaceSwitching:
     def test_marketplace_property_returns_country_code(
         self, mock_authenticator: Mock
     ) -> None:
-        """marketplace property returns country code."""
+        """Marketplace property returns country code."""
         with Client(auth=mock_authenticator) as client:
             assert client.marketplace == "us"
 
@@ -456,9 +456,7 @@ class TestAsyncClientRequests:
     """Tests for AsyncClient HTTP requests."""
 
     @pytest.mark.asyncio
-    async def test_async_client_get_success(
-        self, mock_authenticator: Mock
-    ) -> None:
+    async def test_async_client_get_success(self, mock_authenticator: Mock) -> None:
         """AsyncClient GET request succeeds."""
         mock_response = AsyncMock(spec=httpx.Response)
         mock_response.status_code = 200
@@ -475,9 +473,7 @@ class TestAsyncClientRequests:
             assert result == {"data": "test"}
 
     @pytest.mark.asyncio
-    async def test_async_client_post_success(
-        self, mock_authenticator: Mock
-    ) -> None:
+    async def test_async_client_post_success(self, mock_authenticator: Mock) -> None:
         """AsyncClient POST request succeeds."""
         mock_response = AsyncMock(spec=httpx.Response)
         mock_response.status_code = 200
@@ -494,9 +490,7 @@ class TestAsyncClientRequests:
             assert result == {"data": "test"}
 
     @pytest.mark.asyncio
-    async def test_async_client_put_success(
-        self, mock_authenticator: Mock
-    ) -> None:
+    async def test_async_client_put_success(self, mock_authenticator: Mock) -> None:
         """AsyncClient PUT request succeeds."""
         mock_response = AsyncMock(spec=httpx.Response)
         mock_response.status_code = 200
@@ -513,9 +507,7 @@ class TestAsyncClientRequests:
             assert result == {"data": "test"}
 
     @pytest.mark.asyncio
-    async def test_async_client_delete_success(
-        self, mock_authenticator: Mock
-    ) -> None:
+    async def test_async_client_delete_success(self, mock_authenticator: Mock) -> None:
         """AsyncClient DELETE request succeeds."""
         mock_response = AsyncMock(spec=httpx.Response)
         mock_response.status_code = 200
@@ -536,9 +528,7 @@ class TestAsyncClientErrorHandling:
     """Tests for AsyncClient error handling."""
 
     @pytest.mark.asyncio
-    async def test_async_client_handles_timeout(
-        self, mock_authenticator: Mock
-    ) -> None:
+    async def test_async_client_handles_timeout(self, mock_authenticator: Mock) -> None:
         """AsyncClient raises NotResponding on timeout."""
         with patch(
             "httpx.AsyncClient.request",
@@ -585,15 +575,13 @@ class TestClientAuthProperty:
     def test_auth_property_returns_authenticator(
         self, mock_authenticator: Mock
     ) -> None:
-        """auth property returns Authenticator instance."""
+        """Auth property returns Authenticator instance."""
         with Client(auth=mock_authenticator) as client:
             assert isinstance(client.auth, Mock)
             assert client.auth is mock_authenticator
 
-    def test_auth_property_raises_on_wrong_type(
-        self, mock_authenticator: Mock
-    ) -> None:
-        """auth property raises if session.auth is not Authenticator."""
+    def test_auth_property_raises_on_wrong_type(self, mock_authenticator: Mock) -> None:
+        """Auth property raises if session.auth is not Authenticator."""
         with Client(auth=mock_authenticator) as client:
             # Directly set session's internal _auth to wrong type to test validation
             client.session._auth = "not_an_authenticator"  # type: ignore[assignment]
@@ -649,9 +637,7 @@ class TestClientPrepareApiPath:
 
             assert "1.0/library" in str(url)
 
-    def test_prepare_api_path_with_absolute_url(
-        self, mock_authenticator: Mock
-    ) -> None:
+    def test_prepare_api_path_with_absolute_url(self, mock_authenticator: Mock) -> None:
         """Absolute URLs are returned as-is."""
         with Client(auth=mock_authenticator) as client:
             url = client._prepare_api_path("https://example.com/test")
