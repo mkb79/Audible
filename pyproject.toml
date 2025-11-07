@@ -98,6 +98,7 @@ safety = [
 tests = [
     "coverage[toml]>=6.2",
     "pytest>=6.2.5",
+    "pytest-asyncio>=0.21.0",
     "pytest-mock>=3.10.0",
 ]
 
@@ -146,7 +147,7 @@ relative_files = true
 
 [tool.coverage.report]
 show_missing = true
-fail_under = 50  # temporarily drop complexity, target is 100
+fail_under = 71  # Phase 2 complete: 72% actual coverage, 71% threshold for safety margin
 exclude_lines = [
     "pragma: no cover",
     "if TYPE_CHECKING:"
@@ -222,6 +223,8 @@ lines-after-imports = 2
 
 [tool.pytest.ini_options]
 testpaths = ["tests", "src/audible"]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
 
 [tool.pydoclint]
 style = "google"
