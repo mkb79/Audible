@@ -12,6 +12,7 @@ import pytest
 from audible import auth
 from audible.auth import Authenticator
 
+
 if TYPE_CHECKING:
     from pytest_httpx import HTTPXMock
 from audible.crypto import (
@@ -240,7 +241,9 @@ class TestRefreshAccessToken:
         """refresh_access_token renews expired token."""
         # Get locale from auth_fixture_data or default to "com"
         auth = Authenticator.from_dict(auth_fixture_data)
-        domain = auth.locale.domain if hasattr(auth, "locale") and auth.locale else "com"
+        domain = (
+            auth.locale.domain if hasattr(auth, "locale") and auth.locale else "com"
+        )
 
         httpx_mock.add_response(
             url=f"https://api.amazon.{domain}/auth/token",
@@ -337,7 +340,9 @@ class TestUserProfile:
     ) -> None:
         """user_profile fetches profile from Amazon."""
         auth = Authenticator.from_dict(auth_fixture_data)
-        domain = auth.locale.domain if hasattr(auth, "locale") and auth.locale else "com"
+        domain = (
+            auth.locale.domain if hasattr(auth, "locale") and auth.locale else "com"
+        )
 
         httpx_mock.add_response(
             url=f"https://api.amazon.{domain}/user/profile",
@@ -375,7 +380,9 @@ class TestWebsiteCookies:
     ) -> None:
         """set_website_cookies_for_country fetches cookies."""
         auth = Authenticator.from_dict(auth_fixture_data)
-        domain = auth.locale.domain if hasattr(auth, "locale") and auth.locale else "com"
+        domain = (
+            auth.locale.domain if hasattr(auth, "locale") and auth.locale else "com"
+        )
 
         httpx_mock.add_response(
             url=f"https://www.amazon.{domain}/ap/exchangetoken/cookies",

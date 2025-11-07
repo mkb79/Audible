@@ -14,6 +14,7 @@ from audible.localization import (
     search_template,
 )
 
+
 if TYPE_CHECKING:
     from pytest_httpx import HTTPXMock
 
