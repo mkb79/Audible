@@ -6,13 +6,13 @@
 
 ## 📊 Current Situation (Updated November 7, 2025)
 
-| Metric                             | Value                                   |
-| ---------------------------------- | --------------------------------------- |
-| **Current Coverage**               | 74.23% (Phase 3 in progress)            |
-| **Target Coverage**                | 85-90%                                  |
-| **Number of Test Files**           | 19 in tests/unit/ + 3 fixture files     |
-| **Tests Passing**                  | 299 passed, 61 skipped                  |
-| **Critical Modules Without Tests** | 3 (metadata, activation_bytes, login)   |
+| Metric                             | Value                                 |
+| ---------------------------------- | ------------------------------------- |
+| **Current Coverage**               | 74.23% (Phase 3 in progress)          |
+| **Target Coverage**                | 85-90%                                |
+| **Number of Test Files**           | 19 in tests/unit/ + 3 fixture files   |
+| **Tests Passing**                  | 299 passed, 61 skipped                |
+| **Critical Modules Without Tests** | 3 (metadata, activation_bytes, login) |
 
 **Progress:** ✅ Phase 2 complete (74% achieved, target was 71%). Phase 3 in progress with aescipher (82%) and register (100%) complete. Major test refactoring with pytest-httpx completed. Fixtures organized in tests/fixtures/. Next: metadata, activation_bytes, login modules.
 
@@ -55,21 +55,21 @@
 
 ### Module Coverage Targets
 
-| Module                | Current                   | Target   | Status |
-| --------------------- | ------------------------- | -------- | ------ |
-| `__init__.py`         | 100% ✅                   | 100%     | ✅     |
-| `_types.py`           | 100% ✅                   | 100%     | ✅     |
-| `exceptions.py`       | 100% ✅ (↑ from 46%)      | **100%** | ✅     |
-| `localization.py`     | 99% ✅ (↑ from 23%)       | **95%**  | ✅     |
-| `_logging.py`         | 100% ✅ (↑ from 41%)      | **90%**  | ✅     |
-| `utils.py`            | 92% ✅ (↑ from 88%)       | **90%**  | ✅     |
-| `client.py`           | 90% ✅ (↑ from 42%)       | **85%**  | ✅     |
-| `auth.py`             | 71% ✅ (↑ from 21%)       | **80%**  | 🔄     |
-| `aescipher.py`        | 82% ✅ (↑ from 19%)       | **85%**  | 🔄     |
-| `register.py`         | 100% ✅ (↑ from 13%)      | **75%**  | ✅     |
-| `metadata.py`         | 20% ⬜                    | **80%**  | ⬜     |
-| `activation_bytes.py` | 21% ⬜                    | **75%**  | ⬜     |
-| `login.py`            | 14% ⬜                    | **70%**  | ⬜     |
+| Module                | Current              | Target   | Status |
+| --------------------- | -------------------- | -------- | ------ |
+| `__init__.py`         | 100% ✅              | 100%     | ✅     |
+| `_types.py`           | 100% ✅              | 100%     | ✅     |
+| `exceptions.py`       | 100% ✅ (↑ from 46%) | **100%** | ✅     |
+| `localization.py`     | 99% ✅ (↑ from 23%)  | **95%**  | ✅     |
+| `_logging.py`         | 100% ✅ (↑ from 41%) | **90%**  | ✅     |
+| `utils.py`            | 92% ✅ (↑ from 88%)  | **90%**  | ✅     |
+| `client.py`           | 90% ✅ (↑ from 42%)  | **85%**  | ✅     |
+| `auth.py`             | 71% ✅ (↑ from 21%)  | **80%**  | 🔄     |
+| `aescipher.py`        | 82% ✅ (↑ from 19%)  | **85%**  | 🔄     |
+| `register.py`         | 100% ✅ (↑ from 13%) | **75%**  | ✅     |
+| `metadata.py`         | 20% ⬜               | **80%**  | ⬜     |
+| `activation_bytes.py` | 21% ⬜               | **75%**  | ⬜     |
+| `login.py`            | 14% ⬜               | **70%**  | ⬜     |
 
 ---
 

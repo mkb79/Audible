@@ -22,6 +22,7 @@
 **Coverage Achieved:** 82% (target: 85%, -3% but acceptable)
 **Tests:** 25 comprehensive tests in test_aescipher.py
 **Key Features Tested:**
+
 - Encryption/decryption roundtrips (dict and bytes styles)
 - File operations (JSON and bytes)
 - Salt functions (create, pack, unpack)
@@ -175,13 +176,14 @@ git commit -m "test: add activation_bytes tests (75% coverage)"
 **Coverage Achieved:** 100% (target: 75%, exceeded by 25%!)
 **Tests:** 13 comprehensive tests using pytest-httpx
 **Key Features Tested:**
+
 - Device registration with Audible API
 - Deregistration functionality
 - Error handling (invalid codes, unauthorized)
 - Request body structure validation
 - Response parsing
-- All using fully anonymized mock data (MOCK_ prefix)
-**Refactoring:** Migrated to pytest-httpx, fixtures in tests/fixtures/register_fixtures.py
+- All using fully anonymized mock data (MOCK\_ prefix)
+  **Refactoring:** Migrated to pytest-httpx, fixtures in tests/fixtures/register_fixtures.py
 
 ### Test File: `tests/unit/test_register.py` ✅
 
