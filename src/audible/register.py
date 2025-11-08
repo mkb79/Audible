@@ -1,3 +1,5 @@
+import base64
+import logging
 import warnings
 from datetime import datetime, timedelta, timezone
 from typing import TYPE_CHECKING, Any
@@ -9,6 +11,63 @@ from .login import build_client_id
 
 if TYPE_CHECKING:
     from .device import BaseDevice
+
+
+logger = logging.getLogger("audible.register")
+
+
+def _convert_base64_der_to_pem(base64_der: str) -> str:
+    """Convert Android base64-DER certificate to PEM format.
+
+    Args:
+        base64_der: Base64-encoded DER certificate (Android format)
+
+    Returns:
+        PEM-formatted private key string
+
+    Raises:
+        ValueError: If conversion fails
+    """
+    try:
+        # Decode base64-DER to bytes
+        der_bytes = base64.b64decode(base64_der)
+
+        # Try using cryptography library (preferred)
+        try:
+            from cryptography.hazmat.backends import default_backend
+            from cryptography.hazmat.primitives import serialization
+            from cryptography.hazmat.primitives.serialization import (
+                load_der_private_key,
+            )
+
+            # Load DER-encoded private key
+            private_key = load_der_private_key(
+                der_bytes, password=None, backend=default_backend()
+            )
+
+            # Convert to PEM format
+            pem_bytes = private_key.private_bytes(
+                encoding=serialization.Encoding.PEM,
+                format=serialization.PrivateFormat.TraditionalOpenSSL,
+                encryption_algorithm=serialization.NoEncryption(),
+            )
+
+            return pem_bytes.decode("utf-8")
+
+        except ImportError:
+            # Fallback: Manual PEM encoding (DER bytes wrapped in PEM headers)
+            # This works for most cases without cryptography library
+            pem_lines = ["-----BEGIN RSA PRIVATE KEY-----"]
+            # Split base64 into 64-char lines
+            for i in range(0, len(base64_der), 64):
+                pem_lines.append(base64_der[i : i + 64])
+            pem_lines.append("-----END RSA PRIVATE KEY-----")
+            return "\n".join(pem_lines) + "\n"
+
+    except Exception as e:
+        raise ValueError(
+            f"Failed to convert base64-DER to PEM format: {e}"
+        ) from e
 
 
 def register(
@@ -97,6 +156,14 @@ def register(
     tokens = success_response["tokens"]
     adp_token = tokens["mac_dms"]["adp_token"]
     device_private_key = tokens["mac_dms"]["device_private_key"]
+
+    # Convert Android base64-DER certificate to PEM format
+    # This ensures device_private_key is always in PEM format regardless of device type
+    if device and device.os_family == "android":
+        logger.debug("Converting Android base64-DER certificate to PEM format")
+        device_private_key = _convert_base64_der_to_pem(device_private_key)
+        logger.debug("Certificate conversion successful")
+
     store_authentication_cookie = tokens.get("store_authentication_cookie")
     access_token = tokens["bearer"]["access_token"]
     refresh_token = tokens["bearer"]["refresh_token"]

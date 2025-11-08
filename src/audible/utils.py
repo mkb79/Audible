@@ -55,24 +55,18 @@ def _check_device_private_key(value: str) -> None:
             f"device_private_key: Expected str, got {type(value).__name__}."
         )
 
-    # PEM format (iOS devices) - RSA private key with headers
+    # PEM format - RSA private key with headers
+    # Both iOS and Android device_private_key are stored in PEM format
+    # (Android base64-DER is converted to PEM during registration)
     pem_fmt = (
         r"^(?P<device_private_key>-----BEGIN RSA PRIVATE KEY-----.*"
         r"-----END RSA PRIVATE KEY-----\n)$"
     )
 
-    # Base64-DER format (Android devices) - DER-encoded certificate in base64
-    # DER certificates start with MII (ASN.1 SEQUENCE tag for RSA keys)
-    # Valid base64 chars: A-Za-z0-9+/=, minimum length for cert
-    base64_der_fmt = r"^MII[A-Za-z0-9+/]+=*$"
-
-    is_pem = re.match(pem_fmt, value, re.S)
-    is_base64_der = re.match(base64_der_fmt, value)
-
-    if not (is_pem or is_base64_der):
+    if not re.match(pem_fmt, value, re.S):
         raise ValueError(
             "device_private_key: Invalid token. "
-            "Must be either PEM format (iOS) or base64-DER format starting with 'MII' (Android)."
+            "Must be PEM format (-----BEGIN RSA PRIVATE KEY-----)."
         )
 
 
