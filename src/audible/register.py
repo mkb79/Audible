@@ -157,12 +157,23 @@ def register(
     adp_token = tokens["mac_dms"]["adp_token"]
     device_private_key = tokens["mac_dms"]["device_private_key"]
 
-    # Convert Android base64-DER certificate to PEM format
-    # This ensures device_private_key is always in PEM format regardless of device type
-    if device and device.os_family == "android":
-        logger.debug("Converting Android base64-DER certificate to PEM format")
+    # Convert base64-DER certificate to PEM format if needed
+    # Check format by content (not by device type) for future-proofing
+    if device_private_key.startswith("-----BEGIN RSA PRIVATE KEY-----"):
+        # Already in PEM format (typically iOS devices)
+        logger.debug("device_private_key is already in PEM format")
+    elif device_private_key.startswith("MII"):
+        # base64-DER format (typically Android devices) - convert to PEM
+        logger.debug("Converting base64-DER certificate to PEM format")
         device_private_key = _convert_base64_der_to_pem(device_private_key)
         logger.debug("Certificate conversion successful")
+    else:
+        # Unknown format - log warning but don't fail
+        logger.warning(
+            "device_private_key has unexpected format (not PEM or base64-DER). "
+            "First 30 chars: %s",
+            device_private_key[:30]
+        )
 
     store_authentication_cookie = tokens.get("store_authentication_cookie")
     access_token = tokens["bearer"]["access_token"]
