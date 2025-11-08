@@ -55,12 +55,24 @@ def _check_device_private_key(value: str) -> None:
             f"device_private_key: Expected str, got {type(value).__name__}."
         )
 
-    fmt = (
+    # PEM format (iOS devices) - RSA private key with headers
+    pem_fmt = (
         r"^(?P<device_private_key>-----BEGIN RSA PRIVATE KEY-----.*"
         r"-----END RSA PRIVATE KEY-----\n)$"
     )
-    if not re.match(fmt, value, re.S):
-        raise ValueError("device_private_key: Invalid token.")
+
+    # Base64-DER format (Android devices) - raw base64 encoded certificate
+    # Valid base64: A-Za-z0-9+/= characters, optional padding
+    base64_fmt = r"^[A-Za-z0-9+/]+=*$"
+
+    is_pem = re.match(pem_fmt, value, re.S)
+    is_base64_der = re.match(base64_fmt, value)
+
+    if not (is_pem or is_base64_der):
+        raise ValueError(
+            "device_private_key: Invalid token. "
+            "Must be either PEM format (iOS) or base64-DER format (Android)."
+        )
 
 
 def _check_expires(value: int | (float | str)) -> int | float:
