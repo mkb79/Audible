@@ -549,12 +549,3 @@ ANDROID_PIXEL_7 = AndroidDevice(
 
 Customized Android profile for a real device.
 """
-
-
-# Backward compatibility alias
-Device = BaseDevice
-"""Alias for BaseDevice for backward compatibility.
-
-.. deprecated:: 0.11.0
-    Use :class:`BaseDevice`, :class:`iPhoneDevice`, or :class:`AndroidDevice` instead.
-"""
