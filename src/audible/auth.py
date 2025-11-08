@@ -364,6 +364,7 @@ class Authenticator(httpx.Auth):
         locale: str | Locale | None = None,
         *,
         crypto_provider: CryptoProvider | type[CryptoProvider] | None = None,
+        device: BaseDevice | None = None,
     ) -> Authenticator:
         """Instantiate an Authenticator from authentication file.
 
@@ -377,6 +378,9 @@ class Authenticator(httpx.Auth):
             locale: The country code of the Audible marketplace to interact
                 with. If ``None`` the country code from file is used.
             crypto_provider: Optional provider override (class or instance).
+            device: Optional device override. If provided, this device will be
+                used instead of the device from the dictionary. If ``None``,
+                the device from the dictionary will be used (if present).
 
         Returns:
             A new Authenticator instance.
@@ -404,39 +408,48 @@ class Authenticator(httpx.Auth):
         if "login_cookies" in data:
             auth.website_cookies = data.pop("login_cookies")
 
-        # Load device data if present
-        device_data = data.pop("device", None)
-        if device_data:
-            # Try to determine device type from os_family to use correct subclass
-            os_family = device_data.get("os_family", "")
-            if os_family == "ios":
-                from .device import iPhoneDevice
+        # Load device - explicit parameter overrides dict device
+        if device is not None:
+            # Use explicitly provided device
+            auth.device = device
+            logger.debug("Using explicit device parameter: %s", device.device_model)
+            # Remove device from data to avoid overwriting
+            data.pop("device", None)
+        else:
+            # Load device data from dict if present
+            device_data = data.pop("device", None)
+            if device_data:
+                # Try to determine device type from os_family to use correct subclass
+                os_family = device_data.get("os_family", "")
+                if os_family == "ios":
+                    from .device import iPhoneDevice
 
-                auth.device = iPhoneDevice.from_dict(device_data)
-            elif os_family == "android":
-                from .device import AndroidDevice
+                    auth.device = iPhoneDevice.from_dict(device_data)
+                elif os_family == "android":
+                    from .device import AndroidDevice
 
-                auth.device = AndroidDevice.from_dict(device_data)
-            else:
-                # Fallback to base class (will use iPhoneDevice as default)
-                from .device import iPhoneDevice
+                    auth.device = AndroidDevice.from_dict(device_data)
+                else:
+                    # Fallback to base class (will use iPhoneDevice as default)
+                    from .device import iPhoneDevice
 
+                    logger.warning(
+                        "Unknown device os_family: %s. Falling back to iPhoneDevice.",
+                        os_family,
+                    )
+                    auth.device = iPhoneDevice.from_dict(device_data)
+                logger.debug("Loaded device from dict: %s", auth.device.device_model)
+            elif file_version:
+                # File has version but no device - create default from device_info
                 logger.warning(
-                    "Unknown device os_family: %s. Falling back to iPhoneDevice.",
-                    os_family,
+                    "Auth file missing device metadata. Auto-generating from device_info."
                 )
-                auth.device = iPhoneDevice.from_dict(device_data)
-            logger.debug("Loaded device: %s", auth.device.device_model)
-        elif file_version:
-            # File has version but no device - create default from device_info
-            logger.warning(
-                "Auth file missing device metadata. Auto-generating from device_info."
-            )
-            auth.device = None  # Will be auto-generated if needed
+                auth.device = None  # Will be auto-generated if needed
 
         auth._update_attrs(**data)
 
-        logger.info("load data from dictionary for locale %s", auth.locale.country_code)
+        locale_info = auth.locale.country_code if auth.locale else "None"
+        logger.info("load data from dictionary for locale %s", locale_info)
 
         return auth
 
@@ -778,8 +791,10 @@ class Authenticator(httpx.Auth):
             "locale_code": self.locale.country_code if self.locale else None,
             "with_username": self.with_username,
             "activation_bytes": self.activation_bytes,
-            "device": self.device.to_dict() if self.device else None,
         }
+        # Only include device if it exists (backward compatibility)
+        if self.device:
+            data["device"] = self.device.to_dict()
         return data
 
     def to_file(
