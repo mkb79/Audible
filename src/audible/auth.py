@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import base64
 import logging
+import uuid
 from collections.abc import Callable, Generator, Iterator
 from datetime import datetime, timedelta, timezone
 from typing import (
@@ -18,6 +19,7 @@ from httpx import Cookies
 from .activation_bytes import get_activation_bytes as get_ab
 from .aescipher import AESCipher, detect_file_encryption
 from .crypto import get_crypto_providers
+from .device import Device
 from .exceptions import AuthFlowError, FileEncryptionError, NoRefreshToken
 from .json import get_json_provider
 from .login import external_login, login
@@ -38,7 +40,11 @@ logger = logging.getLogger("audible.auth")
 
 
 def refresh_access_token(
-    refresh_token: str, domain: str, with_username: bool = False
+    refresh_token: str,
+    domain: str,
+    with_username: bool = False,
+    app_name: str = "Audible",
+    app_version: str = "3.56.2",
 ) -> dict[str, Any]:
     """Refreshes an access token.
 
@@ -48,6 +54,8 @@ def refresh_access_token(
         domain: The top level domain of the requested Amazon server
             (e.g. com).
         with_username: If ``True`` uses `audible` domain instead of `amazon`.
+        app_name: Application name (from device metadata).
+        app_version: Application version (from device metadata).
 
     Returns:
         A dict with the new access token and expiration timestamp.
@@ -57,10 +65,13 @@ def refresh_access_token(
 
     .. versionadded:: v0.8
         The with_username argument
+
+    .. versionchanged:: v0.11.0
+        Added app_name and app_version parameters to support device metadata
     """
     body = {
-        "app_name": "Audible",
-        "app_version": "3.56.2",
+        "app_name": app_name,
+        "app_version": app_version,
         "source_token": refresh_token,
         "requested_token_type": "access_token",
         "source_token_type": "refresh_token",
@@ -81,7 +92,12 @@ def refresh_access_token(
 
 
 def refresh_website_cookies(
-    refresh_token: str, domain: str, cookies_domain: str, with_username: bool = False
+    refresh_token: str,
+    domain: str,
+    cookies_domain: str,
+    with_username: bool = False,
+    app_name: str = "Audible",
+    app_version: str = "3.56.2",
 ) -> dict[str, str]:
     """Fetches website cookies for a specific domain.
 
@@ -93,6 +109,8 @@ def refresh_website_cookies(
         cookies_domain: The top level domain scope for the cookies
             (e.g. com, de, fr).
         with_username: If ``True`` uses `audible` domain instead of `amazon`.
+        app_name: Application name (from device metadata).
+        app_version: Application version (from device metadata).
 
     Returns:
         The requested cookies for the Amazon and Audible website for the given
@@ -100,14 +118,17 @@ def refresh_website_cookies(
 
     .. versionadded:: v0.8
         The with_username argument
+
+    .. versionchanged:: v0.11.0
+        Added app_name and app_version parameters to support device metadata
     """
     target_domain = "audible" if with_username else "amazon"
 
     url = f"https://www.{target_domain}.{domain}/ap/exchangetoken/cookies"
 
     body = {
-        "app_name": "Audible",
-        "app_version": "3.56.2",
+        "app_name": app_name,
+        "app_version": app_version,
         "source_token": refresh_token,
         "requested_token_type": "auth_cookies",
         "source_token_type": "refresh_token",
@@ -269,10 +290,12 @@ class Authenticator(httpx.Auth):
     adp_token: str | None = None
     crypter: AESCipher | None = None
     customer_info: dict[str, Any] | None = None
+    device: Device | None = None
     device_info: dict[str, Any] | None = None
     device_private_key: str | None = None
     encryption: str | bool | None = None
     expires: float | None = None
+    file_version: str = "1.0"
     filename: pathlib.Path | None = None
     locale: Locale | None = None
     refresh_token: str | None = None
@@ -346,6 +369,9 @@ class Authenticator(httpx.Auth):
 
         .. versionadded:: v0.7.1
 
+        .. versionchanged:: v0.11.0
+           Now loads `file_version` and `device` for complete device metadata
+
         Args:
             data: A dictionary with the authentication data
             locale: The country code of the Audible marketplace to interact
@@ -357,11 +383,38 @@ class Authenticator(httpx.Auth):
         """
         auth = cls(crypto_provider=crypto_provider)
 
+        # Extract file_version and check compatibility
+        file_version = data.pop("file_version", None)
+        if file_version is None:
+            logger.warning(
+                "Auth file has no version marker (created with audible < v0.11.0). "
+                "Device metadata not available. Consider re-saving with auth.to_file()"
+            )
+        elif file_version != "1.0":
+            logger.info(
+                "Auth file version: %s (current: 1.0). Loading with compatibility mode.",
+                file_version,
+            )
+
         locale_code: str | None = data.pop("locale_code", None)
         auth.locale = cast("Locale", locale or locale_code)
 
+        # login cookies where renamed to website cookies
+        # old names must be adjusted
         if "login_cookies" in data:
             auth.website_cookies = data.pop("login_cookies")
+
+        # Load device data if present
+        device_data = data.pop("device", None)
+        if device_data:
+            auth.device = Device.from_dict(device_data)
+            logger.debug("Loaded device: %s", auth.device.device_model)
+        elif file_version:
+            # File has version but no device - create default from device_info
+            logger.warning(
+                "Auth file missing device metadata. Auto-generating from device_info."
+            )
+            auth.device = None  # Will be auto-generated if needed
 
         auth._update_attrs(**data)
 
@@ -408,35 +461,37 @@ class Authenticator(httpx.Auth):
         Raises:
             FileEncryptionError: If file ist encrypted without providing a password
         """
-        auth = cls(crypto_provider=crypto_provider)
-        auth.filename = cast("pathlib.Path", filename)
-        auth.encryption = encryption or detect_file_encryption(auth.filename)
+        filepath = cast("pathlib.Path", filename)
+        file_encryption = encryption or detect_file_encryption(filepath)
 
-        if isinstance(auth.encryption, str):
+        # Read and decrypt file if needed
+        if isinstance(file_encryption, str):
             if password is None:
                 message = "File is encrypted but no password provided."
                 logger.critical(message)
                 raise FileEncryptionError(message)
             cipher_kwargs = dict(kwargs)
+            # Create temporary auth for crypto provider access
+            temp_auth = cls(crypto_provider=crypto_provider)
             if "crypto_provider" not in cipher_kwargs:
-                cipher_kwargs["crypto_provider"] = auth._get_crypto()
-            auth.crypter = AESCipher(password, **cipher_kwargs)
-            file_data = auth.crypter.from_file(auth.filename, auth.encryption)
+                cipher_kwargs["crypto_provider"] = temp_auth._get_crypto()
+            crypter = AESCipher(password, **cipher_kwargs)
+            file_data = crypter.from_file(filepath, file_encryption)
         else:
-            file_data = auth.filename.read_text()
+            crypter = None
+            file_data = filepath.read_text()
 
         json_data = get_json_provider().loads(file_data)
 
-        locale_code = json_data.pop("locale_code", None)
-        locale = locale or locale_code
-        auth.locale = cast("Locale", locale)
+        # Use from_dict for consistent loading logic
+        auth = cls.from_dict(
+            json_data, locale=locale, crypto_provider=crypto_provider
+        )
 
-        # login cookies where renamed to website cookies
-        # old names must be adjusted
-        if "login_cookies" in json_data:
-            auth.website_cookies = json_data.pop("login_cookies")
-
-        auth._update_attrs(**json_data)
+        # Set file-specific attributes
+        auth.filename = filepath
+        auth.encryption = file_encryption
+        auth.crypter = crypter
 
         logger.info(
             "load data from file %s for locale %s",
@@ -666,8 +721,13 @@ class Authenticator(httpx.Auth):
 
         .. versionadded:: v0.8
            The returned dict now contains the `with_username` attribute
+
+        .. versionchanged:: v0.11.0
+           The returned dict now contains the `file_version` and `device`
+           attributes for complete device emulation control
         """
         data = {
+            "file_version": self.file_version,
             "website_cookies": self.website_cookies,
             "adp_token": self.adp_token,
             "access_token": self.access_token,
@@ -680,6 +740,7 @@ class Authenticator(httpx.Auth):
             "locale_code": self.locale.country_code if self.locale else None,
             "with_username": self.with_username,
             "activation_bytes": self.activation_bytes,
+            "device": self.device.to_dict() if self.device else None,
         }
         return data
 
@@ -772,10 +833,20 @@ class Authenticator(httpx.Auth):
             if self.locale is None:
                 raise Exception("No locale found.")
 
+            # Get app metadata from device if available
+            app_name = "Audible"
+            app_version = "3.56.2"
+            if self.device:
+                refresh_meta = self.device.get_token_refresh_data()
+                app_name = refresh_meta["app_name"]
+                app_version = refresh_meta["app_version"]
+
             refresh_data = refresh_access_token(
                 refresh_token=self.refresh_token,
                 domain=self.locale.domain,
                 with_username=self.with_username or False,
+                app_name=app_name,
+                app_version=app_version,
             )
 
             self._update_attrs(**refresh_data)
@@ -793,11 +864,21 @@ class Authenticator(httpx.Auth):
         if self.locale is None:
             raise Exception("No locale found.")
 
+        # Get app metadata from device if available
+        app_name = "Audible"
+        app_version = "3.56.2"
+        if self.device:
+            refresh_meta = self.device.get_token_refresh_data()
+            app_name = refresh_meta["app_name"]
+            app_version = refresh_meta["app_version"]
+
         self.website_cookies = refresh_website_cookies(
             self.refresh_token,
             self.locale.domain,
             cookies_domain,
             self.with_username or False,
+            app_name=app_name,
+            app_version=app_version,
         )
 
     @overload
@@ -864,6 +945,122 @@ class Authenticator(httpx.Auth):
             raise Exception("No locale found.")
 
         return user_profile(access_token=self.access_token, domain=self.locale.domain)
+
+    def update_device(
+        self,
+        app_version: str | None = None,
+        os_version: str | None = None,
+        **kwargs: Any,
+    ) -> None:
+        """Update device configuration metadata.
+
+        Updates the device metadata (app version, OS version, etc.) without
+        requiring re-registration. Useful when Audible requires a newer app
+        version for API access.
+
+        Args:
+            app_version: New Audible app version (e.g., "3.60.0").
+            os_version: New OS version (e.g., "16.0.0" for iOS, "14" for Android).
+            **kwargs: Other device attributes to update (device_model,
+                supported_codecs, etc.).
+
+        Example:
+            Update to newer iOS version::
+
+                auth = Authenticator.from_file("auth.json")
+                auth.update_device(app_version="3.60.0", os_version="16.0.0")
+                auth.to_file()  # Save updated metadata
+
+            Update Android device model::
+
+                auth.update_device(
+                    device_model="Pixel 7",
+                    os_version_number="33"
+                )
+
+        Note:
+            This only updates the device metadata stored in the auth file.
+            To actually register a different device type with Audible servers,
+            you need to deregister and re-register::
+
+                auth.deregister_device()
+                new_auth = Authenticator.from_login(..., device=Device.ANDROID)
+
+        .. versionadded:: v0.11.0
+        """
+        if self.device is None:
+            # Create default device from existing device_info if available
+            if self.device_info:
+                self.device = Device(
+                    device_type=self.device_info.get("device_type", "A2CZJZGLK2JJVM"),
+                    device_serial=self.device_info.get(
+                        "device_serial_number", uuid.uuid4().hex.upper()
+                    ),
+                    device_model="iPhone",
+                    app_version="3.56.2",
+                    os_version="15.0.0",
+                    software_version="35602678",
+                )
+                logger.info(
+                    "Created default device from device_info: %s", self.device.device_model
+                )
+            else:
+                self.device = Device.IPHONE
+                logger.info("Created default iPhone device")
+
+        # Build updates dict
+        updates = {}
+        if app_version:
+            updates["app_version"] = app_version
+            # Auto-update software_version (app_version without dots + "78")
+            updates["software_version"] = app_version.replace(".", "") + "78"
+        if os_version:
+            updates["os_version"] = os_version
+        updates.update(kwargs)
+
+        # Create updated device
+        self.device = self.device.copy(**updates)
+        logger.info("Updated device: %s", updates)
+
+    def set_device(self, device: Device) -> None:
+        """Set a completely new device configuration.
+
+        Replaces the current device configuration with a new one. Useful for
+        switching between predefined device profiles or using a custom device.
+
+        Args:
+            device: Device instance or predefined profile.
+
+        Example:
+            Switch to Android device::
+
+                auth = Authenticator.from_file("auth.json")
+                auth.set_device(Device.ANDROID)
+                auth.to_file()
+
+            Use customized Android profile::
+
+                android = Device.ANDROID.copy(
+                    device_model="Samsung S23",
+                    os_version_number="33"
+                )
+                auth.set_device(android)
+
+        Warning:
+            Changing the device type (e.g., iPhone to Android) requires
+            re-registration to actually register the new device with Audible
+            servers. The current tokens/credentials remain valid for the
+            originally registered device::
+
+                auth.deregister_device()  # Deregister old device
+                new_auth = Authenticator.from_login(
+                    "user", "pass", "us", device=auth.device
+                )
+
+        .. versionadded:: v0.11.0
+        """
+        self.device = device
+        logger.info("Set device to: %s (%s)", device.device_model, device.device_type)
 
     @property
     def access_token_expires(self) -> timedelta:
