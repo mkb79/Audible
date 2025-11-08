@@ -167,8 +167,8 @@ def test_authenticator_from_dict_with_device_field() -> None:
     from audible.device import IPHONE_OS26
 
     auth_data = {
-        "access_token": "Atna|test_access_token_1234567890",  # noqa: S105
-        "refresh_token": "Atnr|test_refresh_token_1234567890",  # noqa: S105
+        "access_token": "Atna|test_access_token_1234567890",
+        "refresh_token": "Atnr|test_refresh_token_1234567890",
         "device_private_key": (
             "-----BEGIN RSA PRIVATE KEY-----\n"
             "MIIEpAIBAAKCAQEA1234567890abcdefghijklmnopqrstuvwxyzABCDEFGHIJ\n"
@@ -189,8 +189,8 @@ def test_authenticator_from_dict_with_device_field() -> None:
 def test_authenticator_from_dict_backward_compatibility() -> None:
     """Test that from_dict() works with old auth files without device field."""
     auth_data = {
-        "access_token": "Atna|test_access_token_1234567890",  # noqa: S105
-        "refresh_token": "Atnr|test_refresh_token_1234567890",  # noqa: S105
+        "access_token": "Atna|test_access_token_1234567890",
+        "refresh_token": "Atnr|test_refresh_token_1234567890",
         "device_private_key": (
             "-----BEGIN RSA PRIVATE KEY-----\n"
             "MIIEpAIBAAKCAQEA1234567890abcdefghijklmnopqrstuvwxyzABCDEFGHIJ\n"
@@ -201,8 +201,8 @@ def test_authenticator_from_dict_backward_compatibility() -> None:
 
     auth = Authenticator.from_dict(auth_data)
 
-    assert auth.access_token == "Atna|test_access_token_1234567890"
-    assert auth.refresh_token == "Atnr|test_refresh_token_1234567890"
+    assert auth.access_token == "Atna|test_access_token_1234567890"  # noqa: S105
+    assert auth.refresh_token == "Atnr|test_refresh_token_1234567890"  # noqa: S105
     assert auth.device is None  # Should be None for old auth files
 
 
@@ -236,8 +236,6 @@ def test_authenticator_file_round_trip_with_device(
     auth_fixture_data: dict[str, str], tmp_path: Path
 ) -> None:
     """Test that device survives to_file() -> from_file() round-trip."""
-    from pathlib import Path
-
     from audible.device import IPHONE
 
     # Create auth with device
@@ -264,8 +262,6 @@ def test_authenticator_file_round_trip_without_device(
     auth_fixture_data: dict[str, str], tmp_path: Path
 ) -> None:
     """Test that auth files without device still work (backward compatibility)."""
-    from pathlib import Path
-
     # Create auth without device
     original = Authenticator.from_dict(auth_fixture_data)
 
@@ -308,8 +304,8 @@ def test_authenticator_device_parameter_overrides_dict_device() -> None:
     from audible.device import ANDROID, IPHONE
 
     auth_data = {
-        "access_token": "Atna|test_access_token_1234567890",  # noqa: S105
-        "refresh_token": "Atnr|test_refresh_token_1234567890",  # noqa: S105
+        "access_token": "Atna|test_access_token_1234567890",
+        "refresh_token": "Atnr|test_refresh_token_1234567890",
         "device_private_key": (
             "-----BEGIN RSA PRIVATE KEY-----\n"
             "MIIEpAIBAAKCAQEA1234567890abcdefghijklmnopqrstuvwxyzABCDEFGHIJ\n"
