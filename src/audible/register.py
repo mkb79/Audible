@@ -1,17 +1,23 @@
+import warnings
 from datetime import datetime, timedelta, timezone
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import httpx
 
 from .login import build_client_id
 
 
+if TYPE_CHECKING:
+    from .device import BaseDevice
+
+
 def register(
     authorization_code: str,
     code_verifier: bytes,
     domain: str,
-    serial: str,
+    serial: str | None = None,
     with_username: bool = False,
+    device: "BaseDevice | None" = None,
 ) -> dict[str, Any]:
     """Registers a dummy Audible device.
 
@@ -19,8 +25,9 @@ def register(
         authorization_code: The code given after a successful authorization
         code_verifier: The verifier code from authorization
         domain: The top level domain of the requested Amazon server (e.g. com).
-        serial: The device serial
+        serial: The device serial. DEPRECATED: Use device parameter instead.
         with_username: If ``True`` uses `audible` domain instead of `amazon`.
+        device: The device to register. If ``None``, uses default iPhone device.
 
     Returns:
         Additional authentication data needed for access Audible API.
@@ -30,7 +37,34 @@ def register(
 
     .. versionadded:: v0.7.1
            The with_username argument
+    .. versionadded:: v0.11.0
+           The device argument
+    .. deprecated:: v0.11.0
+           The serial argument is deprecated. Use device parameter instead.
     """
+    # Handle device parameter with backward compatibility
+    if device is None:
+        from .device import IPHONE
+
+        device = IPHONE
+
+    # Handle backward compatibility with serial parameter
+    if serial is not None:
+        warnings.warn(
+            "The 'serial' parameter is deprecated and will be removed in v0.12.0. "
+            "Use 'device' parameter instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        # Use provided serial instead of device's serial
+        device_serial = serial
+    else:
+        device_serial = device.device_serial
+
+    # Get registration data from device
+    registration_data = device.get_registration_data()
+    registration_data["device_serial"] = device_serial
+
     body = {
         "requested_token_type": [
             "bearer",
@@ -39,22 +73,9 @@ def register(
             "store_authentication_cookie",
         ],
         "cookies": {"website_cookies": [], "domain": f".amazon.{domain}"},
-        "registration_data": {
-            "domain": "Device",
-            "app_version": "3.56.2",
-            "device_serial": serial,
-            "device_type": "A2CZJZGLK2JJVM",
-            "device_name": (
-                "%FIRST_NAME%%FIRST_NAME_POSSESSIVE_STRING%%DUPE_"
-                "STRATEGY_1ST%Audible for iPhone"
-            ),
-            "os_version": "15.0.0",
-            "software_version": "35602678",
-            "device_model": "iPhone",
-            "app_name": "Audible",
-        },
+        "registration_data": registration_data,
         "auth_data": {
-            "client_id": build_client_id(serial),
+            "client_id": build_client_id(device_serial),
             "authorization_code": authorization_code,
             "code_verifier": code_verifier.decode(),
             "code_algorithm": "SHA-256",
@@ -102,6 +123,7 @@ def register(
         "store_authentication_cookie": store_authentication_cookie,
         "device_info": device_info,
         "customer_info": customer_info,
+        "device": device,
     }
 
 

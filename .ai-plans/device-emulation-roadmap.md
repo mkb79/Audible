@@ -7,6 +7,7 @@
 ## Executive Summary
 
 This document outlines the complete implementation plan for the Device Emulation System in the Audible library. The system enables users to:
+
 - Emulate different Audible-capable devices (iPhone, Android, Fire Tablet)
 - Access device-specific features (Dolby Atmos, Widevine DRM, etc.)
 - Customize device metadata for API compatibility
@@ -21,16 +22,20 @@ This document outlines the complete implementation plan for the Device Emulation
 ### 1.1 Device Class Architecture ✅
 
 **Commits:**
+
 - `4de5050` - Initial device system with comprehensive metadata
 - `1f2b0d3` - Refactor to BaseDevice + iOS/Android subclasses
 
 **Implemented:**
+
 - `BaseDevice` (Abstract Base Class)
+
   - Abstract methods: `_generate_user_agent()`, `_generate_bundle_id()`, `_detect_os_family()`
   - 15+ device attributes (device_type, app_version, os_version, codecs, DRM types, etc.)
   - Shared helper methods: `copy()`, `to_dict()`, `from_dict()`, `get_registration_data()`, etc.
 
 - `iPhoneDevice(BaseDevice)`
+
   - iOS-specific User-Agent generation (WebKit format)
   - FairPlay DRM support
   - Dolby Atmos codec support (ec+3)
@@ -44,17 +49,20 @@ This document outlines the complete implementation plan for the Device Emulation
   - Bundle ID: `com.audible.application`
 
 **Predefined Instances:**
+
 - `IPHONE` - iPhone 15, iOS 15.0, Audible 3.56.2
 - `IPHONE_16` - iPhone 15, iOS 16.0, Audible 3.60.0
 - `ANDROID` - Android SDK x86_64, Android 14, Audible 177102
 - `ANDROID_PIXEL_7` - Google Pixel 7, Android 13
 
 **Files:**
+
 - `src/audible/device.py` (600 lines)
 
 ### 1.2 Authenticator Integration ✅
 
 **Implemented:**
+
 - Added `device: BaseDevice | None` attribute to Authenticator
 - Added `file_version: str = "1.0"` for future compatibility
 - Extended `to_dict()` to serialize device metadata
@@ -66,10 +74,12 @@ This document outlines the complete implementation plan for the Device Emulation
 - Auto-generation of default device from `device_info` if missing
 
 **New Methods:**
+
 - `update_device(app_version, os_version, **kwargs)` - Update metadata without re-registration
 - `set_device(device)` - Set completely new device configuration
 
 **Enhanced Methods:**
+
 - `refresh_access_token()` - Now uses device metadata (app_name, app_version)
 - `set_website_cookies_for_country()` - Now uses device metadata
 - Module-level functions also updated:
@@ -77,6 +87,7 @@ This document outlines the complete implementation plan for the Device Emulation
   - `refresh_website_cookies(refresh_token, domain, ..., app_name, app_version)`
 
 **Files Modified:**
+
 - `src/audible/auth.py` (~200 lines changed)
 
 ---
@@ -90,6 +101,7 @@ This document outlines the complete implementation plan for the Device Emulation
 **Estimated Effort:** 2-3 hours
 
 **Current Problem:**
+
 - `register.py` uses hardcoded device values
 - `login.py` uses hardcoded device values
 - `Authenticator.from_login()` doesn't accept device parameter
@@ -100,6 +112,7 @@ This document outlines the complete implementation plan for the Device Emulation
 #### 2.1.1 Update `register.py`
 
 **Current Code (lines 34-64):**
+
 ```python
 def register(
     authorization_code: str,
@@ -130,6 +143,7 @@ def register(
 ```
 
 **New Code:**
+
 ```python
 def register(
     authorization_code: str,
@@ -150,6 +164,7 @@ def register(
 ```
 
 **Impact:**
+
 - All callers of `register()` must be updated
 - `Authenticator.from_login()` needs to pass device
 - `Authenticator.from_login_external()` needs to pass device
@@ -161,6 +176,7 @@ def register(
 **A. `build_init_cookies()` (lines 305-321)**
 
 Current:
+
 ```python
 def build_init_cookies() -> dict[str, str]:
     map_md_dict = {
@@ -175,6 +191,7 @@ def build_init_cookies() -> dict[str, str]:
 ```
 
 New:
+
 ```python
 def build_init_cookies(device: BaseDevice) -> dict[str, str]:
     # Use device.get_init_cookies() instead
@@ -184,6 +201,7 @@ def build_init_cookies(device: BaseDevice) -> dict[str, str]:
 **B. `login()` function (lines 398-540)**
 
 Current:
+
 ```python
 def login(
     username: str,
@@ -206,6 +224,7 @@ def login(
 ```
 
 New:
+
 ```python
 def login(
     username: str,
@@ -234,6 +253,7 @@ Similar updates needed.
 **D. Module-level `USER_AGENT` constant**
 
 Current:
+
 ```python
 USER_AGENT = (
     "Mozilla/5.0 (iPhone; CPU iPhone OS 15_0 like Mac OS X) "
@@ -242,6 +262,7 @@ USER_AGENT = (
 ```
 
 Decision:
+
 - Keep for backward compatibility
 - Mark as deprecated in docstring
 - Use device.user_agent in all new code
@@ -249,6 +270,7 @@ Decision:
 #### 2.1.3 Update `Authenticator.from_login()`
 
 Current:
+
 ```python
 @classmethod
 def from_login(
@@ -277,6 +299,7 @@ def from_login(
 ```
 
 New:
+
 ```python
 @classmethod
 def from_login(
@@ -323,6 +346,7 @@ def from_login(
 ```
 
 **Backward Compatibility Strategy:**
+
 - Keep `serial` parameter but mark as deprecated
 - If `serial` is provided without `device`, create default device with that serial
 - Log deprecation warning
@@ -332,6 +356,7 @@ def from_login(
 Similar changes as `from_login()`.
 
 **Testing Checklist:**
+
 - [ ] Test registration with IPHONE
 - [ ] Test registration with ANDROID
 - [ ] Test registration with custom device
@@ -343,182 +368,79 @@ Similar changes as `from_login()`.
 
 ---
 
-## Phase 3: Android Certificate Challenge 🔴 CRITICAL ISSUE
+## Phase 3: Device Data Storage ✅ SIMPLE
 
-### 3.1 Problem Statement
+### 3.1 Objective
 
-**Issue:** Android devices using Widevine DRM require device certificates for license requests.
+**Goal:** Ensure all device-related data returned by the Audible server during registration is properly stored in the auth file.
 
-**Background:**
-- iOS uses FairPlay DRM (handled via access tokens)
-- Android uses Widevine DRM (requires device certificate + private key)
-- For Dolby Atmos and encrypted content, a valid device certificate is needed
-- Certificates are typically in base64-encoded DER format
+**What This Is:**
 
-**Evidence from Research:**
-- GitHub Issue #155: Mentions Dolby Atmos on Android requiring Widevine
-- AudibleApi PR#55: Android implementation (didn't include certificate handling)
+- Storing device_info from server response (already implemented)
+- Ensuring complete round-trip: register → save → load → use
 
-**What's Missing:**
-1. Device certificate (base64 DER format)
-2. Device private key (for certificate)
-3. Certificate generation/provisioning mechanism
-4. Integration with license request flow
+**What This Is NOT:**
 
-### 3.2 Certificate Architecture
+- NOT about DRM/Widevine/FairPlay (that's for audible-cli later)
+- NOT about codec/DRM type negotiation
+- NOT about license requests
 
-**Where Certificates Are Needed:**
+### 3.2 Current Status
 
-#### A. Device Registration (Maybe)
-Some DRM systems require certificate during registration. Need to verify if Audible does.
+**Already Implemented:**
 
-#### B. License Requests (Definitely)
-When requesting a license for DRM-protected content:
 ```python
-POST /1.0/content/{ASIN}/licenserequest
-{
-    "quality": "High",
-    "consumption_type": "Download",
-    "supported_media_features": {
-        "codecs": ["mp4a.40.2", "ac-4"],
-        "drm_types": ["Widevine"]
-    },
-    "spatial": true,
-    "device_certificate": "BASE64_DER_ENCODED_CERT"  # ← NEEDED
+# register.py returns device_info from server
+extensions = success_response["extensions"]
+device_info = extensions["device_info"]
+customer_info = extensions["customer_info"]
+
+return {
+    "device_info": device_info,  # Contains: device_serial_number, device_type, device_name
+    "customer_info": customer_info,
+    ...
 }
+
+# auth.py already stores it
+def to_dict(self):
+    return {
+        "device_info": self.device_info,  # ✅ Already saved
+        "device": self.device.to_dict(),  # ✅ Already saved
+        ...
+    }
 ```
 
-#### C. DRM License Endpoint
-```python
-POST /1.0/content/{ASIN}/drmlicense
-{
-    "certificate": "BASE64_DER_ENCODED_CERT",
-    "challenge": "..."
-}
-```
+**What device_info Contains (from server):**
 
-### 3.3 Implementation Options
+- `device_serial_number` - Serial returned by server
+- `device_type` - Device type confirmed by server
+- `device_name` - Device name processed by server
 
-#### Option A: User-Provided Certificates (Recommended for v1)
+### 3.3 Verification Needed
 
-**Approach:**
-- Add optional `device_certificate` and `device_private_key` attributes to `AndroidDevice`
-- User must provide their own valid certificate (extracted from real Android device)
-- Document how to extract certificate from real device
+**Check:**
 
-**Pros:**
-- Legal compliance (no distribution of Google's certificates)
-- Works with legitimate user-owned devices
-- Transparent to user
+1. Does server return additional fields we're not storing?
+2. Is there a device certificate/private key in the response? (Probably not - that's the RSA key for signing)
+3. Are we correctly storing everything from `device_info`?
 
-**Cons:**
-- Complex setup for users
-- Requires real Android device access
-- Each user needs unique certificate
+**Current Understanding:**
 
-**Implementation:**
-```python
-@dataclass
-class AndroidDevice(BaseDevice):
-    # ... existing attributes ...
-    device_certificate: str | None = None  # Base64 DER format
-    device_private_key_cert: str | None = None  # For certificate signing
+- `device_private_key` (in auth.py) is for **RSA request signing**, NOT for DRM
+- `device_info` is server confirmation of registration
+- DRM certificates (if any) would be handled in audible-cli for media download
 
-    def get_license_request_data(self, asin: str, quality: str = "High") -> dict[str, Any]:
-        """Get data for license request with Widevine support."""
-        data = {
-            "quality": quality,
-            "consumption_type": "Download",
-            "supported_media_features": self.get_supported_media_features(),
-            "spatial": True
-        }
+### 3.4 Action Items
 
-        if self.device_certificate:
-            data["device_certificate"] = self.device_certificate
+**Very Simple - Just Verify:**
 
-        return data
-```
+- [ ] Review server response from `/auth/register` to confirm all fields are captured
+- [ ] Ensure `device_info` is completely stored
+- [ ] Test round-trip: register → save → load → verify device recreation
 
-**User Documentation:**
-```markdown
-### Android Device Certificates
+**Estimated Effort:** 30 minutes (mostly verification)
 
-To use Widevine DRM with Android devices, you need a device certificate:
-
-1. Extract certificate from a real Android device:
-   ```bash
-   adb pull /data/vendor/mediadrm/IDM1013/L1/oemcert.bin
-   base64 oemcert.bin > device_cert.txt
-   ```
-
-2. Use in code:
-   ```python
-   from audible.device import AndroidDevice
-
-   my_android = AndroidDevice(
-       device_type="A10KISP2GWF0E4",
-       device_model="Pixel 7",
-       device_certificate=open("device_cert.txt").read().strip(),
-       ...
-   )
-   ```
-```
-
-#### Option B: Self-Signed Test Certificates (For Development Only)
-
-**Approach:**
-- Generate test certificates for development
-- **CLEARLY MARKED** as not for production use
-- Only works for testing, not real content
-
-**Pros:**
-- Easy for testing
-- No real device needed
-
-**Cons:**
-- Won't work with real Audible content
-- Legal gray area
-- Could enable piracy if misused
-
-**Status:** NOT RECOMMENDED (legal/ethical concerns)
-
-#### Option C: Certificate Provisioning Service (Future Enhancement)
-
-**Approach:**
-- Partner with Google/Amazon for legitimate certificate provisioning
-- Implement provisioning protocol
-
-**Status:** OUT OF SCOPE for current implementation
-
-### 3.4 Recommended Implementation Plan
-
-**Phase 3A: Add Certificate Support to AndroidDevice**
-
-1. Add optional certificate attributes
-2. Update serialization to include certificates
-3. Add `get_license_request_data()` method
-4. Update `to_dict()`/`from_dict()` for certificate fields
-
-**Phase 3B: Document Certificate Extraction**
-
-1. Write detailed guide on extracting certificates from real devices
-2. Add legal disclaimer about device ownership
-3. Provide troubleshooting guide
-
-**Phase 3C: Integrate with License Request Flow**
-
-1. Update client to use `device.get_license_request_data()` for license requests
-2. Add certificate validation
-3. Handle missing certificate gracefully (informative error)
-
-**Files to Modify:**
-- `src/audible/device.py` - Add certificate attributes to `AndroidDevice`
-- `src/audible/client.py` - Integrate certificate in license requests
-- `docs/` - Add certificate extraction guide
-
-**Priority:** HIGH (blocks full Android DRM support)
-
-**Estimated Effort:** 3-4 hours
+**Priority:** LOW (likely already complete)
 
 ---
 
@@ -529,6 +451,7 @@ To use Widevine DRM with Android devices, you need a device certificate:
 **Required Tests:**
 
 #### A. Device Classes (`tests/test_device.py`)
+
 - [ ] Test `iPhoneDevice` instantiation
 - [ ] Test `AndroidDevice` instantiation
 - [ ] Test custom device creation (inherit from BaseDevice)
@@ -547,6 +470,7 @@ To use Widevine DRM with Android devices, you need a device certificate:
 - [ ] Test certificate handling in AndroidDevice
 
 #### B. Authenticator Integration (`tests/test_auth.py`)
+
 - [ ] Test auth file with device metadata
 - [ ] Test loading auth file (iOS device)
 - [ ] Test loading auth file (Android device)
@@ -559,6 +483,7 @@ To use Widevine DRM with Android devices, you need a device certificate:
 - [ ] Test file_version handling
 
 #### C. Registration & Login (`tests/test_register.py`, `tests/test_login.py`)
+
 - [ ] Test registration with IPHONE
 - [ ] Test registration with ANDROID
 - [ ] Test registration with custom device
@@ -568,6 +493,7 @@ To use Widevine DRM with Android devices, you need a device certificate:
 - [ ] Test backward compatibility with serial parameter
 
 #### D. Integration Tests
+
 - [ ] Full auth flow: login → register → save → load → refresh
 - [ ] Device switch: register as iPhone → deregister → register as Android
 - [ ] Custom device end-to-end test
@@ -577,6 +503,7 @@ To use Widevine DRM with Android devices, you need a device certificate:
 ### 4.2 Type Checking
 
 **mypy Compatibility:**
+
 - [ ] All device classes pass mypy
 - [ ] All authenticator changes pass mypy
 - [ ] Abstract methods correctly typed
@@ -585,6 +512,7 @@ To use Widevine DRM with Android devices, you need a device certificate:
 ### 4.3 Linting
 
 **ruff/pydoclint:**
+
 - [ ] All docstrings follow Google style
 - [ ] All public methods documented
 - [ ] All classes have class-level docstrings
@@ -593,6 +521,7 @@ To use Widevine DRM with Android devices, you need a device certificate:
 ### 4.4 Pre-commit Hooks
 
 Before final PR:
+
 - [ ] Run `uv run nox` (all sessions must pass)
 - [ ] Run `uv run nox --session=pre-commit`
 - [ ] Run `uv run nox --session=mypy`
@@ -606,12 +535,14 @@ Before final PR:
 ### 5.1 Code Documentation ⏳ TODO
 
 #### A. Module Docstrings
+
 - [x] `src/audible/device.py` - Comprehensive module docstring with examples
 - [ ] Update `src/audible/auth.py` docstring to mention device support
 - [ ] Update `src/audible/register.py` docstring
 - [ ] Update `src/audible/login.py` docstring
 
 #### B. Class Docstrings
+
 - [x] `BaseDevice` - Complete with inheritance example
 - [x] `iPhoneDevice` - Complete with customization example
 - [x] `AndroidDevice` - Complete with certificate note
@@ -619,7 +550,9 @@ Before final PR:
 - [ ] All methods have proper docstrings
 
 #### C. API Reference
+
 All public APIs documented with:
+
 - Purpose
 - Parameters (with types and examples)
 - Return values
@@ -632,7 +565,8 @@ All public APIs documented with:
 #### A. README Updates (`README.md`)
 
 **New Section:**
-```markdown
+
+````markdown
 ## Device Emulation
 
 Audible supports different device types with varying features. You can customize which device your authentication emulates:
@@ -649,6 +583,7 @@ auth = Authenticator.from_login("email", "password", "us")
 # Register as Android
 auth = Authenticator.from_login("email", "password", "us", device=ANDROID)
 ```
+````
 
 ### Creating Custom Devices
 
@@ -688,15 +623,18 @@ auth.to_file()
 ### Device-Specific Features
 
 **iPhone:**
+
 - FairPlay DRM
 - Dolby Atmos (ec+3 codec)
 
 **Android:**
+
 - Widevine DRM
 - Dolby Atmos (ac-4 codec)
 - Extended codec support
 
 **Custom Devices:**
+
 ```python
 from audible.device import BaseDevice
 from dataclasses import dataclass
@@ -720,7 +658,8 @@ my_firetv = FireTVDevice(
     software_version="35602678"
 )
 ```
-```
+
+````
 
 #### B. Examples (`examples/`)
 
@@ -780,9 +719,10 @@ my_firetv = FireTVDevice(
 
    # Save with device metadata
    auth.to_file()  # Now includes device + file_version
-   ```
+````
 
 3. **Using New Features**
+
    ```python
    from audible.device import ANDROID
 
@@ -796,6 +736,7 @@ my_firetv = FireTVDevice(
 ### Deprecations
 
 **`serial` parameter (soft deprecation):**
+
 ```python
 # Old way (still works, but deprecated):
 auth = Authenticator.from_login("email", "password", "us", serial="ABC123")
@@ -811,7 +752,8 @@ auth = Authenticator.from_login(
 ### Breaking Changes
 
 **None** - Full backward compatibility maintained
-```
+
+````
 
 ### 5.4 CHANGELOG Entry
 
@@ -896,7 +838,7 @@ auth = Authenticator.from_login(
 ### Contributors
 
 Special thanks to the AudibleApi project for Android device specifications.
-```
+````
 
 ---
 
@@ -914,11 +856,20 @@ Special thanks to the AudibleApi project for Android device specifications.
 - Device capability negotiation
 - Multi-device management (switch between registered devices)
 
-### 6.3 DRM Integration
+### 6.3 DRM Integration (OUT OF SCOPE - audible-cli only)
 
-- Full Widevine license request flow
-- FairPlay certificate handling
-- PlayReady support
+**NOT in this package:**
+
+- Widevine/FairPlay license requests
+- Codec negotiation
+- DRM certificate handling
+- Media feature detection
+
+**Rationale:**
+
+- Core `audible` package handles authentication/registration only
+- DRM features belong in `audible-cli` for media download
+- Keeps core library focused and lightweight
 
 ---
 
@@ -928,24 +879,32 @@ Special thanks to the AudibleApi project for Android device specifications.
 
 1. ✅ Phase 1: Foundation (DONE)
 2. 🚧 Phase 2.1: Register & Login Integration (NEXT - 2-3 hours)
-3. 🔴 Phase 3: Android Certificate Support (CRITICAL - 3-4 hours)
+3. ✅ Phase 3: Device Data Storage (LIKELY DONE - verify only, ~30min)
 4. ⏳ Phase 4: Tests (HIGH - 4-6 hours)
 5. ⏳ Phase 5: Documentation (MEDIUM - 2-3 hours)
 
-**Total Remaining Effort:** ~15 hours
+**Total Remaining Effort:** ~10-12 hours
 
 **Blockers:**
+
 - None currently
 
 **Risks:**
-- Android certificate legality/availability
+
 - Audible API changes breaking device emulation
+
+**Out of Scope (for audible-cli later):**
+
+- DRM license requests (Widevine/FairPlay)
+- Codec negotiation
+- Media feature detection
 
 ---
 
 ## Implementation Checklist
 
 ### Phase 2: Integration
+
 - [ ] Update `register()` to accept `device` parameter
 - [ ] Update `login()` to accept `device` parameter
 - [ ] Update `external_login()` to accept `device` parameter
@@ -956,16 +915,15 @@ Special thanks to the AudibleApi project for Android device specifications.
 - [ ] Test registration with ANDROID
 - [ ] Test backward compatibility
 
-### Phase 3: Certificates
-- [ ] Add `device_certificate` attribute to `AndroidDevice`
-- [ ] Add `device_private_key_cert` attribute to `AndroidDevice`
-- [ ] Update `to_dict()`/`from_dict()` for certificates
-- [ ] Add `get_license_request_data()` method
-- [ ] Write certificate extraction guide
-- [ ] Add legal disclaimer
-- [ ] Test certificate serialization
+### Phase 3: Device Data Storage
+
+- [ ] Verify all fields from server `device_info` are stored
+- [ ] Test round-trip: register → save → load
+- [ ] Confirm no additional device data in server response
+- [ ] Document device_info fields
 
 ### Phase 4: Testing
+
 - [ ] Write device class unit tests
 - [ ] Write authenticator integration tests
 - [ ] Write register/login tests
@@ -975,6 +933,7 @@ Special thanks to the AudibleApi project for Android device specifications.
 - [ ] Pass all nox sessions
 
 ### Phase 5: Documentation
+
 - [ ] Update README with device section
 - [ ] Create example files
 - [ ] Write Sphinx documentation
@@ -987,17 +946,23 @@ Special thanks to the AudibleApi project for Android device specifications.
 ## Notes & Decisions
 
 **2025-01-08:**
+
 - Decided on `BaseDevice` abstract class approach (cleaner than single class with if/else)
 - Predefined devices as module constants (not class properties) for better type inference
 - Backward compatibility is critical - no breaking changes
-- Android certificates will be user-provided (legal compliance)
+- **IMPORTANT:** Removed `supported_codecs` and `supported_drm_types` from device classes
+  - These features belong in audible-cli, not core library
+  - Core library only handles device emulation for authentication/registration
+  - DRM license requests and codec negotiation are out of scope
 
 **Key Design Principles:**
+
 1. Clean separation of iOS vs Android logic
 2. Easy extensibility for custom devices
 3. Full backward compatibility
 4. Type safety (ABC + dataclasses)
 5. Comprehensive documentation
+6. **IMPORTANT:** No DRM/codec features in core library (belongs in audible-cli)
 
 ---
 

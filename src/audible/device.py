@@ -83,8 +83,6 @@ class BaseDevice(ABC):
         os_family: Operating system family ("ios", "android").
         os_version_number: Numeric OS version.
         device_product: Device product identifier (Android).
-        supported_codecs: Audio codecs supported by this device.
-        supported_drm_types: DRM types supported by this device.
         domain: Registration domain (usually "Device").
 
     Example:
@@ -126,8 +124,6 @@ class BaseDevice(ABC):
     os_family: str = ""
     os_version_number: str = ""
     device_product: str = ""
-    supported_codecs: list[str] = field(default_factory=lambda: ["mp4a.40.2"])
-    supported_drm_types: list[str] = field(default_factory=lambda: ["Adrm"])
     domain: str = "Device"
 
     def __post_init__(self) -> None:
@@ -317,20 +313,6 @@ class BaseDevice(ABC):
             "amzn-app-id": self.amzn_app_id,
         }
 
-    def get_supported_media_features(self) -> dict[str, list[str]]:
-        """Get supported codecs and DRM types for license requests.
-
-        Returns:
-            Dictionary with codec and DRM type lists.
-
-        See Also:
-            GitHub Issue: https://github.com/mkb79/audible-cli/issues/155
-        """
-        return {
-            "codecs": self.supported_codecs.copy(),
-            "drm_types": self.supported_drm_types.copy(),
-        }
-
 
 @dataclass
 class iPhoneDevice(BaseDevice):
@@ -339,10 +321,9 @@ class iPhoneDevice(BaseDevice):
     Implements iPhone-specific User-Agent generation, bundle IDs,
     and default configurations for iOS devices.
 
-    Supports:
-    - FairPlay DRM
-    - Dolby Atmos (ec+3 codec)
-    - AAC-LC and xHE-AAC codecs
+    Attributes:
+        os_family: The OS family identifier (always "ios" for iPhoneDevice).
+        app_name: The application name (always "Audible" for iPhoneDevice).
 
     Example:
         Use default iPhone configuration::
@@ -368,12 +349,6 @@ class iPhoneDevice(BaseDevice):
 
     os_family: str = "ios"
     app_name: str = "Audible"
-    supported_codecs: list[str] = field(
-        default_factory=lambda: ["mp4a.40.2", "mp4a.40.42", "ec+3"]
-    )
-    supported_drm_types: list[str] = field(
-        default_factory=lambda: ["Mpeg", "Adrm", "FairPlay"]
-    )
 
     def _generate_user_agent(self) -> str:
         """Generate iOS User-Agent string."""
@@ -397,7 +372,9 @@ class iPhoneDevice(BaseDevice):
 
     def _extract_os_version_number(self) -> str:
         """Extract major iOS version (e.g., '15.0.0' -> '15')."""
-        return self.os_version.split(".")[0] if "." in self.os_version else self.os_version
+        return (
+            self.os_version.split(".")[0] if "." in self.os_version else self.os_version
+        )
 
 
 @dataclass
@@ -407,11 +384,9 @@ class AndroidDevice(BaseDevice):
     Implements Android-specific User-Agent generation, package names,
     and default configurations for Android devices.
 
-    Supports:
-    - Widevine DRM
-    - Dolby Atmos (ac-4 codec)
-    - Multiple streaming protocols (HLS, DASH)
-    - Extended codec support (XHE-AAC, AC-4)
+    Attributes:
+        os_family: The OS family identifier (always "android" for AndroidDevice).
+        app_name: The application package name (always "com.audible.application" for AndroidDevice).
 
     Example:
         Use default Android configuration::
@@ -443,25 +418,14 @@ class AndroidDevice(BaseDevice):
 
     os_family: str = "android"
     app_name: str = "com.audible.application"
-    supported_codecs: list[str] = field(
-        default_factory=lambda: ["mp4a.40.2", "mp4a.40.42", "ec+3", "ac-4"]
-    )
-    supported_drm_types: list[str] = field(
-        default_factory=lambda: [
-            "Adrm",
-            "Hls",
-            "PlayReady",
-            "Mpeg",
-            "Dash",
-            "Widevine",
-        ]
-    )
 
     def _generate_user_agent(self) -> str:
         """Generate Android User-Agent string (Dalvik format)."""
         if "/" in self.os_version and ":" in self.os_version:
             # Full Android version string format
-            android_version = self.os_version.split("/")[0].replace("Android", "").strip()
+            android_version = (
+                self.os_version.split("/")[0].replace("Android", "").strip()
+            )
             build = self.os_version.split(":")[1].split("/")[0]
             return (
                 f"Dalvik/2.1.0 (Linux; U; {android_version}; "
@@ -524,8 +488,6 @@ IPHONE = iPhoneDevice(
 )
 """iPhone 15 running iOS 15.0 with Audible 3.56.2.
 
-Supports FairPlay DRM and Dolby Atmos (ec+3 codec).
-
 Example:
     >>> from audible.device import IPHONE
     >>> auth = Authenticator.from_login("user", "pass", "us", device=IPHONE)
@@ -562,8 +524,6 @@ ANDROID = AndroidDevice(
     ),
 )
 """Android device (SDK built for x86_64) with Audible app.
-
-Supports Widevine DRM, Dolby Atmos (ac-4 codec), and multiple streaming protocols.
 
 Based on real Android Audible app configuration.
 

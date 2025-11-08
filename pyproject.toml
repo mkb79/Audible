@@ -218,6 +218,10 @@ lines-after-imports = 2
 "src/audible/json/protocols.py" = ["D417"]
 "src/audible/json/*_provider.py" = ["PLC0415"]
 "src/audible/json/registry.py" = ["PLC0415"]
+"src/audible/auth.py" = ["PLC0415"]
+"src/audible/device.py" = ["PLC0415", "N801"]  # N801: iPhoneDevice naming intentional
+"src/audible/login.py" = ["PLC0415", "C901"]  # C901: login() complexity pre-existing
+"src/audible/register.py" = ["PLC0415"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests", "src/audible"]

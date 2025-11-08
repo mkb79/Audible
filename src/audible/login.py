@@ -5,9 +5,10 @@ import logging
 import re
 import secrets
 import uuid
+import warnings
 from collections.abc import Callable
 from textwrap import dedent
-from typing import Any
+from typing import TYPE_CHECKING, Any
 from urllib.parse import parse_qs, urlencode
 
 import httpx
@@ -15,8 +16,11 @@ from bs4 import BeautifulSoup, NavigableString, Tag
 from PIL import Image
 
 from .exceptions import AudibleError
-from .json import get_json_provider
 from .metadata import encrypt_metadata, meta_audible_app
+
+
+if TYPE_CHECKING:
+    from .device import BaseDevice
 
 
 logger = logging.getLogger("audible.login")
@@ -58,13 +62,25 @@ def default_approval_alert_callback() -> None:
     input("Please press ENTER when you approve the notification.")
 
 
-def playwright_external_login_url_callback(url: str) -> str:
+def playwright_external_login_url_callback(
+    url: str, device: "BaseDevice | None" = None
+) -> str:
     """Helper function for login using playwright.
 
     Install playwright with `pip install playwright` into the same environment
     Run command: `playwright install chromium`
+
+    Args:
+        url: The OAuth URL to navigate to
+        device: The device to use for cookies. If ``None``, uses default iPhone device.
+
+    Returns:
+        The redirect URL containing the authorization code
+
+    .. versionadded:: v0.11.0
+           The device argument
     """
-    from playwright.sync_api import (  # type: ignore[import-not-found]  # noqa: I001, PLC0415
+    from playwright.sync_api import (  # type: ignore[import-not-found]  # noqa: I001
         sync_playwright,
         Error,
         TimeoutError as PlaywrightTimeoutError,
@@ -82,7 +98,7 @@ def playwright_external_login_url_callback(url: str) -> str:
 
         try:
             cookies = []
-            for name, value in build_init_cookies().items():
+            for name, value in build_init_cookies(device).items():
                 cookies.append({"name": name, "value": value, "url": url})
             context.add_cookies(cookies)
 
@@ -302,22 +318,25 @@ def build_oauth_url(
     return f"{base_url}?{urlencode(oauth_params)}", serial
 
 
-def build_init_cookies() -> dict[str, str]:
-    """Build initial cookies to prevent captcha in most cases."""
-    token_bytes = secrets.token_bytes(313)
-    frc = base64.b64encode(token_bytes).decode("ascii").rstrip("=")
+def build_init_cookies(device: "BaseDevice | None" = None) -> dict[str, str]:
+    """Build initial cookies to prevent captcha in most cases.
 
-    map_md_dict = {
-        "device_user_dictionary": [],
-        "device_registration_data": {"software_version": "35602678"},
-        "app_identifier": {"app_version": "3.56.2", "bundle_id": "com.audible.iphone"},
-    }
-    map_md_str = get_json_provider().dumps(map_md_dict)
-    map_md = base64.b64encode(map_md_str.encode()).decode().rstrip("=")
+    Args:
+        device: The device to use for cookie generation. If ``None``, uses default iPhone device.
 
-    amzn_app_id = "MAPiOSLib/6.0/ToHideRetailLink"
+    Returns:
+        Dictionary of initial cookies for login.
 
-    return {"frc": frc, "map-md": map_md, "amzn-app-id": amzn_app_id}
+    .. versionadded:: v0.11.0
+           The device argument
+    """
+    if device is None:
+        from .device import IPHONE
+
+        device = IPHONE
+
+    # Device already provides get_init_cookies() that builds the full cookie dict
+    return device.get_init_cookies()
 
 
 def check_for_captcha(soup: BeautifulSoup) -> bool:
@@ -387,6 +406,7 @@ def login(
     otp_callback: Callable[[], str] | None = None,
     cvf_callback: Callable[[], str] | None = None,
     approval_callback: Callable[[], Any] | None = None,
+    device: "BaseDevice | None" = None,
 ) -> dict[str, Any]:
     """Login to Audible by simulating an Audible App for iOS.
 
@@ -398,6 +418,7 @@ def login(
             login.
         market_place_id: The id for the Audible marketplace to login.
         serial: The device serial. If ``None`` a custom one will be created.
+            DEPRECATED: Use device parameter instead.
         with_username: If ``True`` login with Audible username instead
             of Amazon account.
         captcha_callback: A custom Callable for handling captcha requests.
@@ -408,6 +429,7 @@ def login(
             code. If ``None`` :func:`default_cvf_callback` is used.
         approval_callback: A custom Callable for handling approval alerts.
             If ``None`` :func:`default_approval_alert_callback` is used.
+        device: The device to use for login. If ``None``, uses default iPhone device.
 
     Returns:
         An ``authorization_code``, a ``code_verifier`` and the
@@ -415,7 +437,29 @@ def login(
 
     Raises:
         Exception: If authorization_code is not in response url.
+
+    .. versionadded:: v0.11.0
+           The device argument
+    .. deprecated:: v0.11.0
+           The serial argument is deprecated. Use device parameter instead.
     """
+    # Handle device parameter with backward compatibility
+    if device is None:
+        from .device import IPHONE
+
+        device = IPHONE
+
+    # Handle backward compatibility with serial parameter
+    if serial is not None:
+        warnings.warn(
+            "The 'serial' parameter is deprecated and will be removed in v0.12.0. "
+            "Use 'device' parameter instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        # Create a copy of device with the provided serial
+        device = device.copy(device_serial=serial)
+
     if with_username:
         base_url = f"https://www.audible.{domain}"
         logger.info("Login with Audible username.")
@@ -426,11 +470,11 @@ def login(
         logger.info("Login with Amazon Account.")
 
     default_headers = {
-        "User-Agent": USER_AGENT,
+        "User-Agent": device.user_agent,
         "Accept-Language": "en-US",
         "Accept-Encoding": "gzip",
     }
-    init_cookies = build_init_cookies()
+    init_cookies = build_init_cookies(device)
 
     session = httpx.Client(
         base_url=base_url,
@@ -440,12 +484,12 @@ def login(
     )
     code_verifier = create_code_verifier()
 
-    oauth_url, serial = build_oauth_url(
+    oauth_url, device_serial = build_oauth_url(
         country_code=country_code,
         domain=domain,
         market_place_id=market_place_id,
         code_verifier=code_verifier,
-        serial=serial,
+        serial=device.device_serial,
         with_username=with_username,
     )
 
@@ -456,7 +500,7 @@ def login(
     login_inputs["email"] = username
     login_inputs["password"] = password
 
-    metadata = meta_audible_app(USER_AGENT, base_url)
+    metadata = meta_audible_app(device.user_agent, base_url)
     login_inputs["metadata1"] = encrypt_metadata(metadata)
 
     method, url = get_next_action_from_soup(oauth_soup, {"name": "signIn"})
@@ -587,7 +631,8 @@ def login(
         "authorization_code": authorization_code,
         "code_verifier": code_verifier,
         "domain": domain,
-        "serial": serial,
+        "serial": device_serial,
+        "device": device,
     }
 
 
@@ -598,6 +643,7 @@ def external_login(
     serial: str | None = None,
     with_username: bool = False,
     login_url_callback: Callable[[str], str] | None = None,
+    device: "BaseDevice | None" = None,
 ) -> dict[str, Any]:
     """Gives the url to login with external browser and prompt for result.
 
@@ -612,22 +658,46 @@ def external_login(
             login.
         market_place_id: The id for the Audible marketplace to login.
         serial: The device serial. If ``None`` a custom one will be created.
+            DEPRECATED: Use device parameter instead.
         with_username: If ``True`` login with Audible username instead
             of Amazon account.
         login_url_callback: A custom Callable for handling login with external
             browsers. If ``None`` :func:`default_login_url_callback` is used.
+        device: The device to use for login. If ``None``, uses default iPhone device.
 
     Returns:
         An ``authorization_code``, a ``code_verifier`` and the
         ``device serial`` from the authorized Client.
+
+    .. versionadded:: v0.11.0
+           The device argument
+    .. deprecated:: v0.11.0
+           The serial argument is deprecated. Use device parameter instead.
     """
+    # Handle device parameter with backward compatibility
+    if device is None:
+        from .device import IPHONE
+
+        device = IPHONE
+
+    # Handle backward compatibility with serial parameter
+    if serial is not None:
+        warnings.warn(
+            "The 'serial' parameter is deprecated and will be removed in v0.12.0. "
+            "Use 'device' parameter instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        # Create a copy of device with the provided serial
+        device = device.copy(device_serial=serial)
+
     code_verifier = create_code_verifier()
-    oauth_url, serial = build_oauth_url(
+    oauth_url, device_serial = build_oauth_url(
         country_code=country_code,
         domain=domain,
         market_place_id=market_place_id,
         code_verifier=code_verifier,
-        serial=serial,
+        serial=device.device_serial,
         with_username=with_username,
     )
 
@@ -645,5 +715,6 @@ def external_login(
         "authorization_code": authorization_code,
         "code_verifier": code_verifier,
         "domain": domain,
-        "serial": serial,
+        "serial": device_serial,
+        "device": device,
     }

@@ -422,7 +422,8 @@ class Authenticator(httpx.Auth):
                 from .device import iPhoneDevice
 
                 logger.warning(
-                    "Unknown device os_family: %s. Falling back to iPhoneDevice.", os_family
+                    "Unknown device os_family: %s. Falling back to iPhoneDevice.",
+                    os_family,
                 )
                 auth.device = iPhoneDevice.from_dict(device_data)
             logger.debug("Loaded device: %s", auth.device.device_model)
@@ -501,9 +502,7 @@ class Authenticator(httpx.Auth):
         json_data = get_json_provider().loads(file_data)
 
         # Use from_dict for consistent loading logic
-        auth = cls.from_dict(
-            json_data, locale=locale, crypto_provider=crypto_provider
-        )
+        auth = cls.from_dict(json_data, locale=locale, crypto_provider=crypto_provider)
 
         # Set file-specific attributes
         auth.filename = filepath
@@ -513,7 +512,7 @@ class Authenticator(httpx.Auth):
         logger.info(
             "load data from file %s for locale %s",
             auth.filename,
-            auth.locale.country_code,
+            auth.locale.country_code if auth.locale else "unknown",
         )
         return auth
 
@@ -530,6 +529,7 @@ class Authenticator(httpx.Auth):
         cvf_callback: Callable[[], str] | None = None,
         approval_callback: Callable[[], Any] | None = None,
         crypto_provider: CryptoProvider | type[CryptoProvider] | None = None,
+        device: BaseDevice | None = None,
     ) -> Authenticator:
         """Instantiate a new Authenticator with authentication data from login.
 
@@ -539,12 +539,19 @@ class Authenticator(httpx.Auth):
            The serial argument
            The with_username argument
 
+        .. versionadded:: v0.11.0
+           The device argument
+
+        .. deprecated:: v0.11.0
+           The serial argument is deprecated. Use device parameter instead.
+
         Args:
             username: The Amazon email address.
             password: The Amazon password.
             locale: The ``country_code`` or :class:`audible.localization.Locale`
                 instance for the marketplace to login.
             serial: The device serial. If ``None`` a custom one will be created.
+                DEPRECATED: Use device parameter instead.
             with_username: If ``True`` login with Audible username instead
                 of Amazon account.
             captcha_callback: A custom callback to handle captcha requests
@@ -555,6 +562,8 @@ class Authenticator(httpx.Auth):
                 during login.
             approval_callback: A custom Callable for handling approval alerts.
             crypto_provider: Optional provider override (class or instance).
+            device: The device to use for login and registration. If ``None``,
+                uses default iPhone device.
 
         Returns:
             Authenticator: New authenticator populated with registration data.
@@ -574,6 +583,7 @@ class Authenticator(httpx.Auth):
             otp_callback=otp_callback,
             cvf_callback=cvf_callback,
             approval_callback=approval_callback,
+            device=device,
         )
         logger.info("logged in to Audible as %s", username)
         register_device = register_(with_username=with_username, **login_device)
@@ -591,6 +601,7 @@ class Authenticator(httpx.Auth):
         with_username: bool = False,
         login_url_callback: Callable[[str], str] | None = None,
         crypto_provider: CryptoProvider | type[CryptoProvider] | None = None,
+        device: BaseDevice | None = None,
     ) -> Authenticator:
         """Instantiate a new Authenticator from login with external browser.
 
@@ -600,15 +611,24 @@ class Authenticator(httpx.Auth):
            The serial argument
            The with_username argument
 
+        .. versionadded:: v0.11.0
+           The device argument
+
+        .. deprecated:: v0.11.0
+           The serial argument is deprecated. Use device parameter instead.
+
         Args:
             locale: The ``country_code`` or :class:`audible.localization.Locale`
                 instance for the marketplace to login.
             serial: The device serial. If ``None`` a custom one will be created.
+                DEPRECATED: Use device parameter instead.
             with_username: If ``True`` login with Audible username instead
                 of Amazon account.
             login_url_callback: A custom Callable for handling login with
                 external browsers.
             crypto_provider: Optional provider override (class or instance).
+            device: The device to use for login and registration. If ``None``,
+                uses default iPhone device.
 
         Returns:
             Authenticator: New authenticator populated with registration data.
@@ -623,6 +643,7 @@ class Authenticator(httpx.Auth):
             serial=serial,
             with_username=with_username,
             login_url_callback=login_url_callback,
+            device=device,
         )
         logger.info("logged in to Audible.")
 
@@ -1022,7 +1043,8 @@ class Authenticator(httpx.Auth):
                     software_version="35602678",
                 )
                 logger.info(
-                    "Created default device from device_info: %s", self.device.device_model
+                    "Created default device from device_info: %s",
+                    self.device.device_model,
                 )
             else:
                 self.device = IPHONE
