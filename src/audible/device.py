@@ -493,21 +493,21 @@ Example:
     >>> auth = Authenticator.from_login("user", "pass", "us", device=IPHONE)
 """
 
-IPHONE_16 = iPhoneDevice(
+IPHONE_OS26 = iPhoneDevice(
     device_type="A2CZJZGLK2JJVM",
     device_model="iPhone",
-    app_version="3.60.0",
-    os_version="16.0.0",
-    os_version_number="16",
-    software_version="36000078",
+    app_version="4.56.2",
+    os_version="26.1",
+    os_version_number="26",
+    software_version="45602826",
     device_name=(
         "%FIRST_NAME%%FIRST_NAME_POSSESSIVE_STRING%%DUPE_STRATEGY_1ST%"
         "Audible for iPhone"
     ),
 )
-"""iPhone 15 running iOS 16.0 with updated Audible app.
+"""iPhone running iOS 26.1 with Audible 4.56.2.
 
-Similar to IPHONE but with newer OS version.
+Latest iOS version with updated Audible app.
 """
 
 ANDROID = AndroidDevice(

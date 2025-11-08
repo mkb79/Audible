@@ -51,7 +51,7 @@ This document outlines the complete implementation plan for the Device Emulation
 **Predefined Instances:**
 
 - `IPHONE` - iPhone 15, iOS 15.0, Audible 3.56.2
-- `IPHONE_16` - iPhone 15, iOS 16.0, Audible 3.60.0
+- `IPHONE_OS26` - iPhone, iOS 26.1, Audible 4.56.2
 - `ANDROID` - Android SDK x86_64, Android 14, Audible 177102
 - `ANDROID_PIXEL_7` - Google Pixel 7, Android 13
 
@@ -768,7 +768,7 @@ auth = Authenticator.from_login(
   - `BaseDevice` (ABC) - Abstract base class for device implementations
   - `iPhoneDevice` - iOS device emulation with FairPlay DRM support
   - `AndroidDevice` - Android device emulation with Widevine DRM support
-  - Predefined instances: `IPHONE`, `IPHONE_16`, `ANDROID`, `ANDROID_PIXEL_7`
+  - Predefined instances: `IPHONE`, `IPHONE_OS26`, `ANDROID`, `ANDROID_PIXEL_7`
 
 - Device metadata in authentication files:
   - `file_version` field for future compatibility tracking

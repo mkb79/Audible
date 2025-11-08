@@ -12,7 +12,7 @@ from audible.device import (
     ANDROID,
     ANDROID_PIXEL_7,
     IPHONE,
-    IPHONE_16,
+    IPHONE_OS26,
     AndroidDevice,
     BaseDevice,
     iPhoneDevice,
@@ -355,14 +355,14 @@ def test_iphone_predefined_instance() -> None:
     assert "Audible for iPhone" in IPHONE.device_name
 
 
-def test_iphone16_predefined_instance() -> None:
-    """Test IPHONE_16 predefined instance."""
-    assert IPHONE_16.device_type == "A2CZJZGLK2JJVM"
-    assert IPHONE_16.device_model == "iPhone"
-    assert IPHONE_16.app_version == "3.60.0"
-    assert IPHONE_16.os_version == "16.0.0"
-    assert IPHONE_16.os_version_number == "16"
-    assert IPHONE_16.software_version == "36000078"
+def test_iphone_os26_predefined_instance() -> None:
+    """Test IPHONE_OS26 predefined instance."""
+    assert IPHONE_OS26.device_type == "A2CZJZGLK2JJVM"
+    assert IPHONE_OS26.device_model == "iPhone"
+    assert IPHONE_OS26.app_version == "4.56.2"
+    assert IPHONE_OS26.os_version == "26.1"
+    assert IPHONE_OS26.os_version_number == "26"
+    assert IPHONE_OS26.software_version == "45602826"
 
 
 def test_iphone_serialization_round_trip() -> None:

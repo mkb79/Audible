@@ -20,7 +20,7 @@ from datetime import datetime
 from pathlib import Path
 
 import audible
-from audible.device import ANDROID, ANDROID_PIXEL_7, IPHONE, IPHONE_16
+from audible.device import ANDROID, ANDROID_PIXEL_7, IPHONE, IPHONE_OS26
 
 
 # Setup extensive logging
@@ -65,7 +65,7 @@ def setup_logging():
 # Test devices configuration
 TEST_DEVICES = {
     "iPhone (iOS 15)": IPHONE,
-    "iPhone 16 (iOS 18)": IPHONE_16,
+    "iPhone (iOS 26)": IPHONE_OS26,
     "Android SDK Emulator": ANDROID,
     "Google Pixel 7": ANDROID_PIXEL_7,
 }

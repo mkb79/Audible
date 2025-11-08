@@ -159,7 +159,7 @@ def test_authenticator_to_dict_excludes_device_when_none(
 
 def test_authenticator_from_dict_with_device_field() -> None:
     """Test that from_dict() restores device from dictionary."""
-    from audible.device import IPHONE_16
+    from audible.device import IPHONE_OS26
 
     auth_data = {
         "access_token": "Atna|test_access_token_1234567890",  # noqa: S105
@@ -169,16 +169,16 @@ def test_authenticator_from_dict_with_device_field() -> None:
             "MIIEpAIBAAKCAQEA1234567890abcdefghijklmnopqrstuvwxyzABCDEFGHIJ\n"
             "-----END RSA PRIVATE KEY-----\n"
         ),
-        "device": IPHONE_16.to_dict(),
+        "device": IPHONE_OS26.to_dict(),
     }
 
     auth = Authenticator.from_dict(auth_data)
 
     assert auth.device is not None
-    assert auth.device.device_type == IPHONE_16.device_type
-    assert auth.device.device_model == IPHONE_16.device_model
-    assert auth.device.app_version == IPHONE_16.app_version
-    assert auth.device.os_version == IPHONE_16.os_version
+    assert auth.device.device_type == IPHONE_OS26.device_type
+    assert auth.device.device_model == IPHONE_OS26.device_model
+    assert auth.device.app_version == IPHONE_OS26.app_version
+    assert auth.device.os_version == IPHONE_OS26.os_version
 
 
 def test_authenticator_from_dict_backward_compatibility() -> None:
