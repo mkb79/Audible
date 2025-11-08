@@ -65,9 +65,7 @@ def _convert_base64_der_to_pem(base64_der: str) -> str:
             return "\n".join(pem_lines) + "\n"
 
     except Exception as e:
-        raise ValueError(
-            f"Failed to convert base64-DER to PEM format: {e}"
-        ) from e
+        raise ValueError(f"Failed to convert base64-DER to PEM format: {e}") from e
 
 
 def register(
@@ -172,7 +170,7 @@ def register(
         logger.warning(
             "device_private_key has unexpected format (not PEM or base64-DER). "
             "First 30 chars: %s",
-            device_private_key[:30]
+            device_private_key[:30],
         )
 
     store_authentication_cookie = tokens.get("store_authentication_cookie")

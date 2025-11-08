@@ -127,14 +127,18 @@ def test_authenticator_with_device_parameter(auth_fixture_data: dict[str, str]) 
     assert auth.device.os_family == "ios"
 
 
-def test_authenticator_without_device_parameter(auth_fixture_data: dict[str, str]) -> None:
+def test_authenticator_without_device_parameter(
+    auth_fixture_data: dict[str, str],
+) -> None:
     """Test that Authenticator works without device (backward compatibility)."""
     auth = Authenticator.from_dict(auth_fixture_data)
 
     assert auth.device is None
 
 
-def test_authenticator_to_dict_includes_device(auth_fixture_data: dict[str, str]) -> None:
+def test_authenticator_to_dict_includes_device(
+    auth_fixture_data: dict[str, str],
+) -> None:
     """Test that to_dict() includes device field when device is set."""
     from audible.device import ANDROID
 

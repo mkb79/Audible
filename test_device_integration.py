@@ -35,7 +35,7 @@ def setup_logging():
     # Create formatters
     detailed_formatter = logging.Formatter(
         "%(asctime)s | %(levelname)-8s | %(name)-20s | %(funcName)-25s | %(message)s",
-        datefmt="%Y-%m-%d %H:%M:%S"
+        datefmt="%Y-%m-%d %H:%M:%S",
     )
 
     # File handler (DEBUG level)
@@ -55,7 +55,13 @@ def setup_logging():
     root_logger.addHandler(console_handler)
 
     # Also enable audible package loggers
-    for logger_name in ["audible", "audible.auth", "audible.login", "audible.register", "audible.client"]:
+    for logger_name in [
+        "audible",
+        "audible.auth",
+        "audible.login",
+        "audible.register",
+        "audible.client",
+    ]:
         logger = logging.getLogger(logger_name)
         logger.setLevel(logging.DEBUG)
 
@@ -81,7 +87,14 @@ def print_separator(title=""):
         print(f"{'=' * 80}\n")
 
 
-def test_device(device_name, device, locale="us", login_method="external", username=None, password=None):
+def test_device(
+    device_name,
+    device,
+    locale="us",
+    login_method="external",
+    username=None,
+    password=None,
+):
     """Test complete flow for a single device.
 
     Args:
@@ -127,10 +140,7 @@ def test_device(device_name, device, locale="us", login_method="external", usern
             logger.info(f"Login user: {username}")
 
             auth = audible.Authenticator.from_login(
-                username=username,
-                password=password,
-                locale=locale,
-                device=device
+                username=username, password=password, locale=locale, device=device
             )
 
             logger.info("✓ Internal login successful!")
@@ -139,15 +149,16 @@ def test_device(device_name, device, locale="us", login_method="external", usern
             logger.info("Starting external login...")
 
             auth = audible.Authenticator.from_login_external(
-                locale=locale,
-                device=device
+                locale=locale, device=device
             )
 
             logger.info("✓ External login successful!")
 
         logger.info(f"Access Token: {auth.access_token[:20]}...")
         logger.info(f"Refresh Token: {auth.refresh_token[:20]}...")
-        logger.info(f"Device Private Key: {auth.device_private_key[:30] if auth.device_private_key else 'None'}...")
+        logger.info(
+            f"Device Private Key: {auth.device_private_key[:30] if auth.device_private_key else 'None'}..."
+        )
 
         # Log device info from server
         if auth.device_info:
@@ -210,8 +221,8 @@ def test_device(device_name, device, locale="us", login_method="external", usern
                 params={
                     "num_results": 3,
                     "response_groups": "product_desc,product_attrs",
-                    "sort_by": "-PurchaseDate"
-                }
+                    "sort_by": "-PurchaseDate",
+                },
             )
 
             if library_response:
@@ -239,15 +250,13 @@ def test_device(device_name, device, locale="us", login_method="external", usern
             logger.info("Test 3: Getting library statistics...")
             try:
                 stats = client.get(
-                    "library",
-                    params={
-                        "num_results": 1,
-                        "response_groups": "stats"
-                    }
+                    "library", params={"num_results": 1, "response_groups": "stats"}
                 )
                 if stats and "stats" in stats:
                     logger.info("✓ Library stats request successful!")
-                    logger.info(f"  Total items: {stats.get('stats', {}).get('total', 'Unknown')}")
+                    logger.info(
+                        f"  Total items: {stats.get('stats', {}).get('total', 'Unknown')}"
+                    )
             except Exception as e:
                 logger.warning(f"Stats request failed: {e}")
 
@@ -356,7 +365,9 @@ def main():
         print(f"  {i}. {name}")
     print(f"  {len(TEST_DEVICES) + 1}. All devices")
 
-    choice = input(f"\nSelect device to test (1-{len(TEST_DEVICES) + 1}, default: all): ").strip()
+    choice = input(
+        f"\nSelect device to test (1-{len(TEST_DEVICES) + 1}, default: all): "
+    ).strip()
 
     if choice and choice.isdigit() and 1 <= int(choice) <= len(TEST_DEVICES):
         # Test single device
@@ -385,7 +396,7 @@ def main():
             locale,
             login_method=login_method,
             username=username,
-            password=password
+            password=password,
         )
         results[device_name] = success
 

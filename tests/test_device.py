@@ -210,7 +210,9 @@ def test_base_device_build_client_id(base_device: BaseDevice) -> None:
     int(client_id, 16)  # Should not raise
 
     # Should encode serial#device_type
-    expected = base_device.device_serial.encode() + b"#" + base_device.device_type.encode()
+    expected = (
+        base_device.device_serial.encode() + b"#" + base_device.device_type.encode()
+    )
     assert client_id == expected.hex()
 
 
@@ -249,6 +251,7 @@ def test_base_device_get_init_cookies(base_device: BaseDevice) -> None:
     assert len(cookies["frc"]) > 100
     # Base64 can contain A-Z, a-z, 0-9, +, / (and = for padding which is stripped)
     import string
+
     valid_chars = set(string.ascii_letters + string.digits + "+/")
     assert all(c in valid_chars for c in cookies["frc"])
 
