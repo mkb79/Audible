@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Test script for device emulation integration.
 
-Tests external login, registration, API requests, and deregistration
+Tests login (internal or external), registration, API requests, and deregistration
 for all predefined devices with extensive logging.
 
 Usage:
@@ -10,9 +10,10 @@ Usage:
 Requirements:
     - Valid Amazon/Audible credentials
     - Internet connection
-    - Ability to solve CAPTCHA if presented
+    - Ability to solve CAPTCHA if presented (for internal login)
 """
 
+import getpass
 import logging
 import sys
 from datetime import datetime
@@ -80,13 +81,16 @@ def print_separator(title=""):
         print(f"{'=' * 80}\n")
 
 
-def test_device(device_name, device, locale="us"):
+def test_device(device_name, device, locale="us", login_method="external", username=None, password=None):
     """Test complete flow for a single device.
 
     Args:
         device_name: Human-readable device name
         device: Device instance to test
         locale: Audible marketplace locale
+        login_method: "external" for browser login, "internal" for username/password
+        username: Amazon email (required for internal login)
+        password: Amazon password (required for internal login)
 
     Returns:
         bool: True if all tests passed, False otherwise
@@ -111,16 +115,36 @@ def test_device(device_name, device, locale="us"):
     test_file = None
 
     try:
-        # Step 1: External Login
-        print_separator("Step 1: External Login")
-        logger.info("Starting external login...")
+        # Step 1: Login (External or Internal)
+        if login_method == "internal":
+            print_separator("Step 1: Internal Login (Username/Password)")
+            logger.info("Starting internal login...")
 
-        auth = audible.Authenticator.from_login_external(
-            locale=locale,
-            device=device
-        )
+            if not username or not password:
+                logger.error("Username and password required for internal login!")
+                return False
 
-        logger.info("✓ External login successful!")
+            logger.info(f"Login user: {username}")
+
+            auth = audible.Authenticator.from_login(
+                username=username,
+                password=password,
+                locale=locale,
+                device=device
+            )
+
+            logger.info("✓ Internal login successful!")
+        else:
+            print_separator("Step 1: External Login (Browser)")
+            logger.info("Starting external login...")
+
+            auth = audible.Authenticator.from_login_external(
+                locale=locale,
+                device=device
+            )
+
+            logger.info("✓ External login successful!")
+
         logger.info(f"Access Token: {auth.access_token[:20]}...")
         logger.info(f"Refresh Token: {auth.refresh_token[:20]}...")
         logger.info(f"Device Private Key: {auth.device_private_key[:30] if auth.device_private_key else 'None'}...")
@@ -303,6 +327,29 @@ def main():
     locale = input("Enter Audible marketplace (default: us): ").strip() or "us"
     logger.info(f"Selected locale: {locale}")
 
+    # Ask for login method
+    print("\nLogin Method:")
+    print("  1. External Login (Browser-based, no CAPTCHA handling)")
+    print("  2. Internal Login (Username/Password, automatic CAPTCHA handling)")
+    login_choice = input("\nSelect login method (1-2, default: 1): ").strip() or "1"
+
+    if login_choice == "2":
+        login_method = "internal"
+        print("\nInternal Login Credentials:")
+        username = input("Amazon email: ").strip()
+        password = getpass.getpass("Amazon password: ").strip()
+
+        if not username or not password:
+            print("Error: Username and password are required for internal login!")
+            return 1
+
+        logger.info(f"Login method: internal (user: {username})")
+    else:
+        login_method = "external"
+        username = None
+        password = None
+        logger.info("Login method: external (browser)")
+
     # Ask which devices to test
     print("\nAvailable devices:")
     for i, name in enumerate(TEST_DEVICES.keys(), 1):
@@ -332,7 +379,14 @@ def main():
             logger.info(f"Skipped device: {device_name}")
             continue
 
-        success = test_device(device_name, device, locale)
+        success = test_device(
+            device_name,
+            device,
+            locale,
+            login_method=login_method,
+            username=username,
+            password=password
+        )
         results[device_name] = success
 
         if success:
