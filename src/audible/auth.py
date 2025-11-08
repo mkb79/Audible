@@ -19,7 +19,7 @@ from httpx import Cookies
 from .activation_bytes import get_activation_bytes as get_ab
 from .aescipher import AESCipher, detect_file_encryption
 from .crypto import get_crypto_providers
-from .device import Device
+from .device import IPHONE, BaseDevice
 from .exceptions import AuthFlowError, FileEncryptionError, NoRefreshToken
 from .json import get_json_provider
 from .login import external_login, login
@@ -290,7 +290,7 @@ class Authenticator(httpx.Auth):
     adp_token: str | None = None
     crypter: AESCipher | None = None
     customer_info: dict[str, Any] | None = None
-    device: Device | None = None
+    device: BaseDevice | None = None
     device_info: dict[str, Any] | None = None
     device_private_key: str | None = None
     encryption: str | bool | None = None
@@ -407,7 +407,24 @@ class Authenticator(httpx.Auth):
         # Load device data if present
         device_data = data.pop("device", None)
         if device_data:
-            auth.device = Device.from_dict(device_data)
+            # Try to determine device type from os_family to use correct subclass
+            os_family = device_data.get("os_family", "")
+            if os_family == "ios":
+                from .device import iPhoneDevice
+
+                auth.device = iPhoneDevice.from_dict(device_data)
+            elif os_family == "android":
+                from .device import AndroidDevice
+
+                auth.device = AndroidDevice.from_dict(device_data)
+            else:
+                # Fallback to base class (will use iPhoneDevice as default)
+                from .device import iPhoneDevice
+
+                logger.warning(
+                    "Unknown device os_family: %s. Falling back to iPhoneDevice.", os_family
+                )
+                auth.device = iPhoneDevice.from_dict(device_data)
             logger.debug("Loaded device: %s", auth.device.device_model)
         elif file_version:
             # File has version but no device - create default from device_info
@@ -983,15 +1000,18 @@ class Authenticator(httpx.Auth):
             To actually register a different device type with Audible servers,
             you need to deregister and re-register::
 
+                from audible.device import ANDROID
                 auth.deregister_device()
-                new_auth = Authenticator.from_login(..., device=Device.ANDROID)
+                new_auth = Authenticator.from_login(..., device=ANDROID)
 
         .. versionadded:: v0.11.0
         """
         if self.device is None:
             # Create default device from existing device_info if available
             if self.device_info:
-                self.device = Device(
+                from .device import iPhoneDevice
+
+                self.device = iPhoneDevice(
                     device_type=self.device_info.get("device_type", "A2CZJZGLK2JJVM"),
                     device_serial=self.device_info.get(
                         "device_serial_number", uuid.uuid4().hex.upper()
@@ -1005,7 +1025,7 @@ class Authenticator(httpx.Auth):
                     "Created default device from device_info: %s", self.device.device_model
                 )
             else:
-                self.device = Device.IPHONE
+                self.device = IPHONE
                 logger.info("Created default iPhone device")
 
         # Build updates dict
@@ -1022,7 +1042,7 @@ class Authenticator(httpx.Auth):
         self.device = self.device.copy(**updates)
         logger.info("Updated device: %s", updates)
 
-    def set_device(self, device: Device) -> None:
+    def set_device(self, device: BaseDevice) -> None:
         """Set a completely new device configuration.
 
         Replaces the current device configuration with a new one. Useful for
@@ -1034,13 +1054,17 @@ class Authenticator(httpx.Auth):
         Example:
             Switch to Android device::
 
+                from audible.device import ANDROID
+
                 auth = Authenticator.from_file("auth.json")
-                auth.set_device(Device.ANDROID)
+                auth.set_device(ANDROID)
                 auth.to_file()
 
             Use customized Android profile::
 
-                android = Device.ANDROID.copy(
+                from audible.device import ANDROID
+
+                android = ANDROID.copy(
                     device_model="Samsung S23",
                     os_version_number="33"
                 )
