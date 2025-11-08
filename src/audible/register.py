@@ -16,11 +16,15 @@ if TYPE_CHECKING:
 logger = logging.getLogger("audible.register")
 
 
-def _convert_base64_der_to_pem(base64_der: str) -> str:
+def _convert_base64_der_to_pem(base64_key: str) -> str:
     """Convert Android base64-DER certificate to PEM format.
 
+    Android returns private keys in PKCS#8 format (base64-encoded DER).
+    This function decodes the PKCS#8 structure and extracts the RSA key,
+    then converts it to PEM format.
+
     Args:
-        base64_der: Base64-encoded DER certificate (Android format)
+        base64_key: Base64-encoded DER certificate (Android PKCS#8 format)
 
     Returns:
         PEM-formatted private key string
@@ -29,40 +33,37 @@ def _convert_base64_der_to_pem(base64_der: str) -> str:
         ValueError: If conversion fails
     """
     try:
-        # Decode base64-DER to bytes
-        der_bytes = base64.b64decode(base64_der)
+        import rsa
+        from pyasn1.codec.der import decoder
+        from pyasn1.type import namedtype, univ
 
-        # Try using cryptography library (preferred)
-        try:
-            from cryptography.hazmat.backends import default_backend
-            from cryptography.hazmat.primitives import serialization
-            from cryptography.hazmat.primitives.serialization import (
-                load_der_private_key,
+        class PrivateKeyAlgorithm(univ.Sequence):
+            componentType = namedtype.NamedTypes(  # noqa: N815
+                namedtype.NamedType("algorithm", univ.ObjectIdentifier()),
+                namedtype.NamedType("parameters", univ.Any()),
             )
 
-            # Load DER-encoded private key
-            private_key = load_der_private_key(
-                der_bytes, password=None, backend=default_backend()
+        class PrivateKeyInfo(univ.Sequence):
+            componentType = namedtype.NamedTypes(  # noqa: N815
+                namedtype.NamedType("version", univ.Integer()),
+                namedtype.NamedType("pkalgo", PrivateKeyAlgorithm()),
+                namedtype.NamedType("key", univ.OctetString()),
             )
 
-            # Convert to PEM format
-            pem_bytes = private_key.private_bytes(
-                encoding=serialization.Encoding.PEM,
-                format=serialization.PrivateFormat.TraditionalOpenSSL,
-                encryption_algorithm=serialization.NoEncryption(),
-            )
+        # Decode base64 to DER bytes
+        encoded_key = base64.b64decode(base64_key)
 
-            return pem_bytes.decode("utf-8")
+        # Decode PKCS#8 structure
+        (key_info, _) = decoder.decode(encoded_key, asn1Spec=PrivateKeyInfo())
 
-        except ImportError:
-            # Fallback: Manual PEM encoding (DER bytes wrapped in PEM headers)
-            # This works for most cases without cryptography library
-            pem_lines = ["-----BEGIN RSA PRIVATE KEY-----"]
-            # Split base64 into 64-char lines
-            for i in range(0, len(base64_der), 64):
-                pem_lines.append(base64_der[i : i + 64])
-            pem_lines.append("-----END RSA PRIVATE KEY-----")
-            return "\n".join(pem_lines) + "\n"
+        # Extract the octet string containing the actual RSA key
+        key_octet_string = key_info["key"]
+
+        # Load RSA key from DER format
+        key = rsa.PrivateKey.load_pkcs1(key_octet_string, format="DER")
+
+        # Save as PEM format
+        return key.save_pkcs1().decode("utf-8")
 
     except Exception as e:
         raise ValueError(f"Failed to convert base64-DER to PEM format: {e}") from e
