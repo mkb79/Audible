@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from pathlib import Path
 from unittest.mock import Mock
 
 import httpx
@@ -220,6 +221,7 @@ def test_authenticator_device_round_trip_serialization(
 
     # Verify device was preserved
     assert restored.device is not None
+    assert original.device is not None
     assert restored.device.device_type == ANDROID_PIXEL_7.device_type
     assert restored.device.device_model == ANDROID_PIXEL_7.device_model
     assert restored.device.device_product == ANDROID_PIXEL_7.device_product
@@ -231,7 +233,7 @@ def test_authenticator_device_round_trip_serialization(
 
 
 def test_authenticator_file_round_trip_with_device(
-    auth_fixture_data: dict[str, str], tmp_path
+    auth_fixture_data: dict[str, str], tmp_path: Path
 ) -> None:
     """Test that device survives to_file() -> from_file() round-trip."""
     from pathlib import Path
@@ -250,6 +252,7 @@ def test_authenticator_file_round_trip_with_device(
 
     # Verify device was preserved
     assert restored.device is not None
+    assert original.device is not None
     assert restored.device.device_type == IPHONE.device_type
     assert restored.device.device_model == IPHONE.device_model
     assert restored.device.app_version == IPHONE.app_version
@@ -258,7 +261,7 @@ def test_authenticator_file_round_trip_with_device(
 
 
 def test_authenticator_file_round_trip_without_device(
-    auth_fixture_data: dict[str, str], tmp_path
+    auth_fixture_data: dict[str, str], tmp_path: Path
 ) -> None:
     """Test that auth files without device still work (backward compatibility)."""
     from pathlib import Path
@@ -279,7 +282,7 @@ def test_authenticator_file_round_trip_without_device(
 
 
 def test_authenticator_encrypted_file_with_device(
-    auth_fixture_data: dict[str, str], tmp_path, auth_fixture_password: str
+    auth_fixture_data: dict[str, str], tmp_path: Path, auth_fixture_password: str
 ) -> None:
     """Test encrypted file storage with device parameter."""
     from audible.device import ANDROID
