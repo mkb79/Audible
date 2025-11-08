@@ -77,6 +77,9 @@ def playwright_external_login_url_callback(
     Returns:
         The redirect URL containing the authorization code
 
+    Raises:
+        AudibleError: If timeout occurs during login or playwright encounters an error.
+
     .. versionadded:: v0.11.0
            The device argument
     """

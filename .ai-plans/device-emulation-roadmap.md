@@ -966,5 +966,48 @@ Special thanks to the AudibleApi project for Android device specifications.
 
 ---
 
+## ⚠️ PRE-MERGE CLEANUP CHECKLIST
+
+**CRITICAL: The following items MUST be removed before merging to master:**
+
+### Files to Remove:
+
+1. **`test_device_integration.py`** - Internal integration test script (root directory)
+
+   - This is a development/testing script not part of the production codebase
+   - Contains hardcoded test credentials and manual test scenarios
+
+2. **`.ai-plans/` directory** - Complete folder including all markdown files
+   - Internal planning documents not intended for public repository
+   - Contains this roadmap and other development notes
+
+### Configuration to Revert:
+
+3. **`.pre-commit-config.yaml`** - Remove temporary exclusions (2 locations)
+   - **Line 30-31**: Remove pydoclint exclusion for `test_device_integration.py`
+     - Comment: `# TEMPORARY: Also exclude test_device_integration.py - REMOVE BEFORE MERGE TO MASTER`
+   - **Line 43-44**: Remove ruff-check exclusion for `test_device_integration.py`
+     - Comment: `# TEMPORARY: Exclude test_device_integration.py - REMOVE BEFORE MERGE TO MASTER`
+   - Both exclusions were added to allow development progress while script has linting issues
+
+### Verification Steps Before Merge:
+
+- [ ] Verify `test_device_integration.py` is deleted
+- [ ] Verify `.ai-plans/` folder is deleted
+- [ ] Verify `.pre-commit-config.yaml` exclusion is removed
+- [ ] Run `uv run nox --session=pre-commit` to ensure no remaining issues
+- [ ] Confirm all production tests pass without the temporary script
+
+**Rationale:**
+
+- `test_device_integration.py` was a development tool for manual testing during implementation
+- `.ai-plans/` contains internal development notes not suitable for public repository
+- The pre-commit exclusion was a temporary workaround to continue development
+- Production codebase should only contain production-ready code and configuration
+
+**Added:** 2025-01-08
+
+---
+
 **Last Updated:** 2025-01-08
 **Next Review:** After Phase 2 completion
