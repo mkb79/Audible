@@ -815,32 +815,30 @@ def test_login_happy_path(httpx_mock: HTTPXMock):
 
 Instead of extracting helper functions, convert `login()` and `register()` into service classes. This provides:
 - State management (session, device, callbacks as attributes)
-- Dependency injection (HTTP client protocol for testing)
 - Context manager support (automatic cleanup)
 - Better API (`service.login()` vs `login()`)
 - Easier mocking (entire class or individual methods)
 - Clearer code structure
+- **Separation of concerns** (LoginService + ChallengeHandler)
 
-#### A. LoginService Class (3-4 hours)
+**Important:**
+- ❌ NO HTTPClient Protocol abstraction (use httpx directly, abstraction comes later)
+- ✅ Split LoginService to avoid monster class (LoginService + ChallengeHandler)
+
+#### A. LoginService + ChallengeHandler (3-4 hours)
 
 **File:** `src/audible/login_service.py` (NEW)
 
-**Design:**
+**Design - 2 Classes (avoid monster class!):**
 
 ```python
 from dataclasses import dataclass
-from typing import Protocol, Callable, Any
+from typing import Callable, Any
 import httpx
 from bs4 import BeautifulSoup
 from .device import BaseDevice
 
-# HTTP Client Protocol for dependency injection
-class HTTPClient(Protocol):
-    """Protocol for HTTP client (enables testing with mocks)."""
-    def get(self, url: str, **kwargs) -> httpx.Response: ...
-    def post(self, url: str, **kwargs) -> httpx.Response: ...
-    def close(self) -> None: ...
-
+# --- 1. LoginResult Dataclass ---
 @dataclass
 class LoginResult:
     """Result from successful login operation."""
@@ -850,10 +848,106 @@ class LoginResult:
     device_serial: str
     device: BaseDevice
 
+
+# --- 2. ChallengeHandler Class (11 methods) ---
+class ChallengeHandler:
+    """Handles all login challenges (CAPTCHA, MFA, OTP, CVF, approval alerts).
+
+    Separates challenge handling logic from main login flow to avoid monster class.
+
+    Args:
+        session: HTTP session for making requests
+        captcha_callback: Function to solve CAPTCHA
+        otp_callback: Function to get OTP code
+        cvf_callback: Function to get CVF code
+        approval_callback: Function to handle approval alerts
+    """
+
+    def __init__(
+        self,
+        session: httpx.Client,
+        captcha_callback: Callable[[str], str] | None = None,
+        otp_callback: Callable[[], str] | None = None,
+        cvf_callback: Callable[[], str] | None = None,
+        approval_callback: Callable[[], Any] | None = None,
+    ):
+        self._session = session
+        self._captcha_callback = captcha_callback
+        self._otp_callback = otp_callback
+        self._cvf_callback = cvf_callback
+        self._approval_callback = approval_callback
+
+    def handle_all_challenges(
+        self, soup: BeautifulSoup, username: str, password: str
+    ) -> BeautifulSoup:
+        """Handle all login challenges in sequence.
+
+        Complexity: ~8 (loops through challenge types)
+        """
+        # Handle each challenge type until all resolved
+        while self._has_captcha(soup):
+            soup = self._handle_captcha(soup, username, password)
+        while self._has_mfa_choice(soup):
+            soup = self._handle_mfa_choice(soup)
+        while self._has_otp(soup):
+            soup = self._handle_otp(soup)
+        while self._has_cvf(soup):
+            soup = self._handle_cvf(soup)
+        if self._has_approval_alert(soup):
+            soup = self._handle_approval_alert(soup)
+        return soup
+
+    # Challenge handlers - each <30 lines, complexity <5
+    def _handle_captcha(
+        self, soup: BeautifulSoup, username: str, password: str
+    ) -> BeautifulSoup:
+        """Handle CAPTCHA challenge."""
+        pass
+
+    def _handle_mfa_choice(self, soup: BeautifulSoup) -> BeautifulSoup:
+        """Handle MFA device selection."""
+        pass
+
+    def _handle_otp(self, soup: BeautifulSoup) -> BeautifulSoup:
+        """Handle OTP challenge."""
+        pass
+
+    def _handle_cvf(self, soup: BeautifulSoup) -> BeautifulSoup:
+        """Handle CVF challenge."""
+        pass
+
+    def _handle_approval_alert(self, soup: BeautifulSoup) -> BeautifulSoup:
+        """Handle approval alert."""
+        pass
+
+    # Challenge detection - each <10 lines, complexity 1-2
+    def _has_captcha(self, soup: BeautifulSoup) -> bool:
+        """Check if CAPTCHA challenge present."""
+        pass
+
+    def _has_mfa_choice(self, soup: BeautifulSoup) -> bool:
+        """Check if MFA choice present."""
+        pass
+
+    def _has_otp(self, soup: BeautifulSoup) -> bool:
+        """Check if OTP challenge present."""
+        pass
+
+    def _has_cvf(self, soup: BeautifulSoup) -> bool:
+        """Check if CVF challenge present."""
+        pass
+
+    def _has_approval_alert(self, soup: BeautifulSoup) -> bool:
+        """Check if approval alert present."""
+        pass
+
+
+# --- 3. LoginService Class (7 methods) ---
 class LoginService:
     """Service for handling Audible login flow.
 
-    Manages session state, challenge handling, and OAuth flow.
+    Orchestrates login process: session setup, OAuth, initial login,
+    challenge handling, and result extraction.
 
     Example:
         >>> with LoginService(device=IPHONE) as service:
@@ -869,7 +963,6 @@ class LoginService:
     def __init__(
         self,
         device: BaseDevice,
-        http_client: HTTPClient | None = None,
         captcha_callback: Callable[[str], str] | None = None,
         otp_callback: Callable[[], str] | None = None,
         cvf_callback: Callable[[], str] | None = None,
@@ -879,14 +972,12 @@ class LoginService:
 
         Args:
             device: Device to emulate
-            http_client: HTTP client (for testing). If None, creates httpx.Client
             captcha_callback: Function to solve CAPTCHA
             otp_callback: Function to get OTP code
             cvf_callback: Function to get CVF code
             approval_callback: Function to handle approval alerts
         """
         self.device = device
-        self._client = http_client or httpx.Client()
         self._captcha_callback = captcha_callback
         self._otp_callback = otp_callback
         self._cvf_callback = cvf_callback
@@ -915,7 +1006,7 @@ class LoginService:
 
         Target: <30 lines, complexity <5
         """
-        # Setup session
+        # Setup
         self._session = self._setup_session(domain, with_username)
         oauth_url, device_serial = self._build_oauth_url(
             country_code, domain, market_place_id
@@ -924,11 +1015,20 @@ class LoginService:
         # Initial login
         soup = self._perform_initial_login(username, password, oauth_url)
 
-        # Handle challenges
-        soup = self._handle_challenges(soup, username, password)
+        # Handle challenges (delegated to ChallengeHandler)
+        challenge_handler = ChallengeHandler(
+            self._session,
+            self._captcha_callback,
+            self._otp_callback,
+            self._cvf_callback,
+            self._approval_callback,
+        )
+        soup = challenge_handler.handle_all_challenges(soup, username, password)
 
         # Extract result
-        code_verifier, authorization_code = self._extract_authorization_data(soup, oauth_url)
+        code_verifier, authorization_code = self._extract_authorization_data(
+            soup, oauth_url
+        )
 
         return LoginResult(
             authorization_code=authorization_code,
@@ -940,98 +1040,41 @@ class LoginService:
 
     # Private methods - each <30 lines, complexity <5
     def _setup_session(self, domain: str, with_username: bool) -> httpx.Client:
-        """Setup HTTP session with device headers."""
-        # Complexity: ~3
+        """Setup HTTP session with device headers.
+
+        Complexity: ~3
+        """
         pass
 
     def _build_oauth_url(
         self, country_code: str, domain: str, market_place_id: str
     ) -> tuple[str, str]:
-        """Build OAuth URL and device serial."""
-        # Complexity: ~2
+        """Build OAuth URL and device serial.
+
+        Complexity: ~2
+        """
         pass
 
     def _perform_initial_login(
         self, username: str, password: str, oauth_url: str
     ) -> BeautifulSoup:
-        """Perform initial login POST."""
-        # Complexity: ~4
-        pass
+        """Perform initial login POST.
 
-    def _handle_challenges(
-        self, soup: BeautifulSoup, username: str, password: str
-    ) -> BeautifulSoup:
-        """Handle all login challenges (CAPTCHA, MFA, etc.)."""
-        # Complexity: ~8 (but orchestrates smaller methods)
-        # Loops through challenge handlers
-        while self._has_captcha(soup):
-            soup = self._handle_captcha(soup, username, password)
-        while self._has_mfa_choice(soup):
-            soup = self._handle_mfa_choice(soup)
-        while self._has_otp(soup):
-            soup = self._handle_otp(soup)
-        while self._has_cvf(soup):
-            soup = self._handle_cvf(soup)
-        if self._has_approval_alert(soup):
-            soup = self._handle_approval_alert(soup)
-        return soup
-
-    def _handle_captcha(
-        self, soup: BeautifulSoup, username: str, password: str
-    ) -> BeautifulSoup:
-        """Handle CAPTCHA challenge."""
-        # Complexity: ~5
-        pass
-
-    def _handle_mfa_choice(self, soup: BeautifulSoup) -> BeautifulSoup:
-        """Handle MFA device selection."""
-        # Complexity: ~4
-        pass
-
-    def _handle_otp(self, soup: BeautifulSoup) -> BeautifulSoup:
-        """Handle OTP challenge."""
-        # Complexity: ~4
-        pass
-
-    def _handle_cvf(self, soup: BeautifulSoup) -> BeautifulSoup:
-        """Handle CVF challenge."""
-        # Complexity: ~4
-        pass
-
-    def _handle_approval_alert(self, soup: BeautifulSoup) -> BeautifulSoup:
-        """Handle approval alert."""
-        # Complexity: ~3
+        Complexity: ~4
+        """
         pass
 
     def _extract_authorization_data(
         self, soup: BeautifulSoup, oauth_url: str
     ) -> tuple[bytes, str]:
-        """Extract authorization code and verifier."""
-        # Complexity: ~3
+        """Extract authorization code and verifier.
+
+        Complexity: ~3
+        """
         pass
 
-    # Challenge detection helpers - each <10 lines, complexity 1-2
-    def _has_captcha(self, soup: BeautifulSoup) -> bool:
-        """Check if CAPTCHA challenge present."""
-        pass
 
-    def _has_mfa_choice(self, soup: BeautifulSoup) -> bool:
-        """Check if MFA choice present."""
-        pass
-
-    def _has_otp(self, soup: BeautifulSoup) -> bool:
-        """Check if OTP challenge present."""
-        pass
-
-    def _has_cvf(self, soup: BeautifulSoup) -> bool:
-        """Check if CVF challenge present."""
-        pass
-
-    def _has_approval_alert(self, soup: BeautifulSoup) -> bool:
-        """Check if approval alert present."""
-        pass
-
-# Backward compatible wrapper function
+# --- 4. Backward Compatible Wrapper Function ---
 def login(
     username: str,
     password: str,
@@ -1087,18 +1130,27 @@ def login(
     }
 ```
 
+**Why 2 Classes?**
+- ✅ LoginService: 7 methods (clean, focused on orchestration)
+- ✅ ChallengeHandler: 11 methods (focused on challenge logic)
+- ✅ Single Responsibility Principle (each class has ONE job)
+- ✅ Easier to test (mock ChallengeHandler in LoginService tests)
+- ✅ Easier to maintain (challenge logic isolated)
+- ✅ No monster class!
+
 #### B. RegistrationService Class (2-3 hours)
 
 **File:** `src/audible/registration_service.py` (NEW)
 
-**Design:**
+**Design - Single Class (7 methods, simple!):**
 
 ```python
 from dataclasses import dataclass
-from typing import Protocol, Any
+from typing import Any
 import httpx
 from .device import BaseDevice
 
+# --- 1. RegistrationResult Dataclass ---
 @dataclass
 class RegistrationResult:
     """Result from successful registration operation."""
@@ -1113,6 +1165,8 @@ class RegistrationResult:
     customer_info: dict[str, Any]
     device: BaseDevice
 
+
+# --- 2. RegistrationService Class (7 methods) ---
 class RegistrationService:
     """Service for handling Audible device registration.
 
@@ -1125,19 +1179,13 @@ class RegistrationService:
         ... )
     """
 
-    def __init__(
-        self,
-        device: BaseDevice,
-        http_client: HTTPClient | None = None,
-    ):
+    def __init__(self, device: BaseDevice):
         """Initialize registration service.
 
         Args:
             device: Device to register
-            http_client: HTTP client (for testing). If None, uses httpx
         """
         self.device = device
-        self._client = http_client or httpx
 
     def register(
         self,
@@ -1154,8 +1202,8 @@ class RegistrationService:
         body = self._build_request_body(authorization_code, code_verifier, domain)
         url = self._build_url(domain, with_username)
 
-        # Make request
-        resp = self._client.post(url, json=body)
+        # Make request (httpx directly, no abstraction!)
+        resp = httpx.post(url, json=body)
         if resp.status_code != 200:
             raise Exception(resp.json())
 
@@ -1177,12 +1225,16 @@ class RegistrationService:
         deregister_all: bool = False,
         with_username: bool = False,
     ) -> Any:
-        """Deregister device."""
+        """Deregister device.
+
+        Target: <20 lines, complexity <3
+        """
         body = {"deregister_all_existing_accounts": deregister_all}
         headers = {"Authorization": f"Bearer {access_token}"}
         url = self._build_url(domain, with_username, endpoint="deregister")
 
-        resp = self._client.post(url, json=body, headers=headers)
+        # Make request (httpx directly)
+        resp = httpx.post(url, json=body, headers=headers)
         if resp.status_code != 200:
             raise Exception(resp.json())
 
@@ -1192,29 +1244,38 @@ class RegistrationService:
     def _build_request_body(
         self, authorization_code: str, code_verifier: bytes, domain: str
     ) -> dict[str, Any]:
-        """Build registration request body."""
-        # Complexity: ~3
+        """Build registration request body.
+
+        Complexity: ~3
+        """
         pass
 
     def _build_url(
         self, domain: str, with_username: bool, endpoint: str = "register"
     ) -> str:
-        """Build registration URL."""
-        # Complexity: ~2
+        """Build registration URL.
+
+        Complexity: ~2
+        """
         pass
 
     def _parse_tokens(self, success_response: dict[str, Any]) -> dict[str, Any]:
-        """Parse tokens from response."""
-        # Complexity: ~6
-        # Handles PEM vs PKCS#8 conversion
+        """Parse tokens from response.
+
+        Handles PEM vs PKCS#8 key format conversion.
+        Complexity: ~6
+        """
         pass
 
     def _parse_extensions(self, success_response: dict[str, Any]) -> dict[str, Any]:
-        """Parse extensions (device_info, customer_info) from response."""
-        # Complexity: ~2
+        """Parse extensions (device_info, customer_info) from response.
+
+        Complexity: ~2
+        """
         pass
 
-# Backward compatible wrapper function
+
+# --- 3. Backward Compatible Wrapper Functions ---
 def register(
     authorization_code: str,
     code_verifier: bytes,
@@ -1257,54 +1318,84 @@ def register(
         "customer_info": result.customer_info,
         "device": result.device,
     }
+
+
+def deregister(
+    access_token: str,
+    domain: str,
+    deregister_all: bool = False,
+    with_username: bool = False,
+) -> Any:
+    """Deregister device (backward compatible wrapper).
+
+    .. deprecated:: v0.11.0
+        Use RegistrationService.deregister() for better testability.
+    """
+    # Note: No device needed for deregister, but we need a dummy instance
+    # This is OK because deregister only uses access_token
+    from .device import IPHONE
+    service = RegistrationService(device=IPHONE)
+    return service.deregister(
+        access_token=access_token,
+        domain=domain,
+        deregister_all=deregister_all,
+        with_username=with_username,
+    )
 ```
+
+**Why Simple?**
+- ✅ RegistrationService: Only 7 methods (clean, focused)
+- ✅ No HTTPClient Protocol (httpx directly, YAGNI!)
+- ✅ No need to split (registration is simpler than login)
+- ✅ Easy to test (mock httpx.post with pytest-httpx)
 
 ### Implementation Checklist
 
-**Phase 4.6.1: Create LoginService (3-4 hours)**
+**Phase 4.6.1: Create LoginService + ChallengeHandler (3-4 hours)**
 - [ ] Create new file `src/audible/login_service.py`
-- [ ] Define HTTPClient Protocol for dependency injection
 - [ ] Define LoginResult dataclass
-- [ ] Implement LoginService class
+- [ ] Implement ChallengeHandler class (11 methods)
+  - [ ] Implement `__init__()` with session and callbacks
+  - [ ] Implement `handle_all_challenges()` (<30 lines, complexity <10)
+  - [ ] Implement `_handle_captcha()` (<30 lines, complexity <5)
+  - [ ] Implement `_handle_mfa_choice()` (<30 lines, complexity <5)
+  - [ ] Implement `_handle_otp()` (<30 lines, complexity <5)
+  - [ ] Implement `_handle_cvf()` (<30 lines, complexity <5)
+  - [ ] Implement `_handle_approval_alert()` (<30 lines, complexity <5)
+  - [ ] Implement challenge detection helpers (5 methods, each <10 lines, complexity 1-2)
+- [ ] Implement LoginService class (7 methods)
   - [ ] Implement `__init__()` with device and callbacks
   - [ ] Implement context manager (`__enter__`, `__exit__`)
   - [ ] Implement public `login()` method (<30 lines, complexity <5)
   - [ ] Implement `_setup_session()` (<30 lines, complexity <5)
   - [ ] Implement `_build_oauth_url()` (<30 lines, complexity <5)
   - [ ] Implement `_perform_initial_login()` (<30 lines, complexity <5)
-  - [ ] Implement `_handle_challenges()` (<30 lines, complexity <10)
-  - [ ] Implement `_handle_captcha()` (<30 lines, complexity <5)
-  - [ ] Implement `_handle_mfa_choice()` (<30 lines, complexity <5)
-  - [ ] Implement `_handle_otp()` (<30 lines, complexity <5)
-  - [ ] Implement `_handle_cvf()` (<30 lines, complexity <5)
-  - [ ] Implement `_handle_approval_alert()` (<30 lines, complexity <5)
   - [ ] Implement `_extract_authorization_data()` (<30 lines, complexity <5)
-  - [ ] Implement challenge detection helpers (5 methods, each <10 lines)
-- [ ] Update `login.py`: Replace login() with wrapper that uses LoginService
+- [ ] Implement backward compatible `login()` wrapper function
 - [ ] Verify all methods have complexity ≤10
 
 **Phase 4.6.2: Create RegistrationService (2-3 hours)**
 - [ ] Create new file `src/audible/registration_service.py`
 - [ ] Define RegistrationResult dataclass
-- [ ] Implement RegistrationService class
-  - [ ] Implement `__init__()` with device
+- [ ] Implement RegistrationService class (7 methods)
+  - [ ] Implement `__init__()` with device (NO HTTPClient!)
   - [ ] Implement public `register()` method (<30 lines, complexity <5)
-  - [ ] Implement public `deregister()` method (<30 lines, complexity <5)
+  - [ ] Implement public `deregister()` method (<20 lines, complexity <3)
   - [ ] Implement `_build_request_body()` (<30 lines, complexity <5)
   - [ ] Implement `_build_url()` (<30 lines, complexity <5)
   - [ ] Implement `_parse_tokens()` (<30 lines, complexity <8)
   - [ ] Implement `_parse_extensions()` (<30 lines, complexity <5)
-- [ ] Update `register.py`: Replace register() with wrapper that uses RegistrationService
-- [ ] Move deregister() into RegistrationService.deregister()
-- [ ] Update register.py: Replace deregister() with wrapper
+- [ ] Implement backward compatible `register()` wrapper function
+- [ ] Implement backward compatible `deregister()` wrapper function
 - [ ] Verify all methods have complexity ≤10
 
 **Phase 4.6.3: Update Tests (1-2 hours)**
-- [ ] Update tests/test_login.py to test LoginService (if exists)
+- [ ] Update tests/test_login.py to test LoginService and ChallengeHandler (if exists)
 - [ ] Update tests/test_register.py to test RegistrationService (if exists)
 - [ ] Add unit tests for LoginResult and RegistrationResult dataclasses
-- [ ] Test dependency injection with mock HTTP clients
-- [ ] Test context manager behavior
+- [ ] Test ChallengeHandler in isolation with mocked httpx.Client
+- [ ] Test LoginService context manager behavior
+- [ ] Test httpx mocking with pytest-httpx (NO custom HTTP abstraction)
 - [ ] Verify all tests pass
 - [ ] Verify coverage maintained or improved
 
@@ -1323,14 +1414,16 @@ def register(
 
 ### Success Criteria
 
-✅ LoginService class implemented with all methods complexity ≤10
-✅ RegistrationService class implemented with all methods complexity ≤10
+✅ **LoginService**: 7 methods, all complexity ≤10 (clean orchestration)
+✅ **ChallengeHandler**: 11 methods, all complexity ≤10 (focused on challenges)
+✅ **RegistrationService**: 7 methods, all complexity ≤10 (simple, no abstraction)
 ✅ LoginResult and RegistrationResult dataclasses defined
 ✅ Backward compatible wrapper functions in login.py and register.py
 ✅ All tests pass (including new tests for services)
 ✅ Coverage maintained or improved
 ✅ pyproject.toml updated to max-complexity=10
 ✅ Full nox suite passes
+✅ NO HTTPClient Protocol - httpx used directly!
 
 ---
 
@@ -1813,42 +1906,41 @@ Special thanks to the AudibleApi project for Android device specifications.
 ### Phase 4.6: Service Classes Refactoring ❌ HIGH - NOT STARTED
 
 **Reason:** login() has 240 lines with 43 control flow statements (complexity ~15-20)
-**Approach:** CLASS-BASED (better than function extraction!)
+**Approach:** CLASS-BASED with split (avoid monster class!)
+**Design:** LoginService (7 methods) + ChallengeHandler (11 methods) + RegistrationService (7 methods)
+**NO HTTPClient Protocol** - Use httpx directly (YAGNI!)
 
-**Phase 4.6.1: Create LoginService (3-4 hours)**
-- [ ] Create new file `src/audible/login_service.py`
-- [ ] Define HTTPClient Protocol for dependency injection
+**Phase 4.6.1: Create LoginService + ChallengeHandler (3-4 hours)**
+- [ ] Create `src/audible/login_service.py`
 - [ ] Define LoginResult dataclass
-- [ ] Implement LoginService class with all methods (15 methods total)
-- [ ] Update `login.py`: Replace login() with wrapper using LoginService
-- [ ] Verify all methods have complexity ≤10
+- [ ] Implement ChallengeHandler class (11 methods)
+  - handle_all_challenges() + 5 challenge handlers + 5 detection helpers
+- [ ] Implement LoginService class (7 methods)
+  - login() + context manager + 4 private methods
+- [ ] Implement backward compatible login() wrapper
+- [ ] Verify all methods complexity ≤10
 
 **Phase 4.6.2: Create RegistrationService (2-3 hours)**
-- [ ] Create new file `src/audible/registration_service.py`
+- [ ] Create `src/audible/registration_service.py`
 - [ ] Define RegistrationResult dataclass
-- [ ] Implement RegistrationService class with all methods (7 methods total)
-- [ ] Update `register.py`: Replace register() and deregister() with wrappers
-- [ ] Verify all methods have complexity ≤10
+- [ ] Implement RegistrationService class (7 methods)
+  - register() + deregister() + 4 private methods
+- [ ] Implement backward compatible register() and deregister() wrappers
+- [ ] Verify all methods complexity ≤10
 
 **Phase 4.6.3: Update Tests (1-2 hours)**
-- [ ] Update tests/test_login.py to test LoginService (if exists)
-- [ ] Update tests/test_register.py to test RegistrationService (if exists)
-- [ ] Add unit tests for dataclasses
-- [ ] Test dependency injection with mock HTTP clients
-- [ ] Test context manager behavior
+- [ ] Update tests for LoginService + ChallengeHandler (if exists)
+- [ ] Update tests for RegistrationService (if exists)
+- [ ] Test dataclasses, context manager, httpx mocking with pytest-httpx
 - [ ] Verify coverage maintained or improved
 
 **Phase 4.6.4: Update Configuration (30 min)**
 - [ ] Update pyproject.toml: max-complexity from 21 → 10
 - [ ] Run `ruff check --select C901` to verify all functions <10
-- [ ] Fix any new violations
-- [ ] Run full nox suite
+- [ ] Fix violations, run full nox suite
 
 **Phase 4.6.5: Update Documentation (30 min)**
-- [ ] Add module docstrings to service files
-- [ ] Update CHANGELOG with service class additions
-- [ ] Update migration guide with service class examples
-- [ ] Add examples showing new vs old API
+- [ ] Add module docstrings, update CHANGELOG, migration guide, examples
 
 **Estimated:** 6-8 hours | **Status:** HIGH priority for quality
 
