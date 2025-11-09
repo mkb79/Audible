@@ -177,6 +177,10 @@ ignore = [
     "D10",  # temporarily ignore missing docstrings
     "E501",
     "N818",
+    "PLR0912",  # temporarily
+    "PLR0913",  # temporarily
+    "PLR0915",  # temporarily
+    "PLR2004",
 ]
 select=[
     "A",
@@ -211,8 +215,15 @@ known-first-party = ["audible"]
 lines-after-imports = 2
 
 [tool.ruff.lint.per-file-ignores]
-"tests/*" = ["S101", "S106"]
-"examples/*" = ["S101"]
+"tests/*" = ["S101", "PLC0415", "S106"]
+"examples/*" = ["S101", "PLC0415"]
+"src/audible/json/protocols.py" = ["D417"]
+"src/audible/json/*_provider.py" = ["PLC0415"]
+"src/audible/json/registry.py" = ["PLC0415"]
+"src/audible/auth.py" = ["PLC0415"]
+"src/audible/device.py" = ["PLC0415", "N801"]  # N801: iPhoneDevice naming intentional
+"src/audible/login.py" = ["PLC0415", "C901"]  # C901: login() complexity pre-existing
+"src/audible/register.py" = ["PLC0415"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
