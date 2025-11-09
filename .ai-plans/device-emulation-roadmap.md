@@ -567,6 +567,477 @@ Coverage: > 10% (target relaxed during development)
 
 ---
 
+## Phase 4.5: Unit Tests for register/login ❌ REQUIRED
+
+**Status:** NOT STARTED
+**Priority:** CRITICAL (blocker for merge to master)
+**Estimated Effort:** 6-8 hours
+
+### Why This Is Critical
+
+**Problem:** `test_device_integration.py` will NOT be merged to master (internal script only).
+Without it, register.py and login.py have NO test coverage in production.
+
+**Impact:**
+- No automated testing for registration flow
+- No automated testing for login flow
+- Breaking changes could go undetected
+- Cannot safely refactor or maintain code
+
+### Required Test Files
+
+#### A. `tests/test_register.py` (NEW)
+
+**Tests to Implement:**
+- `test_register_with_iphone_device()` - Register with iPhone
+- `test_register_with_android_device()` - Register with Android (test PKCS#8 conversion)
+- `test_register_with_custom_device()` - Register with custom device
+- `test_register_backward_compat_serial()` - Test deprecated serial parameter
+- `test_register_error_handling()` - Test HTTP errors, invalid responses
+- `test_register_token_parsing()` - Verify all tokens extracted correctly
+- `test_register_device_info_extraction()` - Verify device_info from server
+- `test_deregister_success()` - Test deregister()
+- `test_deregister_all()` - Test deregister with deregister_all=True
+- `test_deregister_error_handling()` - Test deregister errors
+
+**HTTP Mocking Strategy:**
+- Use `pytest-httpx` for mocking httpx.post()
+- Mock successful registration response
+- Mock error responses (400, 500, etc.)
+- Mock key conversion scenarios (PEM vs base64-DER)
+
+**Example Test:**
+```python
+import pytest
+from pytest_httpx import HTTPXMock
+from audible.register import register
+from audible.device import IPHONE, ANDROID
+
+def test_register_with_iphone(httpx_mock: HTTPXMock):
+    """Test device registration with iPhone."""
+    # Mock successful registration response
+    httpx_mock.add_response(
+        url="https://api.amazon.com/auth/register",
+        json={
+            "response": {
+                "success": {
+                    "tokens": {
+                        "bearer": {...},
+                        "mac_dms": {
+                            "adp_token": "test_adp",
+                            "device_private_key": "-----BEGIN RSA PRIVATE KEY-----\n...",
+                        },
+                    },
+                    "extensions": {
+                        "device_info": {...},
+                        "customer_info": {...},
+                    },
+                }
+            }
+        }
+    )
+
+    result = register(
+        authorization_code="test_code",
+        code_verifier=b"test_verifier",
+        domain="com",
+        device=IPHONE,
+    )
+
+    assert result["adp_token"] == "test_adp"
+    assert result["device"] == IPHONE
+```
+
+**Coverage Target:** >80%
+
+#### B. `tests/test_login.py` (NEW)
+
+**Tests to Implement:**
+- `test_login_happy_path()` - Successful login without challenges
+- `test_login_with_captcha()` - Login with CAPTCHA challenge
+- `test_login_with_mfa()` - Login with MFA/OTP
+- `test_login_with_cvf()` - Login with CVF verification
+- `test_login_with_approval_alert()` - Login with approval alert
+- `test_login_device_parameter()` - Test device parameter usage
+- `test_login_backward_compat_serial()` - Test deprecated serial parameter
+- `test_external_login_success()` - Test external_login()
+- `test_external_login_with_device()` - external_login with custom device
+- `test_build_init_cookies()` - Test cookie generation
+- `test_build_init_cookies_with_device()` - Cookies with custom device
+- `test_build_oauth_url()` - Test OAuth URL construction
+- Helper function tests (get_soup, get_inputs_from_soup, etc.)
+
+**HTTP Mocking Strategy:**
+- Mock login page responses
+- Mock CAPTCHA pages
+- Mock MFA/OTP pages
+- Mock authorization code redirect
+
+**Example Test:**
+```python
+def test_login_happy_path(httpx_mock: HTTPXMock):
+    """Test successful login without challenges."""
+    # Mock OAuth page
+    httpx_mock.add_response(
+        url__regex=r".*signin\.amazon\.com.*",
+        html="<form>...</form>",
+    )
+
+    # Mock successful login redirect
+    httpx_mock.add_response(
+        url__regex=r".*ap/maplanding.*",
+        headers={
+            "Location": "https://audible.com/ap/maplanding?openid.oa2.authorization_code=TEST_CODE"
+        },
+    )
+
+    result = login(
+        username="test@example.com",
+        password="password",
+        country_code="us",
+        domain="com",
+        market_place_id="AF2M0KC94RCEA",
+        device=IPHONE,
+    )
+
+    assert result["authorization_code"] == "TEST_CODE"
+    assert result["device"] == IPHONE
+```
+
+**Coverage Target:** >80%
+
+### Implementation Plan
+
+**Step 1: Setup (30 min)**
+- [ ] Add pytest-httpx to test dependencies
+- [ ] Create test file templates
+- [ ] Study existing integration test for scenarios
+
+**Step 2: test_register.py (3-4 hours)**
+- [ ] Implement happy path tests
+- [ ] Implement device variation tests (iPhone, Android, custom)
+- [ ] Implement error handling tests
+- [ ] Implement deregister tests
+- [ ] Verify >80% coverage
+
+**Step 3: test_login.py (3-4 hours)**
+- [ ] Implement happy path test
+- [ ] Implement challenge tests (CAPTCHA, MFA, CVF)
+- [ ] Implement helper function tests
+- [ ] Implement external_login tests
+- [ ] Verify >80% coverage
+
+**Step 4: Integration (30 min)**
+- [ ] Run all tests
+- [ ] Check coverage report
+- [ ] Fix any failures
+- [ ] Update nox configuration
+
+### Success Criteria
+
+✅ `tests/test_register.py` exists with >80% coverage
+✅ `tests/test_login.py` exists with >80% coverage
+✅ All new tests pass
+✅ Total test count >200
+✅ Ready to remove test_device_integration.py
+
+---
+
+## Phase 4.6: Code Complexity Refactoring ❌ REQUIRED
+
+**Status:** NOT STARTED
+**Priority:** HIGH (quality & maintainability)
+**Estimated Effort:** 4-6 hours
+
+### Current Complexity Issues
+
+**Analysis Performed:** 2025-01-08
+
+#### login() Function - NEEDS REFACTORING
+- **Location:** `src/audible/login.py:400-640`
+- **Lines:** 240 lines
+- **Control Flow Statements:** 43
+- **Estimated Complexity:** 15-20 (target: <10)
+- **Issues:**
+  - Handles 5 different challenges (captcha, MFA, OTP, CVF, approval)
+  - Multiple nested loops and conditionals
+  - Hard to test in isolation
+  - Difficult to maintain
+
+#### register() Function - NEEDS REFACTORING
+- **Location:** `src/audible/register.py:72-204`
+- **Lines:** 130 lines
+- **Control Flow Statements:** 13
+- **Estimated Complexity:** 8-10 (borderline)
+- **Issues:**
+  - Response parsing mixed with business logic
+  - Key format conversion inline
+  - Could be clearer with extraction
+
+#### device.py - CLEAN ✅
+- **Status:** All functions under complexity threshold
+- **No refactoring needed**
+
+#### auth.py - CLEAN ✅
+- **Status:** Modified for device support, but complexity OK
+- **No refactoring needed**
+
+### Refactoring Plan
+
+#### A. Refactor login() (3-4 hours)
+
+**Extract Helper Functions:**
+
+```python
+def _perform_initial_login(
+    session: httpx.Client,
+    username: str,
+    password: str,
+    device: BaseDevice,
+    oauth_url: str,
+) -> tuple[httpx.Response, BeautifulSoup]:
+    """Perform initial login POST request.
+
+    Returns:
+        Tuple of (response, parsed soup)
+    """
+    # Extract lines 499-512
+    pass
+
+def _handle_captcha_challenge(
+    session: httpx.Client,
+    soup: BeautifulSoup,
+    username: str,
+    password: str,
+    callback: Callable[[str], str],
+) -> BeautifulSoup:
+    """Handle CAPTCHA challenge during login.
+
+    Returns:
+        Updated soup after CAPTCHA submission
+    """
+    # Extract lines 514-533
+    pass
+
+def _handle_mfa_choice(
+    session: httpx.Client,
+    soup: BeautifulSoup,
+) -> BeautifulSoup:
+    """Handle MFA device choice selection.
+
+    Returns:
+        Updated soup after MFA device selection
+    """
+    # Extract lines 535-560
+    pass
+
+def _handle_otp_challenge(
+    session: httpx.Client,
+    soup: BeautifulSoup,
+    callback: Callable[[], str],
+) -> BeautifulSoup:
+    """Handle OTP (one-time password) challenge.
+
+    Returns:
+        Updated soup after OTP submission
+    """
+    # Extract lines 565-590
+    pass
+
+def _handle_cvf_challenge(
+    session: httpx.Client,
+    soup: BeautifulSoup,
+    callback: Callable[[], str],
+) -> BeautifulSoup:
+    """Handle CVF (credential verification) challenge.
+
+    Returns:
+        Updated soup after CVF submission
+    """
+    # Extract lines 595-615
+    pass
+
+def _handle_approval_alert(
+    soup: BeautifulSoup,
+    callback: Callable[[], Any],
+) -> BeautifulSoup:
+    """Handle approval alert notification.
+
+    Returns:
+        Updated soup after approval
+    """
+    # Extract lines 620-630
+    pass
+
+def login(...) -> dict[str, Any]:
+    """Login to Audible (refactored orchestrator).
+
+    Now orchestrates helper functions instead of doing everything.
+    Target: <50 lines, complexity <5
+    """
+    # Setup
+    device = _resolve_device(device, serial)
+    session = _create_login_session(device, domain, with_username)
+    oauth_url, device_serial = build_oauth_url(...)
+
+    # Initial login
+    login_resp, login_soup = _perform_initial_login(
+        session, username, password, device, oauth_url
+    )
+
+    # Handle challenges
+    while check_for_captcha(login_soup):
+        login_soup = _handle_captcha_challenge(
+            session, login_soup, username, password, captcha_callback or default_captcha_callback
+        )
+
+    while check_for_choice_mfa(login_soup):
+        login_soup = _handle_mfa_choice(session, login_soup)
+
+    while check_for_mfa(login_soup):
+        login_soup = _handle_otp_challenge(
+            session, login_soup, otp_callback or default_otp_callback
+        )
+
+    while check_for_cvf(login_soup):
+        login_soup = _handle_cvf_challenge(
+            session, login_soup, cvf_callback or default_cvf_callback
+        )
+
+    if check_for_approval_alert(login_soup):
+        login_soup = _handle_approval_alert(
+            login_soup, approval_callback or default_approval_alert_callback
+        )
+
+    # Extract authorization code
+    authorization_code = _extract_authorization_code(login_soup)
+
+    return {
+        "authorization_code": authorization_code,
+        "code_verifier": code_verifier,
+        "domain": domain,
+        "serial": device_serial,
+        "device": device,
+    }
+```
+
+**Benefits:**
+- Each helper function <50 lines, complexity <5
+- Easy to test in isolation
+- Clear separation of concerns
+- Main function reads like documentation
+
+#### B. Refactor register() (1-2 hours)
+
+**Extract Helper Functions:**
+
+```python
+def _build_registration_body(
+    device: BaseDevice,
+    authorization_code: str,
+    code_verifier: bytes,
+    domain: str,
+) -> dict[str, Any]:
+    """Build registration request body.
+
+    Returns:
+        Complete registration request body
+    """
+    # Extract lines 123-143
+    pass
+
+def _parse_registration_tokens(
+    success_response: dict[str, Any],
+) -> dict[str, Any]:
+    """Parse tokens from registration response.
+
+    Returns:
+        Dict with adp_token, device_private_key, access_token, etc.
+    """
+    # Extract lines 155-181
+    pass
+
+def _parse_registration_extensions(
+    success_response: dict[str, Any],
+) -> tuple[dict[str, Any], dict[str, Any]]:
+    """Parse extensions from registration response.
+
+    Returns:
+        Tuple of (device_info, customer_info)
+    """
+    # Extract lines 183-185
+    pass
+
+def register(...) -> dict[str, Any]:
+    """Register Audible device (refactored orchestrator).
+
+    Target: <50 lines, complexity <5
+    """
+    # Setup device
+    device = _resolve_device(device, serial)
+
+    # Build request
+    body = _build_registration_body(device, authorization_code, code_verifier, domain)
+
+    # Make request
+    url = f"https://api.{target_domain}.{domain}/auth/register"
+    resp = httpx.post(url, json=body)
+
+    # Parse response
+    if resp.status_code != 200:
+        raise Exception(resp.json())
+
+    success_response = resp.json()["response"]["success"]
+    tokens = _parse_registration_tokens(success_response)
+    device_info, customer_info = _parse_registration_extensions(success_response)
+
+    # Return result
+    return {
+        **tokens,
+        "device_info": device_info,
+        "customer_info": customer_info,
+        "device": device,
+    }
+```
+
+### Implementation Checklist
+
+**Phase 4.6.1: Refactor login.py**
+- [ ] Extract _perform_initial_login()
+- [ ] Extract _handle_captcha_challenge()
+- [ ] Extract _handle_mfa_choice()
+- [ ] Extract _handle_otp_challenge()
+- [ ] Extract _handle_cvf_challenge()
+- [ ] Extract _handle_approval_alert()
+- [ ] Refactor login() to use helpers
+- [ ] Update login() tests to cover helpers
+- [ ] Verify complexity <10 for all functions
+
+**Phase 4.6.2: Refactor register.py**
+- [ ] Extract _build_registration_body()
+- [ ] Extract _parse_registration_tokens()
+- [ ] Extract _parse_registration_extensions()
+- [ ] Refactor register() to use helpers
+- [ ] Update register() tests
+- [ ] Verify complexity <10 for all functions
+
+**Phase 4.6.3: Update Configuration**
+- [ ] Update pyproject.toml: `max-complexity = 10`
+- [ ] Run ruff check with new threshold
+- [ ] Fix any violations
+- [ ] Run full nox suite
+
+### Success Criteria
+
+✅ All functions have complexity ≤10
+✅ login() refactored into 6+ smaller functions
+✅ register() refactored into 3+ smaller functions
+✅ All tests still pass
+✅ Coverage maintained or improved
+✅ pyproject.toml updated to max-complexity=10
+
+---
+
 ## Phase 5: Documentation
 
 ### 5.1 Code Documentation ⏳ TODO
@@ -929,24 +1400,40 @@ Special thanks to the AudibleApi project for Android device specifications.
 
 **Remaining Work:**
 
-- Phase 5: Documentation (2-3 hours)
+- **Phase 4.5: Unit Tests for register/login** (6-8 hours) **CRITICAL - BLOCKER**
+  - tests/test_register.py
+  - tests/test_login.py
+  - >80% coverage for both files
+  - HTTP mocking with pytest-httpx
+
+- **Phase 4.6: Code Complexity Refactoring** (4-6 hours) **HIGH PRIORITY**
+  - Refactor login() (240 lines → 6+ smaller functions)
+  - Refactor register() (130 lines → 3+ smaller functions)
+  - Update pyproject.toml: max-complexity = 10
+  - Maintain/improve test coverage
+
+- **Phase 5: Documentation** (2-3 hours)
   - README device section
   - Example files
   - Sphinx documentation pages
   - Migration guide
 
+**Total Remaining Effort:** 12-17 hours
+
 **Blockers:**
 
-- None
+- ❌ **Phase 4.5 MUST be completed** before merge (no unit tests for register/login in master)
+- ⚠️ **Phase 4.6 SHOULD be completed** for code quality (high complexity in login/register)
 
 **Risks:**
 
-- None identified
+- Without Phase 4.5: Breaking changes in register/login could go undetected
+- Without Phase 4.6: Code becomes harder to maintain and test
 
 **Known Limitations:**
 
 - Android Widevine DRM requires user-provided device certificates (not included)
-- Unit tests for register/login not implemented (complex HTTP mocking required)
+- test_device_integration.py will be removed (internal script, not for master)
 
 **Out of Scope (for audible-cli later):**
 
@@ -997,6 +1484,62 @@ Special thanks to the AudibleApi project for Android device specifications.
 - ✅ Pass all nox sessions (15/16, safety acceptable)
 - ✅ 177 total tests passing
 
+### Phase 4.5: Unit Tests for register/login ❌ CRITICAL - NOT STARTED
+
+**Reason:** test_device_integration.py will NOT be in master - need unit tests
+
+- [ ] Add pytest-httpx dependency
+- [ ] Create tests/test_register.py
+  - [ ] test_register_with_iphone_device
+  - [ ] test_register_with_android_device
+  - [ ] test_register_with_custom_device
+  - [ ] test_register_backward_compat_serial
+  - [ ] test_register_error_handling
+  - [ ] test_deregister_success
+  - [ ] test_deregister_error_handling
+  - [ ] Achieve >80% coverage
+- [ ] Create tests/test_login.py
+  - [ ] test_login_happy_path
+  - [ ] test_login_with_captcha
+  - [ ] test_login_with_mfa
+  - [ ] test_login_with_cvf
+  - [ ] test_external_login
+  - [ ] test_build_init_cookies
+  - [ ] test_backward_compat_serial
+  - [ ] Achieve >80% coverage
+- [ ] Run full test suite
+- [ ] Verify total tests >200
+
+**Estimated:** 6-8 hours | **Status:** BLOCKER for merge
+
+### Phase 4.6: Code Complexity Refactoring ❌ HIGH - NOT STARTED
+
+**Reason:** login() has 240 lines with 43 control flow statements (complexity ~15-20)
+
+- [ ] Refactor login.py
+  - [ ] Extract _perform_initial_login()
+  - [ ] Extract _handle_captcha_challenge()
+  - [ ] Extract _handle_mfa_choice()
+  - [ ] Extract _handle_otp_challenge()
+  - [ ] Extract _handle_cvf_challenge()
+  - [ ] Extract _handle_approval_alert()
+  - [ ] Refactor login() to orchestrate (target: <50 lines, complexity <5)
+  - [ ] Update tests for new functions
+- [ ] Refactor register.py
+  - [ ] Extract _build_registration_body()
+  - [ ] Extract _parse_registration_tokens()
+  - [ ] Extract _parse_registration_extensions()
+  - [ ] Refactor register() to orchestrate (target: <50 lines, complexity <5)
+  - [ ] Update tests
+- [ ] Update pyproject.toml
+  - [ ] Change max-complexity from 21 → 10
+  - [ ] Run ruff check --select C901
+  - [ ] Fix any new violations
+- [ ] Run full nox suite
+- [ ] Verify all functions complexity ≤10
+
+**Estimated:** 4-6 hours | **Status:** HIGH priority for quality
+
 ### Phase 5: Documentation ⏳ IN PROGRESS
 
 - ✅ All code docstrings complete (Google style)
@@ -1009,6 +1552,8 @@ Special thanks to the AudibleApi project for Android device specifications.
 - [ ] Write migration guide
 - [ ] Update CHANGELOG
 - [ ] Final docstring review
+
+**Estimated:** 2-3 hours
 
 ---
 
