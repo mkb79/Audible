@@ -8,6 +8,7 @@ handling (ChallengeHandler).
 """
 
 import logging
+import time
 from collections.abc import Callable
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any
@@ -138,8 +139,8 @@ class ChallengeHandler:
         while self._has_cvf(soup):
             soup, last_resp = self._handle_cvf(soup)
 
-        if self._has_approval_alert(soup):
-            soup, last_resp = self._handle_approval_alert(soup)
+        while self._has_approval_alert(soup):
+            soup, last_resp = self._handle_approval_alert(soup, last_resp)
 
         return soup, last_resp
 
@@ -191,15 +192,16 @@ class ChallengeHandler:
         """
         inputs = get_inputs_from_soup(soup)
 
-        # Select TOTP device if available (auth-TOTP)
         for node in soup.select("div[data-a-input-name=otpDeviceContext]"):
-            if "auth-TOTP" in node.get("class", []):
+            # auth-TOTP, auth-SMS, auth-VOICE
+            if "auth-TOTP" in node["class"]:
                 inp_node = node.find("input")
-                if isinstance(inp_node, Tag):
-                    name = inp_node.get("name")
-                    value = inp_node.get("value")
-                    if isinstance(name, str) and isinstance(value, str):
-                        inputs[name] = value
+                if (
+                    isinstance(inp_node, Tag)
+                    and isinstance(inp_node["name"], str)
+                    and isinstance(inp_node["value"], str)
+                ):
+                    inputs[inp_node["name"]] = inp_node["value"]
 
         method, url = get_next_action_from_soup(soup)
         login_resp = self._session.request(method, url, data=inputs)
@@ -262,7 +264,7 @@ class ChallengeHandler:
         return get_soup(login_resp), login_resp
 
     def _handle_approval_alert(
-        self, soup: BeautifulSoup
+        self, soup: BeautifulSoup, response: httpx.Response
     ) -> tuple[BeautifulSoup, httpx.Response]:
         """Handle approval alert notification.
 
@@ -279,19 +281,15 @@ class ChallengeHandler:
         """
         self._approval_callback()
 
-        # Get current URL - need to reconstruct from session's last request
-        # In original code, this used login_resp.url
-        # We'll poll the current URL
-        login_resp = self._session.get("")  # Empty string uses base_url
-        url = str(login_resp.url)
-
-        # Poll until approval
+        url = str(response.url)
+        login_resp = self._session.get(url)
         soup = get_soup(login_resp)
 
         while soup.find("span", {"class": "transaction-approval-word-break"}):
             login_resp = self._session.get(url)
             soup = get_soup(login_resp)
-            logger.info("still waiting for approval redirect")
+            logger.info("still waiting for approval")
+            time.sleep(4)
 
         return soup, login_resp
 
