@@ -7,6 +7,7 @@ import pandas as pd
 
 import audible
 
+
 if TYPE_CHECKING:
     from statsmodels.tsa.seasonal import DecomposeResult
 
