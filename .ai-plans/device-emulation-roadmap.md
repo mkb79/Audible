@@ -743,17 +743,38 @@ def test_login_happy_path(httpx_mock: HTTPXMock):
 
 ---
 
-## Phase 4.6: Code Complexity Refactoring ❌ REQUIRED
+## Phase 4.6: Service Classes Refactoring ❌ REQUIRED
 
 **Status:** NOT STARTED
 **Priority:** HIGH (quality & maintainability)
-**Estimated Effort:** 4-6 hours
+**Estimated Effort:** 6-8 hours
+**Approach:** CLASS-BASED (better than function extraction!)
+
+### Why Classes Instead of Functions
+
+**Advantages of Class-Based Approach:**
+- ✅ **State Management** - Session, callbacks, device as instance attributes
+- ✅ **Dependency Injection** - HTTP client injectable for testing
+- ✅ **Context Manager** - Automatic session cleanup with `with` statement
+- ✅ **Better API** - `service.login()` vs `login()`
+- ✅ **Easier Mocking** - Mock entire class or individual methods
+- ✅ **Reusability** - Service instance can be reused
+- ✅ **Clearer Structure** - Methods grouped by concern
+- ✅ **Type Safety** - Dataclass results instead of dict
+
+**Disadvantages of Pure Function Refactoring:**
+- ❌ All parameters must be passed through helper functions
+- ❌ No state encapsulation
+- ❌ Harder to mock (each function individually)
+- ❌ Less object-oriented
+- ❌ No context manager support
+- ❌ Not reusable
 
 ### Current Complexity Issues
 
 **Analysis Performed:** 2025-01-08
 
-#### login() Function - NEEDS REFACTORING
+#### login() Function - NEEDS CLASS CONVERSION
 - **Location:** `src/audible/login.py:400-640`
 - **Lines:** 240 lines
 - **Control Flow Statements:** 43
@@ -761,10 +782,13 @@ def test_login_happy_path(httpx_mock: HTTPXMock):
 - **Issues:**
   - Handles 5 different challenges (captcha, MFA, OTP, CVF, approval)
   - Multiple nested loops and conditionals
-  - Hard to test in isolation
-  - Difficult to maintain
+  - Hard to test in isolation (no dependency injection)
+  - Parameters passed through everywhere
+  - No session cleanup mechanism
 
-#### register() Function - NEEDS REFACTORING
+**Solution:** Convert to `LoginService` class
+
+#### register() Function - NEEDS CLASS CONVERSION
 - **Location:** `src/audible/register.py:72-204`
 - **Lines:** 130 lines
 - **Control Flow Statements:** 13
@@ -772,7 +796,10 @@ def test_login_happy_path(httpx_mock: HTTPXMock):
 - **Issues:**
   - Response parsing mixed with business logic
   - Key format conversion inline
+  - No testability (httpx called directly)
   - Could be clearer with extraction
+
+**Solution:** Convert to `RegistrationService` class
 
 #### device.py - CLEAN ✅
 - **Status:** All functions under complexity threshold
@@ -782,259 +809,528 @@ def test_login_happy_path(httpx_mock: HTTPXMock):
 - **Status:** Modified for device support, but complexity OK
 - **No refactoring needed**
 
-### Refactoring Plan
+### Refactoring Plan - Class-Based Architecture
 
-#### A. Refactor login() (3-4 hours)
+#### Overview
 
-**Extract Helper Functions:**
+Instead of extracting helper functions, convert `login()` and `register()` into service classes. This provides:
+- State management (session, device, callbacks as attributes)
+- Dependency injection (HTTP client protocol for testing)
+- Context manager support (automatic cleanup)
+- Better API (`service.login()` vs `login()`)
+- Easier mocking (entire class or individual methods)
+- Clearer code structure
+
+#### A. LoginService Class (3-4 hours)
+
+**File:** `src/audible/login_service.py` (NEW)
+
+**Design:**
 
 ```python
-def _perform_initial_login(
-    session: httpx.Client,
+from dataclasses import dataclass
+from typing import Protocol, Callable, Any
+import httpx
+from bs4 import BeautifulSoup
+from .device import BaseDevice
+
+# HTTP Client Protocol for dependency injection
+class HTTPClient(Protocol):
+    """Protocol for HTTP client (enables testing with mocks)."""
+    def get(self, url: str, **kwargs) -> httpx.Response: ...
+    def post(self, url: str, **kwargs) -> httpx.Response: ...
+    def close(self) -> None: ...
+
+@dataclass
+class LoginResult:
+    """Result from successful login operation."""
+    authorization_code: str
+    code_verifier: bytes
+    domain: str
+    device_serial: str
+    device: BaseDevice
+
+class LoginService:
+    """Service for handling Audible login flow.
+
+    Manages session state, challenge handling, and OAuth flow.
+
+    Example:
+        >>> with LoginService(device=IPHONE) as service:
+        ...     result = service.login(
+        ...         username="user@example.com",
+        ...         password="password",
+        ...         country_code="us",
+        ...         domain="com",
+        ...         market_place_id="AF2M0KC94RCEA",
+        ...     )
+    """
+
+    def __init__(
+        self,
+        device: BaseDevice,
+        http_client: HTTPClient | None = None,
+        captcha_callback: Callable[[str], str] | None = None,
+        otp_callback: Callable[[], str] | None = None,
+        cvf_callback: Callable[[], str] | None = None,
+        approval_callback: Callable[[], Any] | None = None,
+    ):
+        """Initialize login service.
+
+        Args:
+            device: Device to emulate
+            http_client: HTTP client (for testing). If None, creates httpx.Client
+            captcha_callback: Function to solve CAPTCHA
+            otp_callback: Function to get OTP code
+            cvf_callback: Function to get CVF code
+            approval_callback: Function to handle approval alerts
+        """
+        self.device = device
+        self._client = http_client or httpx.Client()
+        self._captcha_callback = captcha_callback
+        self._otp_callback = otp_callback
+        self._cvf_callback = cvf_callback
+        self._approval_callback = approval_callback
+        self._session: httpx.Client | None = None
+
+    def __enter__(self) -> "LoginService":
+        """Context manager entry."""
+        return self
+
+    def __exit__(self, *args) -> None:
+        """Context manager exit - cleanup session."""
+        if self._session:
+            self._session.close()
+
+    def login(
+        self,
+        username: str,
+        password: str,
+        country_code: str,
+        domain: str,
+        market_place_id: str,
+        with_username: bool = False,
+    ) -> LoginResult:
+        """Perform login flow.
+
+        Target: <30 lines, complexity <5
+        """
+        # Setup session
+        self._session = self._setup_session(domain, with_username)
+        oauth_url, device_serial = self._build_oauth_url(
+            country_code, domain, market_place_id
+        )
+
+        # Initial login
+        soup = self._perform_initial_login(username, password, oauth_url)
+
+        # Handle challenges
+        soup = self._handle_challenges(soup, username, password)
+
+        # Extract result
+        code_verifier, authorization_code = self._extract_authorization_data(soup, oauth_url)
+
+        return LoginResult(
+            authorization_code=authorization_code,
+            code_verifier=code_verifier,
+            domain=domain,
+            device_serial=device_serial,
+            device=self.device,
+        )
+
+    # Private methods - each <30 lines, complexity <5
+    def _setup_session(self, domain: str, with_username: bool) -> httpx.Client:
+        """Setup HTTP session with device headers."""
+        # Complexity: ~3
+        pass
+
+    def _build_oauth_url(
+        self, country_code: str, domain: str, market_place_id: str
+    ) -> tuple[str, str]:
+        """Build OAuth URL and device serial."""
+        # Complexity: ~2
+        pass
+
+    def _perform_initial_login(
+        self, username: str, password: str, oauth_url: str
+    ) -> BeautifulSoup:
+        """Perform initial login POST."""
+        # Complexity: ~4
+        pass
+
+    def _handle_challenges(
+        self, soup: BeautifulSoup, username: str, password: str
+    ) -> BeautifulSoup:
+        """Handle all login challenges (CAPTCHA, MFA, etc.)."""
+        # Complexity: ~8 (but orchestrates smaller methods)
+        # Loops through challenge handlers
+        while self._has_captcha(soup):
+            soup = self._handle_captcha(soup, username, password)
+        while self._has_mfa_choice(soup):
+            soup = self._handle_mfa_choice(soup)
+        while self._has_otp(soup):
+            soup = self._handle_otp(soup)
+        while self._has_cvf(soup):
+            soup = self._handle_cvf(soup)
+        if self._has_approval_alert(soup):
+            soup = self._handle_approval_alert(soup)
+        return soup
+
+    def _handle_captcha(
+        self, soup: BeautifulSoup, username: str, password: str
+    ) -> BeautifulSoup:
+        """Handle CAPTCHA challenge."""
+        # Complexity: ~5
+        pass
+
+    def _handle_mfa_choice(self, soup: BeautifulSoup) -> BeautifulSoup:
+        """Handle MFA device selection."""
+        # Complexity: ~4
+        pass
+
+    def _handle_otp(self, soup: BeautifulSoup) -> BeautifulSoup:
+        """Handle OTP challenge."""
+        # Complexity: ~4
+        pass
+
+    def _handle_cvf(self, soup: BeautifulSoup) -> BeautifulSoup:
+        """Handle CVF challenge."""
+        # Complexity: ~4
+        pass
+
+    def _handle_approval_alert(self, soup: BeautifulSoup) -> BeautifulSoup:
+        """Handle approval alert."""
+        # Complexity: ~3
+        pass
+
+    def _extract_authorization_data(
+        self, soup: BeautifulSoup, oauth_url: str
+    ) -> tuple[bytes, str]:
+        """Extract authorization code and verifier."""
+        # Complexity: ~3
+        pass
+
+    # Challenge detection helpers - each <10 lines, complexity 1-2
+    def _has_captcha(self, soup: BeautifulSoup) -> bool:
+        """Check if CAPTCHA challenge present."""
+        pass
+
+    def _has_mfa_choice(self, soup: BeautifulSoup) -> bool:
+        """Check if MFA choice present."""
+        pass
+
+    def _has_otp(self, soup: BeautifulSoup) -> bool:
+        """Check if OTP challenge present."""
+        pass
+
+    def _has_cvf(self, soup: BeautifulSoup) -> bool:
+        """Check if CVF challenge present."""
+        pass
+
+    def _has_approval_alert(self, soup: BeautifulSoup) -> bool:
+        """Check if approval alert present."""
+        pass
+
+# Backward compatible wrapper function
+def login(
     username: str,
     password: str,
-    device: BaseDevice,
-    oauth_url: str,
-) -> tuple[httpx.Response, BeautifulSoup]:
-    """Perform initial login POST request.
+    country_code: str,
+    domain: str,
+    market_place_id: str,
+    device: BaseDevice | None = None,
+    serial: str | None = None,
+    with_username: bool = False,
+    captcha_callback: Callable[[str], str] | None = None,
+    otp_callback: Callable[[], str] | None = None,
+    cvf_callback: Callable[[], str] | None = None,
+    approval_callback: Callable[[], Any] | None = None,
+) -> dict[str, Any]:
+    """Login to Audible (backward compatible wrapper).
 
-    Returns:
-        Tuple of (response, parsed soup)
+    .. deprecated:: v0.11.0
+        Use LoginService class for better testability and control.
+
+    This function maintains backward compatibility by wrapping LoginService.
     """
-    # Extract lines 499-512
-    pass
+    # Handle device/serial parameter
+    if device is None:
+        from .device import IPHONE
+        device = IPHONE
+        if serial:
+            device = device.copy(device_serial=serial)
 
-def _handle_captcha_challenge(
-    session: httpx.Client,
-    soup: BeautifulSoup,
-    username: str,
-    password: str,
-    callback: Callable[[str], str],
-) -> BeautifulSoup:
-    """Handle CAPTCHA challenge during login.
-
-    Returns:
-        Updated soup after CAPTCHA submission
-    """
-    # Extract lines 514-533
-    pass
-
-def _handle_mfa_choice(
-    session: httpx.Client,
-    soup: BeautifulSoup,
-) -> BeautifulSoup:
-    """Handle MFA device choice selection.
-
-    Returns:
-        Updated soup after MFA device selection
-    """
-    # Extract lines 535-560
-    pass
-
-def _handle_otp_challenge(
-    session: httpx.Client,
-    soup: BeautifulSoup,
-    callback: Callable[[], str],
-) -> BeautifulSoup:
-    """Handle OTP (one-time password) challenge.
-
-    Returns:
-        Updated soup after OTP submission
-    """
-    # Extract lines 565-590
-    pass
-
-def _handle_cvf_challenge(
-    session: httpx.Client,
-    soup: BeautifulSoup,
-    callback: Callable[[], str],
-) -> BeautifulSoup:
-    """Handle CVF (credential verification) challenge.
-
-    Returns:
-        Updated soup after CVF submission
-    """
-    # Extract lines 595-615
-    pass
-
-def _handle_approval_alert(
-    soup: BeautifulSoup,
-    callback: Callable[[], Any],
-) -> BeautifulSoup:
-    """Handle approval alert notification.
-
-    Returns:
-        Updated soup after approval
-    """
-    # Extract lines 620-630
-    pass
-
-def login(...) -> dict[str, Any]:
-    """Login to Audible (refactored orchestrator).
-
-    Now orchestrates helper functions instead of doing everything.
-    Target: <50 lines, complexity <5
-    """
-    # Setup
-    device = _resolve_device(device, serial)
-    session = _create_login_session(device, domain, with_username)
-    oauth_url, device_serial = build_oauth_url(...)
-
-    # Initial login
-    login_resp, login_soup = _perform_initial_login(
-        session, username, password, device, oauth_url
-    )
-
-    # Handle challenges
-    while check_for_captcha(login_soup):
-        login_soup = _handle_captcha_challenge(
-            session, login_soup, username, password, captcha_callback or default_captcha_callback
+    # Use service class
+    with LoginService(
+        device=device,
+        captcha_callback=captcha_callback,
+        otp_callback=otp_callback,
+        cvf_callback=cvf_callback,
+        approval_callback=approval_callback,
+    ) as service:
+        result = service.login(
+            username=username,
+            password=password,
+            country_code=country_code,
+            domain=domain,
+            market_place_id=market_place_id,
+            with_username=with_username,
         )
 
-    while check_for_choice_mfa(login_soup):
-        login_soup = _handle_mfa_choice(session, login_soup)
-
-    while check_for_mfa(login_soup):
-        login_soup = _handle_otp_challenge(
-            session, login_soup, otp_callback or default_otp_callback
-        )
-
-    while check_for_cvf(login_soup):
-        login_soup = _handle_cvf_challenge(
-            session, login_soup, cvf_callback or default_cvf_callback
-        )
-
-    if check_for_approval_alert(login_soup):
-        login_soup = _handle_approval_alert(
-            login_soup, approval_callback or default_approval_alert_callback
-        )
-
-    # Extract authorization code
-    authorization_code = _extract_authorization_code(login_soup)
-
+    # Convert to dict for backward compatibility
     return {
-        "authorization_code": authorization_code,
-        "code_verifier": code_verifier,
-        "domain": domain,
-        "serial": device_serial,
-        "device": device,
+        "authorization_code": result.authorization_code,
+        "code_verifier": result.code_verifier,
+        "domain": result.domain,
+        "serial": result.device_serial,
+        "device": result.device,
     }
 ```
 
-**Benefits:**
-- Each helper function <50 lines, complexity <5
-- Easy to test in isolation
-- Clear separation of concerns
-- Main function reads like documentation
+#### B. RegistrationService Class (2-3 hours)
 
-#### B. Refactor register() (1-2 hours)
+**File:** `src/audible/registration_service.py` (NEW)
 
-**Extract Helper Functions:**
+**Design:**
 
 ```python
-def _build_registration_body(
-    device: BaseDevice,
+from dataclasses import dataclass
+from typing import Protocol, Any
+import httpx
+from .device import BaseDevice
+
+@dataclass
+class RegistrationResult:
+    """Result from successful registration operation."""
+    adp_token: str
+    device_private_key: str
+    access_token: str
+    refresh_token: str
+    expires: float
+    website_cookies: dict[str, str] | None
+    store_authentication_cookie: Any
+    device_info: dict[str, Any]
+    customer_info: dict[str, Any]
+    device: BaseDevice
+
+class RegistrationService:
+    """Service for handling Audible device registration.
+
+    Example:
+        >>> service = RegistrationService(device=ANDROID)
+        >>> result = service.register(
+        ...     authorization_code="code",
+        ...     code_verifier=b"verifier",
+        ...     domain="com",
+        ... )
+    """
+
+    def __init__(
+        self,
+        device: BaseDevice,
+        http_client: HTTPClient | None = None,
+    ):
+        """Initialize registration service.
+
+        Args:
+            device: Device to register
+            http_client: HTTP client (for testing). If None, uses httpx
+        """
+        self.device = device
+        self._client = http_client or httpx
+
+    def register(
+        self,
+        authorization_code: str,
+        code_verifier: bytes,
+        domain: str,
+        with_username: bool = False,
+    ) -> RegistrationResult:
+        """Register device with Audible.
+
+        Target: <30 lines, complexity <5
+        """
+        # Build request
+        body = self._build_request_body(authorization_code, code_verifier, domain)
+        url = self._build_url(domain, with_username)
+
+        # Make request
+        resp = self._client.post(url, json=body)
+        if resp.status_code != 200:
+            raise Exception(resp.json())
+
+        # Parse response
+        success_response = resp.json()["response"]["success"]
+        tokens = self._parse_tokens(success_response)
+        extensions = self._parse_extensions(success_response)
+
+        return RegistrationResult(
+            **tokens,
+            **extensions,
+            device=self.device,
+        )
+
+    def deregister(
+        self,
+        access_token: str,
+        domain: str,
+        deregister_all: bool = False,
+        with_username: bool = False,
+    ) -> Any:
+        """Deregister device."""
+        body = {"deregister_all_existing_accounts": deregister_all}
+        headers = {"Authorization": f"Bearer {access_token}"}
+        url = self._build_url(domain, with_username, endpoint="deregister")
+
+        resp = self._client.post(url, json=body, headers=headers)
+        if resp.status_code != 200:
+            raise Exception(resp.json())
+
+        return resp.json()
+
+    # Private methods - each <30 lines, complexity <5
+    def _build_request_body(
+        self, authorization_code: str, code_verifier: bytes, domain: str
+    ) -> dict[str, Any]:
+        """Build registration request body."""
+        # Complexity: ~3
+        pass
+
+    def _build_url(
+        self, domain: str, with_username: bool, endpoint: str = "register"
+    ) -> str:
+        """Build registration URL."""
+        # Complexity: ~2
+        pass
+
+    def _parse_tokens(self, success_response: dict[str, Any]) -> dict[str, Any]:
+        """Parse tokens from response."""
+        # Complexity: ~6
+        # Handles PEM vs PKCS#8 conversion
+        pass
+
+    def _parse_extensions(self, success_response: dict[str, Any]) -> dict[str, Any]:
+        """Parse extensions (device_info, customer_info) from response."""
+        # Complexity: ~2
+        pass
+
+# Backward compatible wrapper function
+def register(
     authorization_code: str,
     code_verifier: bytes,
     domain: str,
+    device: BaseDevice | None = None,
+    serial: str | None = None,
+    with_username: bool = False,
 ) -> dict[str, Any]:
-    """Build registration request body.
+    """Register Audible device (backward compatible wrapper).
 
-    Returns:
-        Complete registration request body
+    .. deprecated:: v0.11.0
+        Use RegistrationService class for better testability and control.
     """
-    # Extract lines 123-143
-    pass
+    # Handle device/serial parameter
+    if device is None:
+        from .device import IPHONE
+        device = IPHONE
+        if serial:
+            device = device.copy(device_serial=serial)
 
-def _parse_registration_tokens(
-    success_response: dict[str, Any],
-) -> dict[str, Any]:
-    """Parse tokens from registration response.
+    # Use service class
+    service = RegistrationService(device=device)
+    result = service.register(
+        authorization_code=authorization_code,
+        code_verifier=code_verifier,
+        domain=domain,
+        with_username=with_username,
+    )
 
-    Returns:
-        Dict with adp_token, device_private_key, access_token, etc.
-    """
-    # Extract lines 155-181
-    pass
-
-def _parse_registration_extensions(
-    success_response: dict[str, Any],
-) -> tuple[dict[str, Any], dict[str, Any]]:
-    """Parse extensions from registration response.
-
-    Returns:
-        Tuple of (device_info, customer_info)
-    """
-    # Extract lines 183-185
-    pass
-
-def register(...) -> dict[str, Any]:
-    """Register Audible device (refactored orchestrator).
-
-    Target: <50 lines, complexity <5
-    """
-    # Setup device
-    device = _resolve_device(device, serial)
-
-    # Build request
-    body = _build_registration_body(device, authorization_code, code_verifier, domain)
-
-    # Make request
-    url = f"https://api.{target_domain}.{domain}/auth/register"
-    resp = httpx.post(url, json=body)
-
-    # Parse response
-    if resp.status_code != 200:
-        raise Exception(resp.json())
-
-    success_response = resp.json()["response"]["success"]
-    tokens = _parse_registration_tokens(success_response)
-    device_info, customer_info = _parse_registration_extensions(success_response)
-
-    # Return result
+    # Convert to dict for backward compatibility
     return {
-        **tokens,
-        "device_info": device_info,
-        "customer_info": customer_info,
-        "device": device,
+        "adp_token": result.adp_token,
+        "device_private_key": result.device_private_key,
+        "access_token": result.access_token,
+        "refresh_token": result.refresh_token,
+        "expires": result.expires,
+        "website_cookies": result.website_cookies,
+        "store_authentication_cookie": result.store_authentication_cookie,
+        "device_info": result.device_info,
+        "customer_info": result.customer_info,
+        "device": result.device,
     }
 ```
 
 ### Implementation Checklist
 
-**Phase 4.6.1: Refactor login.py**
-- [ ] Extract _perform_initial_login()
-- [ ] Extract _handle_captcha_challenge()
-- [ ] Extract _handle_mfa_choice()
-- [ ] Extract _handle_otp_challenge()
-- [ ] Extract _handle_cvf_challenge()
-- [ ] Extract _handle_approval_alert()
-- [ ] Refactor login() to use helpers
-- [ ] Update login() tests to cover helpers
-- [ ] Verify complexity <10 for all functions
+**Phase 4.6.1: Create LoginService (3-4 hours)**
+- [ ] Create new file `src/audible/login_service.py`
+- [ ] Define HTTPClient Protocol for dependency injection
+- [ ] Define LoginResult dataclass
+- [ ] Implement LoginService class
+  - [ ] Implement `__init__()` with device and callbacks
+  - [ ] Implement context manager (`__enter__`, `__exit__`)
+  - [ ] Implement public `login()` method (<30 lines, complexity <5)
+  - [ ] Implement `_setup_session()` (<30 lines, complexity <5)
+  - [ ] Implement `_build_oauth_url()` (<30 lines, complexity <5)
+  - [ ] Implement `_perform_initial_login()` (<30 lines, complexity <5)
+  - [ ] Implement `_handle_challenges()` (<30 lines, complexity <10)
+  - [ ] Implement `_handle_captcha()` (<30 lines, complexity <5)
+  - [ ] Implement `_handle_mfa_choice()` (<30 lines, complexity <5)
+  - [ ] Implement `_handle_otp()` (<30 lines, complexity <5)
+  - [ ] Implement `_handle_cvf()` (<30 lines, complexity <5)
+  - [ ] Implement `_handle_approval_alert()` (<30 lines, complexity <5)
+  - [ ] Implement `_extract_authorization_data()` (<30 lines, complexity <5)
+  - [ ] Implement challenge detection helpers (5 methods, each <10 lines)
+- [ ] Update `login.py`: Replace login() with wrapper that uses LoginService
+- [ ] Verify all methods have complexity ≤10
 
-**Phase 4.6.2: Refactor register.py**
-- [ ] Extract _build_registration_body()
-- [ ] Extract _parse_registration_tokens()
-- [ ] Extract _parse_registration_extensions()
-- [ ] Refactor register() to use helpers
-- [ ] Update register() tests
-- [ ] Verify complexity <10 for all functions
+**Phase 4.6.2: Create RegistrationService (2-3 hours)**
+- [ ] Create new file `src/audible/registration_service.py`
+- [ ] Define RegistrationResult dataclass
+- [ ] Implement RegistrationService class
+  - [ ] Implement `__init__()` with device
+  - [ ] Implement public `register()` method (<30 lines, complexity <5)
+  - [ ] Implement public `deregister()` method (<30 lines, complexity <5)
+  - [ ] Implement `_build_request_body()` (<30 lines, complexity <5)
+  - [ ] Implement `_build_url()` (<30 lines, complexity <5)
+  - [ ] Implement `_parse_tokens()` (<30 lines, complexity <8)
+  - [ ] Implement `_parse_extensions()` (<30 lines, complexity <5)
+- [ ] Update `register.py`: Replace register() with wrapper that uses RegistrationService
+- [ ] Move deregister() into RegistrationService.deregister()
+- [ ] Update register.py: Replace deregister() with wrapper
+- [ ] Verify all methods have complexity ≤10
 
-**Phase 4.6.3: Update Configuration**
+**Phase 4.6.3: Update Tests (1-2 hours)**
+- [ ] Update tests/test_login.py to test LoginService (if exists)
+- [ ] Update tests/test_register.py to test RegistrationService (if exists)
+- [ ] Add unit tests for LoginResult and RegistrationResult dataclasses
+- [ ] Test dependency injection with mock HTTP clients
+- [ ] Test context manager behavior
+- [ ] Verify all tests pass
+- [ ] Verify coverage maintained or improved
+
+**Phase 4.6.4: Update Configuration (30 min)**
 - [ ] Update pyproject.toml: `max-complexity = 10`
-- [ ] Run ruff check with new threshold
-- [ ] Fix any violations
+- [ ] Run `ruff check --select C901` to verify all functions <10
+- [ ] Fix any new violations
 - [ ] Run full nox suite
+- [ ] Verify all 16 sessions pass (except safety if needed)
+
+**Phase 4.6.5: Update Documentation (30 min)**
+- [ ] Add module docstrings to login_service.py and registration_service.py
+- [ ] Update CHANGELOG with service class additions
+- [ ] Update migration guide with service class examples
+- [ ] Add examples showing new vs old API
 
 ### Success Criteria
 
-✅ All functions have complexity ≤10
-✅ login() refactored into 6+ smaller functions
-✅ register() refactored into 3+ smaller functions
-✅ All tests still pass
+✅ LoginService class implemented with all methods complexity ≤10
+✅ RegistrationService class implemented with all methods complexity ≤10
+✅ LoginResult and RegistrationResult dataclasses defined
+✅ Backward compatible wrapper functions in login.py and register.py
+✅ All tests pass (including new tests for services)
 ✅ Coverage maintained or improved
 ✅ pyproject.toml updated to max-complexity=10
+✅ Full nox suite passes
 
 ---
 
@@ -1406,9 +1702,11 @@ Special thanks to the AudibleApi project for Android device specifications.
   - >80% coverage for both files
   - HTTP mocking with pytest-httpx
 
-- **Phase 4.6: Code Complexity Refactoring** (4-6 hours) **HIGH PRIORITY**
-  - Refactor login() (240 lines → 6+ smaller functions)
-  - Refactor register() (130 lines → 3+ smaller functions)
+- **Phase 4.6: Service Classes Refactoring** (6-8 hours) **HIGH PRIORITY**
+  - Convert login() to LoginService class with dependency injection
+  - Convert register() to RegistrationService class
+  - Create LoginResult and RegistrationResult dataclasses
+  - Backward compatible wrapper functions
   - Update pyproject.toml: max-complexity = 10
   - Maintain/improve test coverage
 
@@ -1418,7 +1716,7 @@ Special thanks to the AudibleApi project for Android device specifications.
   - Sphinx documentation pages
   - Migration guide
 
-**Total Remaining Effort:** 12-17 hours
+**Total Remaining Effort:** 14-19 hours
 
 **Blockers:**
 
@@ -1512,33 +1810,47 @@ Special thanks to the AudibleApi project for Android device specifications.
 
 **Estimated:** 6-8 hours | **Status:** BLOCKER for merge
 
-### Phase 4.6: Code Complexity Refactoring ❌ HIGH - NOT STARTED
+### Phase 4.6: Service Classes Refactoring ❌ HIGH - NOT STARTED
 
 **Reason:** login() has 240 lines with 43 control flow statements (complexity ~15-20)
+**Approach:** CLASS-BASED (better than function extraction!)
 
-- [ ] Refactor login.py
-  - [ ] Extract _perform_initial_login()
-  - [ ] Extract _handle_captcha_challenge()
-  - [ ] Extract _handle_mfa_choice()
-  - [ ] Extract _handle_otp_challenge()
-  - [ ] Extract _handle_cvf_challenge()
-  - [ ] Extract _handle_approval_alert()
-  - [ ] Refactor login() to orchestrate (target: <50 lines, complexity <5)
-  - [ ] Update tests for new functions
-- [ ] Refactor register.py
-  - [ ] Extract _build_registration_body()
-  - [ ] Extract _parse_registration_tokens()
-  - [ ] Extract _parse_registration_extensions()
-  - [ ] Refactor register() to orchestrate (target: <50 lines, complexity <5)
-  - [ ] Update tests
-- [ ] Update pyproject.toml
-  - [ ] Change max-complexity from 21 → 10
-  - [ ] Run ruff check --select C901
-  - [ ] Fix any new violations
+**Phase 4.6.1: Create LoginService (3-4 hours)**
+- [ ] Create new file `src/audible/login_service.py`
+- [ ] Define HTTPClient Protocol for dependency injection
+- [ ] Define LoginResult dataclass
+- [ ] Implement LoginService class with all methods (15 methods total)
+- [ ] Update `login.py`: Replace login() with wrapper using LoginService
+- [ ] Verify all methods have complexity ≤10
+
+**Phase 4.6.2: Create RegistrationService (2-3 hours)**
+- [ ] Create new file `src/audible/registration_service.py`
+- [ ] Define RegistrationResult dataclass
+- [ ] Implement RegistrationService class with all methods (7 methods total)
+- [ ] Update `register.py`: Replace register() and deregister() with wrappers
+- [ ] Verify all methods have complexity ≤10
+
+**Phase 4.6.3: Update Tests (1-2 hours)**
+- [ ] Update tests/test_login.py to test LoginService (if exists)
+- [ ] Update tests/test_register.py to test RegistrationService (if exists)
+- [ ] Add unit tests for dataclasses
+- [ ] Test dependency injection with mock HTTP clients
+- [ ] Test context manager behavior
+- [ ] Verify coverage maintained or improved
+
+**Phase 4.6.4: Update Configuration (30 min)**
+- [ ] Update pyproject.toml: max-complexity from 21 → 10
+- [ ] Run `ruff check --select C901` to verify all functions <10
+- [ ] Fix any new violations
 - [ ] Run full nox suite
-- [ ] Verify all functions complexity ≤10
 
-**Estimated:** 4-6 hours | **Status:** HIGH priority for quality
+**Phase 4.6.5: Update Documentation (30 min)**
+- [ ] Add module docstrings to service files
+- [ ] Update CHANGELOG with service class additions
+- [ ] Update migration guide with service class examples
+- [ ] Add examples showing new vs old API
+
+**Estimated:** 6-8 hours | **Status:** HIGH priority for quality
 
 ### Phase 5: Documentation ⏳ IN PROGRESS
 
