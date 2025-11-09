@@ -40,6 +40,7 @@ class RegistrationResult:
         customer_info: Customer information from server
         device: Device configuration used for registration
     """
+
     adp_token: str
     device_private_key: str
     access_token: str
@@ -62,23 +63,18 @@ class RegistrationService:
         device: Device to register
 
     Example:
-        >>> from audible.registration_service import RegistrationService
-        >>> from audible.device import ANDROID
-        >>> service = RegistrationService(device=ANDROID)
-        >>> result = service.register(
+        >>> from audible.registration_service import RegistrationService  # doctest: +SKIP
+        >>> from audible.device import ANDROID  # doctest: +SKIP
+        >>> service = RegistrationService(device=ANDROID)  # doctest: +SKIP
+        >>> result = service.register(  # doctest: +SKIP
         ...     authorization_code="code_from_login",
         ...     code_verifier=b"verifier_from_login",
         ...     domain="com",
         ... )
-        >>> print(result.access_token)
+        >>> print(result.access_token)  # doctest: +SKIP
     """
 
     def __init__(self, device: "BaseDevice"):
-        """Initialize registration service with device.
-
-        Args:
-            device: Device to register
-        """
         self.device = device
 
     def register(
@@ -337,9 +333,6 @@ def register(
     Returns:
         Dict with all authentication tokens and device info
 
-    Raises:
-        Exception: If registration fails
-
     .. deprecated:: v0.11.0
         The serial parameter is deprecated. Use device parameter instead.
 
@@ -348,20 +341,20 @@ def register(
         the same for backward compatibility.
 
     Example:
-        >>> from audible.registration_service import register
-        >>> from audible.device import ANDROID
-        >>> result = register(
+        >>> from audible.registration_service import register  # doctest: +SKIP
+        >>> from audible.device import ANDROID  # doctest: +SKIP
+        >>> result = register(  # doctest: +SKIP
         ...     authorization_code="code",
         ...     code_verifier=b"verifier",
         ...     domain="com",
         ...     device=ANDROID,
         ... )
     """
-    import warnings
+    import warnings  # noqa: PLC0415
 
     # Handle device parameter with backward compatibility
     if device is None:
-        from .device import IPHONE
+        from .device import IPHONE  # noqa: PLC0415
 
         device = IPHONE
 
@@ -421,22 +414,19 @@ def deregister(
     Returns:
         Server response (contains errors if any occurred)
 
-    Raises:
-        Exception: If deregistration fails
-
     .. versionchanged:: v0.11.0
         Now uses RegistrationService.deregister() internally.
 
     Example:
-        >>> from audible.registration_service import deregister
-        >>> result = deregister(
+        >>> from audible.registration_service import deregister  # doctest: +SKIP
+        >>> result = deregister(  # doctest: +SKIP
         ...     access_token="token",
         ...     domain="com",
         ... )
     """
     # Note: No device needed for deregister, but we need a dummy instance
     # This is OK because deregister only uses access_token
-    from .device import IPHONE
+    from .device import IPHONE  # noqa: PLC0415
 
     service = RegistrationService(device=IPHONE)
     return service.deregister(

@@ -13,7 +13,7 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any
 
 import httpx
-from bs4 import BeautifulSoup
+from bs4 import BeautifulSoup, Tag
 
 from .login import (
     build_init_cookies,
@@ -56,6 +56,7 @@ class LoginResult:
         device_serial: Device serial number used for registration
         device: Device configuration used for login
     """
+
     authorization_code: str
     code_verifier: bytes
     domain: str
@@ -79,12 +80,12 @@ class ChallengeHandler:
         approval_callback: Function to handle approval alerts
 
     Example:
-        >>> handler = ChallengeHandler(
+        >>> handler = ChallengeHandler(  # doctest: +SKIP
         ...     session=httpx.Client(),
         ...     username="user@example.com",
         ...     password="password",
         ... )
-        >>> soup = handler.handle_all_challenges(initial_soup)
+        >>> soup = handler.handle_all_challenges(initial_soup)  # doctest: +SKIP
     """
 
     def __init__(
@@ -97,7 +98,6 @@ class ChallengeHandler:
         cvf_callback: Callable[[], str] | None = None,
         approval_callback: Callable[[], Any] | None = None,
     ):
-        """Initialize challenge handler with session and callbacks."""
         self._session = session
         self._username = username
         self._password = password
@@ -143,7 +143,9 @@ class ChallengeHandler:
 
         return soup, last_resp
 
-    def _handle_captcha(self, soup: BeautifulSoup) -> tuple[BeautifulSoup, httpx.Response]:
+    def _handle_captcha(
+        self, soup: BeautifulSoup
+    ) -> tuple[BeautifulSoup, httpx.Response]:
         """Handle CAPTCHA challenge.
 
         Extracts CAPTCHA URL, gets user solution via callback,
@@ -172,7 +174,9 @@ class ChallengeHandler:
         login_resp = self._session.request(method, url, data=inputs)
         return get_soup(login_resp), login_resp
 
-    def _handle_mfa_choice(self, soup: BeautifulSoup) -> tuple[BeautifulSoup, httpx.Response]:
+    def _handle_mfa_choice(
+        self, soup: BeautifulSoup
+    ) -> tuple[BeautifulSoup, httpx.Response]:
         """Handle MFA device selection.
 
         Automatically selects TOTP (authenticator app) if available.
@@ -191,12 +195,11 @@ class ChallengeHandler:
         for node in soup.select("div[data-a-input-name=otpDeviceContext]"):
             if "auth-TOTP" in node.get("class", []):
                 inp_node = node.find("input")
-                if (
-                    inp_node
-                    and inp_node.get("name")
-                    and inp_node.get("value")
-                ):
-                    inputs[inp_node["name"]] = inp_node["value"]
+                if isinstance(inp_node, Tag):
+                    name = inp_node.get("name")
+                    value = inp_node.get("value")
+                    if isinstance(name, str) and isinstance(value, str):
+                        inputs[name] = value
 
         method, url = get_next_action_from_soup(soup)
         login_resp = self._session.request(method, url, data=inputs)
@@ -258,7 +261,9 @@ class ChallengeHandler:
         login_resp = self._session.request(method, url, data=inputs)
         return get_soup(login_resp), login_resp
 
-    def _handle_approval_alert(self, soup: BeautifulSoup) -> tuple[BeautifulSoup, httpx.Response]:
+    def _handle_approval_alert(
+        self, soup: BeautifulSoup
+    ) -> tuple[BeautifulSoup, httpx.Response]:
         """Handle approval alert notification.
 
         Waits for user to approve via email/app notification.
@@ -327,7 +332,7 @@ class LoginService:
         approval_callback: Function to handle approval alerts
 
     Example:
-        >>> with LoginService(device=IPHONE) as service:
+        >>> with LoginService(device=IPHONE) as service:  # doctest: +SKIP
         ...     result = service.login(
         ...         username="user@example.com",
         ...         password="password",
@@ -335,7 +340,7 @@ class LoginService:
         ...         domain="com",
         ...         market_place_id="AF2M0KC94RCEA",
         ...     )
-        >>> print(result.authorization_code)
+        >>> print(result.authorization_code)  # doctest: +SKIP
     """
 
     def __init__(
@@ -346,7 +351,6 @@ class LoginService:
         cvf_callback: Callable[[], str] | None = None,
         approval_callback: Callable[[], Any] | None = None,
     ):
-        """Initialize login service with device and callbacks."""
         self.device = device
         self._captcha_callback = captcha_callback
         self._otp_callback = otp_callback
@@ -384,9 +388,6 @@ class LoginService:
 
         Returns:
             LoginResult with authorization code and device info
-
-        Raises:
-            Exception: If login fails or authorization code not found
 
         Complexity: ~5
         """
@@ -517,7 +518,7 @@ class LoginService:
 
         Complexity: ~4
         """
-        assert self._session is not None, "Session not initialized"
+        assert self._session is not None, "Session not initialized"  # noqa: S101
 
         base_url = (
             f"https://www.audible.{domain}"
@@ -620,9 +621,6 @@ def login(
     Returns:
         Dict with authorization_code, code_verifier, domain, serial, and device
 
-    Raises:
-        Exception: If login fails
-
     .. deprecated:: v0.11.0
         The serial parameter is deprecated. Use device parameter instead.
 
@@ -631,9 +629,9 @@ def login(
         for backward compatibility.
 
     Example:
-        >>> from audible.login_service import login
-        >>> from audible.device import IPHONE
-        >>> result = login(
+        >>> from audible.login_service import login  # doctest: +SKIP
+        >>> from audible.device import IPHONE  # doctest: +SKIP
+        >>> result = login(  # doctest: +SKIP
         ...     username="user@example.com",
         ...     password="password",
         ...     country_code="us",
@@ -642,11 +640,11 @@ def login(
         ...     device=IPHONE,
         ... )
     """
-    import warnings
+    import warnings  # noqa: PLC0415
 
     # Handle device parameter with backward compatibility
     if device is None:
-        from .device import IPHONE
+        from .device import IPHONE  # noqa: PLC0415
 
         device = IPHONE
 

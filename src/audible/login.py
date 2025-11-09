@@ -16,7 +16,6 @@ from bs4 import BeautifulSoup, NavigableString, Tag
 from PIL import Image
 
 from .exceptions import AudibleError
-from .metadata import encrypt_metadata, meta_audible_app
 
 
 if TYPE_CHECKING:
@@ -413,6 +412,11 @@ def login(
 ) -> dict[str, Any]:
     """Login to Audible by simulating an Audible App for iOS.
 
+    .. deprecated:: v0.11.0
+        Use :class:`audible.LoginService` instead for better testability
+        and maintainability. This function is now a wrapper around the
+        service class and will be removed in v0.12.0.
+
     Args:
         username: The Amazon email address.
         password: The Amazon password.
@@ -438,205 +442,34 @@ def login(
         An ``authorization_code``, a ``code_verifier`` and the
         ``device serial`` from the authorized Client.
 
-    Raises:
-        Exception: If authorization_code is not in response url.
-
     .. versionadded:: v0.11.0
            The device argument
-    .. deprecated:: v0.11.0
-           The serial argument is deprecated. Use device parameter instead.
+    .. versionchanged:: v0.11.0
+           Now uses LoginService internally. Prefer using LoginService directly.
     """
-    # Handle device parameter with backward compatibility
-    if device is None:
-        from .device import IPHONE
+    from .login_service import login as _login_impl
 
-        device = IPHONE
-
-    # Handle backward compatibility with serial parameter
-    if serial is not None:
-        warnings.warn(
-            "The 'serial' parameter is deprecated and will be removed in v0.12.0. "
-            "Use 'device' parameter instead.",
-            DeprecationWarning,
-            stacklevel=2,
-        )
-        # Create a copy of device with the provided serial
-        device = device.copy(device_serial=serial)
-
-    if with_username:
-        base_url = f"https://www.audible.{domain}"
-        logger.info("Login with Audible username.")
-    else:
-        if not is_valid_email(username):
-            logger.warning("Username %s is not a valid mail address.", username)
-        base_url = f"https://www.amazon.{domain}"
-        logger.info("Login with Amazon Account.")
-
-    default_headers = {
-        "User-Agent": device.user_agent,
-        "Accept-Language": "en-US",
-        "Accept-Encoding": "gzip",
-    }
-    init_cookies = build_init_cookies(device)
-
-    session = httpx.Client(
-        base_url=base_url,
-        headers=default_headers,
-        cookies=init_cookies,
-        follow_redirects=True,
+    warnings.warn(
+        "Importing from audible.login is deprecated and will be removed in v0.12.0. "
+        "Use audible.LoginService instead for better testability and control.",
+        DeprecationWarning,
+        stacklevel=2,
     )
-    code_verifier = create_code_verifier()
 
-    oauth_url, device_serial = build_oauth_url(
+    return _login_impl(
+        username=username,
+        password=password,
         country_code=country_code,
         domain=domain,
         market_place_id=market_place_id,
-        code_verifier=code_verifier,
-        serial=device.device_serial,
+        serial=serial,
         with_username=with_username,
+        captcha_callback=captcha_callback,
+        otp_callback=otp_callback,
+        cvf_callback=cvf_callback,
+        approval_callback=approval_callback,
+        device=device,
     )
-
-    oauth_resp = session.get(oauth_url)
-    oauth_soup = get_soup(oauth_resp)
-
-    login_inputs = get_inputs_from_soup(oauth_soup)
-    login_inputs["email"] = username
-    login_inputs["password"] = password
-
-    metadata = meta_audible_app(device.user_agent, base_url)
-    login_inputs["metadata1"] = encrypt_metadata(metadata)
-
-    method, url = get_next_action_from_soup(oauth_soup, {"name": "signIn"})
-
-    login_resp = session.request(method, url, data=login_inputs)
-    login_soup = get_soup(login_resp)
-
-    # check for captcha
-    while check_for_captcha(login_soup):
-        captcha_url = extract_captcha_url(login_soup)
-        if captcha_callback:
-            guess = captcha_callback(captcha_url)
-        else:
-            guess = default_captcha_callback(captcha_url)
-
-        inputs = get_inputs_from_soup(login_soup)
-        inputs["guess"] = guess
-        inputs["use_image_captcha"] = "true"
-        inputs["use_audio_captcha"] = "false"
-        inputs["showPasswordChecked"] = "false"
-        inputs["email"] = username
-        inputs["password"] = password
-
-        method, url = get_next_action_from_soup(login_soup, {"name": "signIn"})
-
-        login_resp = session.request(method, url, data=inputs)
-        login_soup = get_soup(login_resp)
-
-    # check for choice mfa
-    # https://www.amazon.de/ap/mfa/new-otp
-    while check_for_choice_mfa(login_soup):
-        inputs = get_inputs_from_soup(login_soup)
-        for node in login_soup.select("div[data-a-input-name=otpDeviceContext]"):
-            # auth-TOTP, auth-SMS, auth-VOICE
-            if "auth-TOTP" in node["class"]:
-                inp_node = node.find("input")
-                if (
-                    isinstance(inp_node, Tag)
-                    and isinstance(inp_node["name"], str)
-                    and isinstance(inp_node["value"], str)
-                ):
-                    inputs[inp_node["name"]] = inp_node["value"]
-
-        method, url = get_next_action_from_soup(login_soup)
-
-        login_resp = session.request(method, url, data=inputs)
-        login_soup = get_soup(login_resp)
-
-    # check for mfa (otp_code)
-    while check_for_mfa(login_soup):
-        if otp_callback:
-            otp_code = otp_callback()
-        else:
-            otp_code = default_otp_callback()
-
-        inputs = get_inputs_from_soup(login_soup)
-        inputs["otpCode"] = otp_code
-        inputs["mfaSubmit"] = "Submit"
-        inputs["rememberDevice"] = "false"
-
-        method, url = get_next_action_from_soup(login_soup)
-
-        login_resp = session.request(method, url, data=inputs)
-        login_soup = get_soup(login_resp)
-
-    # check for cvf
-    while check_for_cvf(login_soup):
-        if cvf_callback:
-            cvf_code = cvf_callback()
-        else:
-            cvf_code = default_cvf_callback()
-
-        inputs = get_inputs_from_soup(login_soup)
-
-        method, url = get_next_action_from_soup(login_soup)
-
-        login_resp = session.request(method, url, data=inputs)
-        login_soup = get_soup(login_resp)
-
-        inputs = get_inputs_from_soup(login_soup)
-        inputs["action"] = "code"
-        inputs["code"] = cvf_code
-
-        method, url = get_next_action_from_soup(login_soup)
-
-        login_resp = session.request(method, url, data=inputs)
-        login_soup = get_soup(login_resp)
-
-    # check for approval alert
-    while check_for_approval_alert(login_soup):
-        if approval_callback:
-            approval_callback()
-        else:
-            default_approval_alert_callback()
-
-        # url = login_soup.find(id="resend-approval-link")["href"]
-        url = str(login_resp.url)
-
-        login_resp = session.get(url)
-        login_soup = get_soup(login_resp)
-
-        while login_soup.find(
-            "span", {"class": "transaction-approval-word-break"}
-        ):  # a-size-base-plus transaction-approval-word-break a-text-bold
-            login_resp = session.get(url)
-            login_soup = get_soup(login_resp)
-            logger.info("still waiting for redirect")
-
-    session.close()
-
-    authcode_url = None
-    if b"openid.oa2.authorization_code" in login_resp.url.query:
-        authcode_url = login_resp.url
-    elif len(login_resp.history) > 0:
-        for history in login_resp.history:
-            if b"openid.oa2.authorization_code" in history.url.query:
-                authcode_url = history.url
-                break
-
-    if authcode_url is None:
-        raise Exception("Login failed. Please check the log.")
-
-    logger.debug("Login confirmed for %s", username)
-
-    authorization_code = extract_code_from_url(authcode_url)
-
-    return {
-        "authorization_code": authorization_code,
-        "code_verifier": code_verifier,
-        "domain": domain,
-        "serial": device_serial,
-        "device": device,
-    }
 
 
 def external_login(

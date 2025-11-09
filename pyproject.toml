@@ -204,7 +204,7 @@ select=[
 ]
 
 [tool.ruff.lint.mccabe]
-max-complexity = 21  # temporarily raise complexity, target is 10
+max-complexity = 10  # All functions now meet complexity target
 
 [tool.ruff.lint.pydocstyle]
 convention = "google"

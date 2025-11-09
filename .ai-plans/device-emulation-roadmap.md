@@ -103,6 +103,7 @@ This document outlines the complete implementation plan for the Device Emulation
 **What Was Implemented:**
 
 ✅ **All functions now accept `device` parameter:**
+
 - `register()` - accepts device, uses `device.get_registration_data()`
 - `login()` - accepts device, uses `device.user_agent` and `device.get_init_cookies()`
 - `external_login()` - accepts device, uses `device.device_serial`
@@ -111,11 +112,13 @@ This document outlines the complete implementation plan for the Device Emulation
 - `Authenticator.from_login_external()` - accepts device, passes to external_login
 
 ✅ **Backward compatibility maintained:**
+
 - `serial` parameter deprecated with warnings
 - Default device is IPHONE when not specified
 - Old code continues to work without changes
 
 ✅ **Commits:**
+
 - Multiple commits implementing device integration
 - PKCS#8 key conversion fix for Android devices
 
@@ -393,18 +396,21 @@ Similar changes as `from_login()`.
 ### What Was Verified:
 
 ✅ **Server response data is completely stored:**
+
 - `register.py` returns `device_info` from server (Lines 201-202)
   - Contains: device_serial_number, device_type, device_name
 - `register.py` returns `device` object (Line 203)
 - `auth.to_dict()` saves both `device_info` and `device` (Lines 788, 796-797)
 
 ✅ **Round-trip works perfectly:**
+
 - Test: `test_authenticator_file_round_trip_with_device` ✅
 - Test: `test_authenticator_device_round_trip_serialization` ✅
 - Test: `test_base_device_round_trip_serialization` ✅
 - Test: `test_authenticator_encrypted_file_with_device` ✅
 
 ✅ **Backward compatibility:**
+
 - Test: `test_authenticator_from_dict_backward_compatibility` ✅
 - Legacy auth files without device field load correctly
 - Device auto-generated from device_info if missing
@@ -516,6 +522,7 @@ def to_dict(self) -> dict[str, Any]:
 - ✅ No type errors in 39 source files
 
 **Results:**
+
 ```
 nox > Session mypy-3.10 was successful
 nox > Session mypy-3.11 was successful
@@ -533,6 +540,7 @@ nox > Session mypy-3.13 was successful
 - ✅ Examples in docstrings are valid (xdoctest passing)
 
 **Results:**
+
 ```
 nox > Session pre-commit was successful
 nox > Session xdoctest-3.10 was successful (14 passed)
@@ -552,12 +560,14 @@ Before final PR:
 - ✅ Run `uv run nox --session=docs-build`
 
 **Test Results:**
+
 ```
 177 passed, 1 skipped in 0.91s
 Coverage: > 10% (target relaxed during development)
 ```
 
 **Quality Summary:**
+
 - ✅ 56 device-related tests (41 device + 15 auth)
 - ✅ All mypy type checks pass
 - ✅ All linting checks pass
@@ -579,6 +589,7 @@ Coverage: > 10% (target relaxed during development)
 Without it, register.py and login.py have NO test coverage in production.
 
 **Impact:**
+
 - No automated testing for registration flow
 - No automated testing for login flow
 - Breaking changes could go undetected
@@ -589,6 +600,7 @@ Without it, register.py and login.py have NO test coverage in production.
 #### A. `tests/test_register.py` (NEW)
 
 **Tests to Implement:**
+
 - `test_register_with_iphone_device()` - Register with iPhone
 - `test_register_with_android_device()` - Register with Android (test PKCS#8 conversion)
 - `test_register_with_custom_device()` - Register with custom device
@@ -601,12 +613,14 @@ Without it, register.py and login.py have NO test coverage in production.
 - `test_deregister_error_handling()` - Test deregister errors
 
 **HTTP Mocking Strategy:**
+
 - Use `pytest-httpx` for mocking httpx.post()
 - Mock successful registration response
 - Mock error responses (400, 500, etc.)
 - Mock key conversion scenarios (PEM vs base64-DER)
 
 **Example Test:**
+
 ```python
 import pytest
 from pytest_httpx import HTTPXMock
@@ -653,6 +667,7 @@ def test_register_with_iphone(httpx_mock: HTTPXMock):
 #### B. `tests/test_login.py` (NEW)
 
 **Tests to Implement:**
+
 - `test_login_happy_path()` - Successful login without challenges
 - `test_login_with_captcha()` - Login with CAPTCHA challenge
 - `test_login_with_mfa()` - Login with MFA/OTP
@@ -668,12 +683,14 @@ def test_register_with_iphone(httpx_mock: HTTPXMock):
 - Helper function tests (get_soup, get_inputs_from_soup, etc.)
 
 **HTTP Mocking Strategy:**
+
 - Mock login page responses
 - Mock CAPTCHA pages
 - Mock MFA/OTP pages
 - Mock authorization code redirect
 
 **Example Test:**
+
 ```python
 def test_login_happy_path(httpx_mock: HTTPXMock):
     """Test successful login without challenges."""
@@ -709,11 +726,13 @@ def test_login_happy_path(httpx_mock: HTTPXMock):
 ### Implementation Plan
 
 **Step 1: Setup (30 min)**
+
 - [ ] Add pytest-httpx to test dependencies
 - [ ] Create test file templates
 - [ ] Study existing integration test for scenarios
 
 **Step 2: test_register.py (3-4 hours)**
+
 - [ ] Implement happy path tests
 - [ ] Implement device variation tests (iPhone, Android, custom)
 - [ ] Implement error handling tests
@@ -721,6 +740,7 @@ def test_login_happy_path(httpx_mock: HTTPXMock):
 - [ ] Verify >80% coverage
 
 **Step 3: test_login.py (3-4 hours)**
+
 - [ ] Implement happy path test
 - [ ] Implement challenge tests (CAPTCHA, MFA, CVF)
 - [ ] Implement helper function tests
@@ -728,6 +748,7 @@ def test_login_happy_path(httpx_mock: HTTPXMock):
 - [ ] Verify >80% coverage
 
 **Step 4: Integration (30 min)**
+
 - [ ] Run all tests
 - [ ] Check coverage report
 - [ ] Fix any failures
@@ -753,6 +774,7 @@ def test_login_happy_path(httpx_mock: HTTPXMock):
 ### Why Classes Instead of Functions
 
 **Advantages of Class-Based Approach:**
+
 - ✅ **State Management** - Session, callbacks, device as instance attributes
 - ✅ **Dependency Injection** - HTTP client injectable for testing
 - ✅ **Context Manager** - Automatic session cleanup with `with` statement
@@ -763,6 +785,7 @@ def test_login_happy_path(httpx_mock: HTTPXMock):
 - ✅ **Type Safety** - Dataclass results instead of dict
 
 **Disadvantages of Pure Function Refactoring:**
+
 - ❌ All parameters must be passed through helper functions
 - ❌ No state encapsulation
 - ❌ Harder to mock (each function individually)
@@ -775,6 +798,7 @@ def test_login_happy_path(httpx_mock: HTTPXMock):
 **Analysis Performed:** 2025-01-08
 
 #### login() Function - NEEDS CLASS CONVERSION
+
 - **Location:** `src/audible/login.py:400-640`
 - **Lines:** 240 lines
 - **Control Flow Statements:** 43
@@ -789,6 +813,7 @@ def test_login_happy_path(httpx_mock: HTTPXMock):
 **Solution:** Convert to `LoginService` class
 
 #### register() Function - NEEDS CLASS CONVERSION
+
 - **Location:** `src/audible/register.py:72-204`
 - **Lines:** 130 lines
 - **Control Flow Statements:** 13
@@ -802,10 +827,12 @@ def test_login_happy_path(httpx_mock: HTTPXMock):
 **Solution:** Convert to `RegistrationService` class
 
 #### device.py - CLEAN ✅
+
 - **Status:** All functions under complexity threshold
 - **No refactoring needed**
 
 #### auth.py - CLEAN ✅
+
 - **Status:** Modified for device support, but complexity OK
 - **No refactoring needed**
 
@@ -814,6 +841,7 @@ def test_login_happy_path(httpx_mock: HTTPXMock):
 #### Overview
 
 Instead of extracting helper functions, convert `login()` and `register()` into service classes. This provides:
+
 - State management (session, device, callbacks as attributes)
 - Context manager support (automatic cleanup)
 - Better API (`service.login()` vs `login()`)
@@ -822,6 +850,7 @@ Instead of extracting helper functions, convert `login()` and `register()` into 
 - **Separation of concerns** (LoginService + ChallengeHandler)
 
 **Important:**
+
 - ❌ NO HTTPClient Protocol abstraction (use httpx directly, abstraction comes later)
 - ✅ Split LoginService to avoid monster class (LoginService + ChallengeHandler)
 
@@ -1131,6 +1160,7 @@ def login(
 ```
 
 **Why 2 Classes?**
+
 - ✅ LoginService: 7 methods (clean, focused on orchestration)
 - ✅ ChallengeHandler: 11 methods (focused on challenge logic)
 - ✅ Single Responsibility Principle (each class has ONE job)
@@ -1344,6 +1374,7 @@ def deregister(
 ```
 
 **Why Simple?**
+
 - ✅ RegistrationService: Only 7 methods (clean, focused)
 - ✅ No HTTPClient Protocol (httpx directly, YAGNI!)
 - ✅ No need to split (registration is simpler than login)
@@ -1352,6 +1383,7 @@ def deregister(
 ### Implementation Checklist
 
 **Phase 4.6.1: Create LoginService + ChallengeHandler (3-4 hours)**
+
 - [ ] Create new file `src/audible/login_service.py`
 - [ ] Define LoginResult dataclass
 - [ ] Implement ChallengeHandler class (11 methods)
@@ -1375,6 +1407,7 @@ def deregister(
 - [ ] Verify all methods have complexity ≤10
 
 **Phase 4.6.2: Create RegistrationService (2-3 hours)**
+
 - [ ] Create new file `src/audible/registration_service.py`
 - [ ] Define RegistrationResult dataclass
 - [ ] Implement RegistrationService class (7 methods)
@@ -1390,6 +1423,7 @@ def deregister(
 - [ ] Verify all methods have complexity ≤10
 
 **Phase 4.6.3: Update Tests (1-2 hours)**
+
 - [ ] Update tests/test_login.py to test LoginService and ChallengeHandler (if exists)
 - [ ] Update tests/test_register.py to test RegistrationService (if exists)
 - [ ] Add unit tests for LoginResult and RegistrationResult dataclasses
@@ -1400,6 +1434,7 @@ def deregister(
 - [ ] Verify coverage maintained or improved
 
 **Phase 4.6.4: Update Configuration (30 min)**
+
 - [ ] Update pyproject.toml: `max-complexity = 10`
 - [ ] Run `ruff check --select C901` to verify all functions <10
 - [ ] Fix any new violations
@@ -1407,6 +1442,7 @@ def deregister(
 - [ ] Verify all 16 sessions pass (except safety if needed)
 
 **Phase 4.6.5: Update Documentation (30 min)**
+
 - [ ] Add module docstrings to login_service.py and registration_service.py
 - [ ] Update CHANGELOG with service class additions
 - [ ] Update migration guide with service class examples
@@ -1790,12 +1826,14 @@ Special thanks to the AudibleApi project for Android device specifications.
 **Remaining Work:**
 
 - **Phase 4.5: Unit Tests for register/login** (6-8 hours) **CRITICAL - BLOCKER**
+
   - tests/test_register.py
   - tests/test_login.py
-  - >80% coverage for both files
+  - > 80% coverage for both files
   - HTTP mocking with pytest-httpx
 
 - **Phase 4.6: Service Classes Refactoring** (6-8 hours) **HIGH PRIORITY**
+
   - Convert login() to LoginService class with dependency injection
   - Convert register() to RegistrationService class
   - Create LoginResult and RegistrationResult dataclasses
@@ -1911,6 +1949,7 @@ Special thanks to the AudibleApi project for Android device specifications.
 **NO HTTPClient Protocol** - Use httpx directly (YAGNI!)
 
 **Phase 4.6.1: Create LoginService + ChallengeHandler (3-4 hours)**
+
 - [ ] Create `src/audible/login_service.py`
 - [ ] Define LoginResult dataclass
 - [ ] Implement ChallengeHandler class (11 methods)
@@ -1921,6 +1960,7 @@ Special thanks to the AudibleApi project for Android device specifications.
 - [ ] Verify all methods complexity ≤10
 
 **Phase 4.6.2: Create RegistrationService (2-3 hours)**
+
 - [ ] Create `src/audible/registration_service.py`
 - [ ] Define RegistrationResult dataclass
 - [ ] Implement RegistrationService class (7 methods)
@@ -1929,17 +1969,20 @@ Special thanks to the AudibleApi project for Android device specifications.
 - [ ] Verify all methods complexity ≤10
 
 **Phase 4.6.3: Update Tests (1-2 hours)**
+
 - [ ] Update tests for LoginService + ChallengeHandler (if exists)
 - [ ] Update tests for RegistrationService (if exists)
 - [ ] Test dataclasses, context manager, httpx mocking with pytest-httpx
 - [ ] Verify coverage maintained or improved
 
 **Phase 4.6.4: Update Configuration (30 min)**
+
 - [ ] Update pyproject.toml: max-complexity from 21 → 10
 - [ ] Run `ruff check --select C901` to verify all functions <10
 - [ ] Fix violations, run full nox suite
 
 **Phase 4.6.5: Update Documentation (30 min)**
+
 - [ ] Add module docstrings, update CHANGELOG, migration guide, examples
 
 **Estimated:** 6-8 hours | **Status:** HIGH priority for quality

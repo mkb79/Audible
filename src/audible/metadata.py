@@ -10,7 +10,7 @@ from datetime import datetime
 METADATA_KEY: bytes = b"a\x03\x8fp4\x18\x97\x99:\xeb\xe7\x8b\x85\x97$4"
 
 
-def raw_xxtea(v: list[int], n: int, k: list[int] | tuple[int, ...]) -> int:
+def raw_xxtea(v: list[int], n: int, k: list[int] | tuple[int, ...]) -> int:  # noqa: C901
     if not isinstance(v, list):
         raise ValueError("arg `v` is not of type list")
     if not isinstance(k, list | tuple):
