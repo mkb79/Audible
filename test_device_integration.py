@@ -87,6 +87,187 @@ def print_separator(title=""):
         print(f"{'=' * 80}\n")
 
 
+def perform_login(device_name, device, locale, login_method, username, password):
+    """Perform login (internal or external) for device testing.
+
+    Args:
+        device_name: Human-readable device name
+        device: Device instance to test
+        locale: Audible marketplace locale
+        login_method: "external" or "internal"
+        username: Amazon email (for internal login)
+        password: Amazon password (for internal login)
+
+    Returns:
+        Authenticator instance if successful, None otherwise
+    """
+    logger = logging.getLogger(__name__)
+
+    if login_method == "internal":
+        print_separator("Step 1: Internal Login (Username/Password)")
+        logger.info("Starting internal login...")
+
+        if not username or not password:
+            logger.error("Username and password required for internal login!")
+            return None
+
+        logger.info("Login user: %s", username)
+        auth = audible.Authenticator.from_login(
+            username=username, password=password, locale=locale, device=device
+        )
+        logger.info("✓ Internal login successful!")
+    else:
+        print_separator("Step 1: External Login (Browser)")
+        logger.info("Starting external login...")
+        auth = audible.Authenticator.from_login_external(locale=locale, device=device)
+        logger.info("✓ External login successful!")
+
+    logger.info("Access Token: %s...", auth.access_token[:20])
+    logger.info("Refresh Token: %s...", auth.refresh_token[:20])
+    logger.info(
+        "Device Private Key: %s...",
+        auth.device_private_key[:30] if auth.device_private_key else "None",
+    )
+
+    if auth.device_info:
+        logger.info("Server Device Info:")
+        for key, value in auth.device_info.items():
+            logger.info("  %s: %s", key, value)
+
+    return auth
+
+
+def save_and_verify_auth(auth, device_name, device):
+    """Save auth to file and verify device persistence.
+
+    Args:
+        auth: Authenticator instance
+        device_name: Human-readable device name
+        device: Device instance to verify against
+
+    Returns:
+        tuple: (test_file Path, success boolean)
+    """
+    logger = logging.getLogger(__name__)
+
+    print_separator("Step 2: Save Authentication to File")
+    test_file = Path(f"test_auth_{device_name.replace(' ', '_').lower()}.json")
+
+    logger.info("Saving auth to file: %s", test_file)
+    auth.to_file(test_file, encryption=False)
+    logger.info("✓ Saved auth file: %s", test_file)
+
+    auth_dict = auth.to_dict()
+    if not auth_dict.get("device"):
+        logger.warning("✗ Device configuration NOT saved!")
+        return test_file, False
+
+    logger.info("✓ Device configuration saved in auth file")
+    logger.debug("Saved device data: %s", auth_dict["device"])
+    return test_file, True
+
+
+def load_and_verify_auth(test_file, device):
+    """Load auth from file and verify device was restored correctly.
+
+    Args:
+        test_file: Path to auth file
+        device: Device instance to verify against
+
+    Returns:
+        tuple: (loaded Authenticator, success boolean)
+    """
+    logger = logging.getLogger(__name__)
+
+    print_separator("Step 3: Load Authentication from File")
+    logger.info("Loading auth from file...")
+
+    auth_loaded = audible.Authenticator.from_file(test_file)
+    logger.info("✓ Loaded auth from file")
+
+    if not auth_loaded.device:
+        logger.warning("✗ Device NOT loaded from file!")
+        return auth_loaded, False
+
+    logger.info("✓ Device loaded: %s", auth_loaded.device.device_model)
+    logger.info("  Device Type: %s", auth_loaded.device.device_type)
+    logger.info("  OS Family: %s", auth_loaded.device.os_family)
+    logger.info("  Serial: %s", auth_loaded.device.device_serial)
+
+    if auth_loaded.device.device_type != device.device_type:
+        logger.error("✗ Device type mismatch after reload!")
+        return auth_loaded, False
+
+    if auth_loaded.device.os_family != device.os_family:
+        logger.error("✗ OS family mismatch after reload!")
+        return auth_loaded, False
+
+    return auth_loaded, True
+
+
+def test_api_requests(client):
+    """Test API requests with loaded auth.
+
+    Args:
+        client: Audible client instance
+
+    Returns:
+        bool: True if tests successful
+    """
+    logger = logging.getLogger(__name__)
+
+    print_separator("Step 4: Test API Requests")
+    logger.info("Testing API requests with loaded auth...")
+
+    # Test 1: Get library
+    logger.info("Test 1: Fetching library...")
+    library_response = client.get(
+        "library",
+        params={
+            "num_results": 3,
+            "response_groups": "product_desc,product_attrs",
+            "sort_by": "-PurchaseDate",
+        },
+    )
+
+    if library_response:
+        items = library_response.get("items", [])
+        logger.info("✓ Library request successful! Got %d items", len(items))
+        for i, item in enumerate(items, 1):
+            title = item.get("title", "Unknown")
+            asin = item.get("asin", "Unknown")
+            logger.info("  %d. %s (ASIN: %s)", i, title, asin)
+    else:
+        logger.warning("Library request returned empty response")
+
+    # Test 2: Get user profile
+    logger.info("Test 2: Fetching user profile...")
+    try:
+        user_profile = client.get("user/profile")
+        if user_profile:
+            logger.info("✓ User profile request successful!")
+            logger.debug("Profile data: %s", user_profile)
+    except Exception as e:
+        logger.info("User profile request skipped: %s", e)
+
+    # Test 3: Get library statistics
+    logger.info("Test 3: Getting library statistics...")
+    try:
+        stats = client.get(
+            "library", params={"num_results": 1, "response_groups": "stats"}
+        )
+        if stats and "stats" in stats:
+            logger.info("✓ Library stats request successful!")
+            logger.info(
+                "  Total items: %s", stats.get("stats", {}).get("total", "Unknown")
+            )
+    except Exception as e:
+        logger.warning("Stats request failed: %s", e)
+
+    logger.info("✓ All API requests completed")
+    return True
+
+
 def test_device(
     device_name,
     device,
@@ -109,170 +290,56 @@ def test_device(
         bool: True if all tests passed, False otherwise
     """
     logger = logging.getLogger(__name__)
-    logger.info(f"Starting test for device: {device_name}")
+    logger.info("Starting test for device: %s", device_name)
 
     print_separator(f"TESTING DEVICE: {device_name}")
 
     # Log device configuration
-    logger.info(f"Device Type: {device.device_type}")
-    logger.info(f"Device Model: {device.device_model}")
-    logger.info(f"OS Family: {device.os_family}")
-    logger.info(f"OS Version: {device.os_version}")
-    logger.info(f"App Version: {device.app_version}")
-    logger.info(f"Software Version: {device.software_version}")
-    logger.info(f"User-Agent: {device.user_agent}")
-    logger.info(f"Bundle ID: {device.bundle_id}")
-    logger.info(f"Device Serial: {device.device_serial}")
+    logger.info("Device Type: %s", device.device_type)
+    logger.info("Device Model: %s", device.device_model)
+    logger.info("OS Family: %s", device.os_family)
+    logger.info("OS Version: %s", device.os_version)
+    logger.info("App Version: %s", device.app_version)
+    logger.info("Software Version: %s", device.software_version)
+    logger.info("User-Agent: %s", device.user_agent)
+    logger.info("Bundle ID: %s", device.bundle_id)
+    logger.info("Device Serial: %s", device.device_serial)
 
-    auth = None
     test_file = None
 
     try:
-        # Step 1: Login (External or Internal)
-        if login_method == "internal":
-            print_separator("Step 1: Internal Login (Username/Password)")
-            logger.info("Starting internal login...")
-
-            if not username or not password:
-                logger.error("Username and password required for internal login!")
-                return False
-
-            logger.info(f"Login user: {username}")
-
-            auth = audible.Authenticator.from_login(
-                username=username, password=password, locale=locale, device=device
-            )
-
-            logger.info("✓ Internal login successful!")
-        else:
-            print_separator("Step 1: External Login (Browser)")
-            logger.info("Starting external login...")
-
-            auth = audible.Authenticator.from_login_external(
-                locale=locale, device=device
-            )
-
-            logger.info("✓ External login successful!")
-
-        logger.info(f"Access Token: {auth.access_token[:20]}...")
-        logger.info(f"Refresh Token: {auth.refresh_token[:20]}...")
-        logger.info(
-            f"Device Private Key: {auth.device_private_key[:30] if auth.device_private_key else 'None'}..."
+        # Step 1: Login
+        auth = perform_login(
+            device_name, device, locale, login_method, username, password
         )
-
-        # Log device info from server
-        if auth.device_info:
-            logger.info("Server Device Info:")
-            for key, value in auth.device_info.items():
-                logger.info(f"  {key}: {value}")
+        if not auth:
+            return False
 
         # Step 2: Save to file
-        print_separator("Step 2: Save Authentication to File")
-        test_file = Path(f"test_auth_{device_name.replace(' ', '_').lower()}.json")
-
-        logger.info(f"Saving auth to file: {test_file}")
-        auth.to_file(test_file, encryption=False)
-        logger.info(f"✓ Saved auth file: {test_file}")
-
-        # Verify device is saved
-        auth_dict = auth.to_dict()
-        if auth_dict.get("device"):
-            logger.info("✓ Device configuration saved in auth file")
-            logger.debug(f"Saved device data: {auth_dict['device']}")
-        else:
-            logger.warning("✗ Device configuration NOT saved!")
+        test_file, save_success = save_and_verify_auth(auth, device_name, device)
+        if not save_success:
             return False
 
         # Step 3: Load from file
-        print_separator("Step 3: Load Authentication from File")
-        logger.info("Loading auth from file...")
-
-        auth_loaded = audible.Authenticator.from_file(test_file)
-        logger.info("✓ Loaded auth from file")
-
-        # Verify device was loaded correctly
-        if auth_loaded.device:
-            logger.info(f"✓ Device loaded: {auth_loaded.device.device_model}")
-            logger.info(f"  Device Type: {auth_loaded.device.device_type}")
-            logger.info(f"  OS Family: {auth_loaded.device.os_family}")
-            logger.info(f"  Serial: {auth_loaded.device.device_serial}")
-
-            # Verify device matches
-            if auth_loaded.device.device_type != device.device_type:
-                logger.error("✗ Device type mismatch after reload!")
-                return False
-            if auth_loaded.device.os_family != device.os_family:
-                logger.error("✗ OS family mismatch after reload!")
-                return False
-        else:
-            logger.warning("✗ Device NOT loaded from file!")
+        auth_loaded, load_success = load_and_verify_auth(test_file, device)
+        if not load_success:
             return False
 
         # Step 4: Test API Requests
-        print_separator("Step 4: Test API Requests")
-
         with audible.Client(auth=auth_loaded) as client:
-            logger.info("Testing API requests with loaded auth...")
-
-            # Test 1: Get library
-            logger.info("Test 1: Fetching library...")
-            library_response = client.get(
-                "library",
-                params={
-                    "num_results": 3,
-                    "response_groups": "product_desc,product_attrs",
-                    "sort_by": "-PurchaseDate",
-                },
-            )
-
-            if library_response:
-                items = library_response.get("items", [])
-                logger.info(f"✓ Library request successful! Got {len(items)} items")
-                for i, item in enumerate(items, 1):
-                    title = item.get("title", "Unknown")
-                    asin = item.get("asin", "Unknown")
-                    logger.info(f"  {i}. {title} (ASIN: {asin})")
-            else:
-                logger.warning("Library request returned empty response")
-
-            # Test 2: Get user profile
-            logger.info("Test 2: Fetching user profile...")
-            try:
-                # This endpoint might not work for all regions
-                user_profile = client.get("user/profile")
-                if user_profile:
-                    logger.info("✓ User profile request successful!")
-                    logger.debug(f"Profile data: {user_profile}")
-            except Exception as e:
-                logger.info(f"User profile request skipped: {e}")
-
-            # Test 3: Get library statistics
-            logger.info("Test 3: Getting library statistics...")
-            try:
-                stats = client.get(
-                    "library", params={"num_results": 1, "response_groups": "stats"}
-                )
-                if stats and "stats" in stats:
-                    logger.info("✓ Library stats request successful!")
-                    logger.info(
-                        f"  Total items: {stats.get('stats', {}).get('total', 'Unknown')}"
-                    )
-            except Exception as e:
-                logger.warning(f"Stats request failed: {e}")
-
-        logger.info("✓ All API requests completed")
+            test_api_requests(client)
 
         # Step 5: Token Refresh Test
         print_separator("Step 5: Test Token Refresh")
         logger.info("Testing token refresh with device metadata...")
 
         old_token = auth_loaded.access_token
-        logger.info(f"Old access token: {old_token[:20]}...")
+        logger.info("Old access token: %s...", old_token[:20])
 
         auth_loaded.refresh_access_token(force=True)
         new_token = auth_loaded.access_token
 
-        logger.info(f"New access token: {new_token[:20]}...")
+        logger.info("New access token: %s...", new_token[:20])
 
         if old_token != new_token:
             logger.info("✓ Token refresh successful! Token changed.")
@@ -284,16 +351,16 @@ def test_device(
         logger.info("Deregistering device...")
 
         response = auth_loaded.deregister_device()
-        logger.info(f"✓ Deregister response: {response}")
+        logger.info("✓ Deregister response: %s", response)
         logger.info("✓ Device deregistered successfully")
 
         # Step 7: Cleanup
         print_separator("Step 7: Cleanup")
         if test_file.exists():
             test_file.unlink()
-            logger.info(f"✓ Removed test file: {test_file}")
+            logger.info("✓ Removed test file: %s", test_file)
 
-        logger.info(f"✓✓✓ ALL TESTS PASSED FOR: {device_name} ✓✓✓")
+        logger.info("✓✓✓ ALL TESTS PASSED FOR: %s ✓✓✓", device_name)
         return True
 
     except KeyboardInterrupt:
@@ -301,7 +368,7 @@ def test_device(
         return False
 
     except Exception as e:
-        logger.error(f"✗ Test failed for {device_name}: {e}", exc_info=True)
+        logger.exception("✗ Test failed for %s: %s", device_name, e)
         return False
 
     finally:
@@ -309,9 +376,9 @@ def test_device(
         if test_file and test_file.exists():
             try:
                 test_file.unlink()
-                logger.info(f"Cleaned up test file: {test_file}")
+                logger.info("Cleaned up test file: %s", test_file)
             except Exception as e:
-                logger.warning(f"Could not remove test file: {e}")
+                logger.warning("Could not remove test file: %s", e)
 
 
 def main():
@@ -327,14 +394,14 @@ def main():
     logger.info("=" * 80)
     logger.info("STARTING DEVICE EMULATION INTEGRATION TESTS")
     logger.info("=" * 80)
-    logger.info(f"Python Version: {sys.version}")
-    logger.info(f"Audible Version: {audible.__version__}")
-    logger.info(f"Test Devices: {list(TEST_DEVICES.keys())}")
+    logger.info("Python Version: %s", sys.version)
+    logger.info("Audible Version: %s", audible.__version__)
+    logger.info("Test Devices: %s", list(TEST_DEVICES.keys()))
 
     # Get user configuration
     print("\nTest Configuration:")
     locale = input("Enter Audible marketplace (default: us): ").strip() or "us"
-    logger.info(f"Selected locale: {locale}")
+    logger.info("Selected locale: %s", locale)
 
     # Ask for login method
     print("\nLogin Method:")
@@ -352,7 +419,7 @@ def main():
             print("Error: Username and password are required for internal login!")
             return 1
 
-        logger.info(f"Login method: internal (user: {username})")
+        logger.info("Login method: internal (user: %s)", username)
     else:
         login_method = "external"
         username = None
@@ -377,7 +444,7 @@ def main():
         # Test all devices
         devices_to_test = TEST_DEVICES
 
-    logger.info(f"Testing devices: {list(devices_to_test.keys())}")
+    logger.info("Testing devices: %s", list(devices_to_test.keys()))
 
     # Run tests
     results = {}
@@ -387,7 +454,7 @@ def main():
             input()
         except KeyboardInterrupt:
             print("\nSkipping this device...")
-            logger.info(f"Skipped device: {device_name}")
+            logger.info("Skipped device: %s", device_name)
             continue
 
         success = test_device(
@@ -417,13 +484,13 @@ def main():
     for device_name, success in results.items():
         status = "✓ PASSED" if success else "✗ FAILED"
         print(f"{device_name:40s} {status}")
-        logger.info(f"{device_name:40s} {status}")
+        logger.info("%s %s", f"{device_name:40s}", status)
 
     print(f"\nTotal: {passed}/{total} tests passed")
-    logger.info(f"Total: {passed}/{total} tests passed")
+    logger.info("Total: %d/%d tests passed", passed, total)
 
     print(f"\nDetailed logs saved to: {log_file}")
-    logger.info(f"Test run completed. Log file: {log_file}")
+    logger.info("Test run completed. Log file: %s", log_file)
 
     return 0 if passed == total else 1
 
