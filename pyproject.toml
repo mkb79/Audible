@@ -137,17 +137,16 @@ build-backend = "hatchling.build"
 required-version = ">=0.7.1"
 
 [tool.coverage.paths]
-source = ["src/audible", "*/site-packages"]
-tests = ["tests", "*/tests"]
+source = ["src/audible"]
+tests = ["tests"]
 
 [tool.coverage.run]
 branch = true
-source = ["src/audible", "tests"]
 relative_files = true
 
 [tool.coverage.report]
 show_missing = true
-fail_under = 10  # temporarily drop complexity, target is 100
+fail_under = 50  # temporarily drop complexity, target is 90
 exclude_lines = [
     "pragma: no cover",
     "if TYPE_CHECKING:"
@@ -168,19 +167,16 @@ disallow_untyped_decorators = false
 [tool.ruff]
 #  missing rst-docstrings check, these should be adding through ruff
 line-length = 88
-src = ["src"]
+src = ["src/audible"]
 target-version = "py310"
 output-format = "grouped"
+extend-exclude = ["test_device_integration.py"]  # TEMPORARY: Exclude test_device_integration.py - REMOVE BEFORE MERGE TO MASTER
 
 [tool.ruff.lint]
 ignore = [
     "D10",  # temporarily ignore missing docstrings
     "E501",
     "N818",
-    "PLR0912",  # temporarily
-    "PLR0913",  # temporarily
-    "PLR0915",  # temporarily
-    "PLR2004",  # temporarily
 ]
 select=[
     "A",
@@ -215,21 +211,14 @@ known-first-party = ["audible"]
 lines-after-imports = 2
 
 [tool.ruff.lint.per-file-ignores]
-"tests/*" = ["S101", "PLC0415", "S106"]
-"examples/*" = ["S101", "PLC0415"]
-"src/audible/json/protocols.py" = ["D417"]
-"src/audible/json/*_provider.py" = ["PLC0415"]
-"src/audible/json/registry.py" = ["PLC0415"]
-"src/audible/auth.py" = ["PLC0415"]
-"src/audible/device.py" = ["PLC0415", "N801"]  # N801: iPhoneDevice naming intentional
-"src/audible/login.py" = ["PLC0415", "C901"]  # C901: login() complexity pre-existing
-"src/audible/register.py" = ["PLC0415"]
+"tests/*" = ["S101", "S106"]
+"examples/*" = ["S101"]
 
 [tool.pytest.ini_options]
-testpaths = ["tests", "src/audible"]
+testpaths = ["tests"]
 
 [tool.pydoclint]
 style = "google"
-exclude = '\.git|\.nox|\.pytest_cache|__pycache__'
+exclude = '\.git|\.nox|\.pytest_cache|__pycache__|test_device_integration\.py'
 arg-type-hints-in-docstring = false
 check-return-types = false

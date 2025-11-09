@@ -27,8 +27,6 @@ repos:
         language: system
         types: [python]
         stages: [manual]
-        # TEMPORARY: Also exclude test_device_integration.py - REMOVE BEFORE MERGE TO MASTER
-        exclude: ^(tests/|examples/|test_device_integration\.py)
       - id: end-of-file-fixer
         name: Fix End of Files
         entry: end-of-file-fixer
@@ -41,8 +39,6 @@ repos:
         language: system
         types: [python]
         require_serial: true
-        # TEMPORARY: Exclude test_device_integration.py - REMOVE BEFORE MERGE TO MASTER
-        exclude: ^test_device_integration\.py$
       - id: trailing-whitespace
         name: Trim Trailing Whitespace
         entry: trailing-whitespace-fixer
@@ -53,7 +49,6 @@ repos:
     rev: v3.0.3
     hooks:
       - id: prettier
-        exclude: '^renovate\.json5$'
   - repo: https://github.com/astral-sh/uv-pre-commit
     # uv version.
     rev: 0.7.6
