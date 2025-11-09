@@ -1,10 +1,14 @@
 import json
 import os
 from datetime import date
+from typing import TYPE_CHECKING
 
 import pandas as pd
 
 import audible
+
+if TYPE_CHECKING:
+    from statsmodels.tsa.seasonal import DecomposeResult
 
 
 def main():
@@ -120,7 +124,9 @@ def analyse_stats(file_name="stats.json"):
     # for now further processing can be done in excell
 
 
-def combine_seasonal_cols(seasonal_model_results, csv_file=""):
+def combine_seasonal_cols(
+    seasonal_model_results: "DecomposeResult", csv_file: str = ""
+) -> pd.DataFrame:
     """Adds new seasonal cols to a df given seasonal results.
 
     See
