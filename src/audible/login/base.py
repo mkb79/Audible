@@ -15,7 +15,7 @@ proper inheritance and code reuse across all challenge handlers.
 Example:
     Creating a custom callback::
 
-        from audible.login_service.base import BaseChallengeCallback, ChallengeContext
+        from audible.login.base import BaseChallengeCallback, ChallengeContext
 
         class MyCustomCallback(BaseChallengeCallback):
             challenge_type = ChallengeType.CAPTCHA
@@ -38,7 +38,7 @@ from dataclasses import dataclass
 from enum import Enum
 from typing import TYPE_CHECKING, Any, Final
 
-from audible.login_service.exceptions import (
+from audible.login.exceptions import (
     CallbackError,
 )
 
@@ -46,7 +46,7 @@ from audible.login_service.exceptions import (
 if TYPE_CHECKING:
     import httpx
 
-    from audible.login_service.soup_page import SoupPage
+    from audible.login.soup_page import SoupPage
 
 
 # Module logger
@@ -225,7 +225,7 @@ class ChallengeContext:
         extra: Additional context data for future extensions
 
     Example:
-        >>> from audible.login_service.base import ChallengeContext, ChallengeType
+        >>> from audible.login.base import ChallengeContext, ChallengeType
         >>> context = ChallengeContext(
         ...     challenge_type=ChallengeType.CAPTCHA,
         ...     description="Amazon CAPTCHA verification",

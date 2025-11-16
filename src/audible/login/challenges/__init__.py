@@ -5,7 +5,7 @@ and their default callbacks. Each challenge type (CAPTCHA, MFA, OTP, CVF,
 Approval Alert) is implemented in its own module for clarity and maintainability.
 
 All handlers inherit from BaseChallengeHandler and all callbacks inherit from
-BaseChallengeCallback (defined in audible.login_service.base).
+BaseChallengeCallback (defined in audible.login.base).
 
 Available Handlers:
     - CaptchaChallengeHandler: Visual CAPTCHA verification
@@ -28,7 +28,7 @@ Note:
 Example:
     .. code-block:: python
 
-        from audible.login_service.challenges import (
+        from audible.login.challenges import (
             CaptchaChallengeHandler,
             DefaultCaptchaCallback,
         )

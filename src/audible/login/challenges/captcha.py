@@ -18,11 +18,11 @@ Example:
     .. code-block:: python
 
         import httpx
-        from audible.login_service.challenges import (
+        from audible.login.challenges import (
             CaptchaChallengeHandler,
             DefaultCaptchaCallback,
         )
-        from audible.login_service.soup_page import SoupPage
+        from audible.login.soup_page import SoupPage
 
         session = httpx.Client()
         page = SoupPage(response)
@@ -55,7 +55,7 @@ import httpx
 from bs4 import NavigableString, Tag
 from PIL import Image
 
-from audible.login_service.base import (
+from audible.login.base import (
     DEFAULT_HTTP_TIMEOUT,
     FALSE_VALUE,
     FORM_FIELD_GUESS,
@@ -71,8 +71,8 @@ from audible.login_service.base import (
     ChallengeType,
     is_captcha_image,
 )
-from audible.login_service.exceptions import CallbackError, CaptchaExtractionError
-from audible.login_service.soup_page import SoupPage
+from audible.login.exceptions import CallbackError, CaptchaExtractionError
+from audible.login.soup_page import SoupPage
 
 
 if TYPE_CHECKING:
@@ -211,7 +211,7 @@ class CaptchaChallengeHandler(BaseChallengeHandler):
         .. code-block:: python
 
             import httpx
-            from audible.login_service.soup_page import SoupPage
+            from audible.login.soup_page import SoupPage
 
             session = httpx.Client()
             page = SoupPage(response)

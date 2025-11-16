@@ -6,6 +6,71 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## Unreleased
 
+### BREAKING CHANGES
+
+- **Login callback interface completely redesigned**: Authentication challenge callbacks are now class-based instead of simple functions
+
+  **Old callback interface (v0.10.x and earlier):**
+  ```python
+  # Simple functions with direct parameters
+  def default_captcha_callback(captcha_url: str) -> str:
+      ...
+
+  def default_otp_callback() -> str:
+      ...
+
+  # Usage
+  from audible.login import login, default_captcha_callback
+  result = login(
+      username="user@example.com",
+      password="secret",
+      country_code="us",
+      domain="com",
+      market_place_id="AF2M0KC94RCEA",
+      captcha_callback=default_captcha_callback,  # Function reference
+      otp_callback=default_otp_callback,
+  )
+  # result is dict[str, Any]
+  ```
+
+  **New callback interface (v0.11.0+):**
+  ```python
+  # Class-based callbacks inheriting from BaseChallengeCallback
+  from audible.login import (
+      LoginService,
+      DefaultCaptchaCallback,
+      DefaultOTPCallback,
+  )
+
+  # Callbacks receive ChallengeContext with rich metadata
+  class DefaultCaptchaCallback(BaseChallengeCallback):
+      def _resolve_challenge(self, context: ChallengeContext) -> str:
+          # context.captcha_url, context.description, etc.
+          ...
+
+  # Usage with LoginService
+  service = LoginService(
+      locale=locale,
+      captcha_callback=DefaultCaptchaCallback(),  # Instance!
+      otp_callback=DefaultOTPCallback(),
+  )
+  result = service.login(username="...", password="...")
+  # result is LoginResult dataclass
+  ```
+
+  **Migration guide:**
+  - Replace callback functions with callback class instances
+  - Update custom callbacks to inherit from `BaseChallengeCallback`
+  - Implement `_resolve_challenge(context: ChallengeContext)` instead of direct parameters
+  - Change from `login()` function to `LoginService.login()` method
+  - Expect `LoginResult` dataclass instead of `dict[str, Any]`
+  - Import callbacks from `audible.login` (e.g., `DefaultCaptchaCallback`, `DefaultOTPCallback`, `DefaultCVFCallback`)
+
+- **Deprecated `login()` function removed**: The top-level `login()` function from `audible.login` has been removed in favor of the `LoginService` class
+  - Replace `from audible.login import login` with `from audible.login import LoginService`
+  - Create a `LoginService` instance and call `.login()` method instead
+  - Return type changed from `dict[str, Any]` to `LoginResult` dataclass with typed fields
+
 ### Added
 
 - Optional high-performance crypto backends for significantly improved performance:
@@ -43,6 +108,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ### Changed
 
 - **Replaced `darglint` with `pydoclint` for docstring validation** - modern, actively maintained alternative with better Protocol support
+- **Refactored login module structure**: External login functionality moved to `audible.login.external` submodule
+  - New utility functions: `extract_authorization_code_from_url()` and `extract_authorization_code_from_response()` for OAuth code extraction
+  - Eliminated code duplication between `LoginService` and `external_login()` implementations (~35 lines)
+  - All external login functions (`external_login`, `playwright_external_login_url_callback`, `default_login_url_callback`) now exported from `audible.login`
 - `aescipher.py` now uses crypto providers for AES, PBKDF2, and hashing operations
 - `aescipher.py` now uses JSON providers for JSON serialization/deserialization
 - `auth.py` now uses crypto providers for RSA signing operations

@@ -16,7 +16,7 @@ The handler automatically:
 Example:
     .. code-block:: python
 
-        from audible.login_service.challenges import (
+        from audible.login.challenges import (
             MFAChoiceHandler,
             DefaultMFAChoiceCallback,
         )
@@ -47,7 +47,7 @@ from urllib.parse import urljoin
 
 from bs4 import BeautifulSoup, Tag
 
-from audible.login_service.base import (
+from audible.login.base import (
     BaseChallengeCallback,
     BaseChallengeHandler,
     ChallengeContext,
@@ -55,8 +55,8 @@ from audible.login_service.base import (
     MFADeviceOption,
     MfaMethod,
 )
-from audible.login_service.exceptions import MFAError
-from audible.login_service.soup_page import SoupPage
+from audible.login.exceptions import MFAError
+from audible.login.soup_page import SoupPage
 
 
 if TYPE_CHECKING:

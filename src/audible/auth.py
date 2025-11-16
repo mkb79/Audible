@@ -23,9 +23,7 @@ from .crypto import get_crypto_providers
 from .device import IPHONE, BaseDevice
 from .exceptions import AuthFlowError, FileEncryptionError, NoRefreshToken
 from .json import get_json_provider
-from .login import external_login
-from .login_service.base import BaseChallengeCallback
-from .login_service.login import LoginService
+from .login import BaseChallengeCallback, LoginService, external_login
 from .register import RegistrationService
 from .utils import test_convert
 

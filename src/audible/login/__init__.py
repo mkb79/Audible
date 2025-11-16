@@ -7,6 +7,7 @@ abstract base classes, dependency injection, and separation of concerns.
 Main Components:
     - LoginService: Orchestrates the complete login flow
     - LoginResult: Dataclass containing authorization code and metadata
+    - external_login: Browser-based login alternative (manual or automated)
     - Challenge Handlers: Modular handlers for each authentication challenge
     - Default Callbacks: Console-based callbacks for user interaction
     - Base Classes: Abstract base classes for extending functionality
@@ -23,7 +24,7 @@ Example:
 
         from audible.device import IPHONE
         from audible.localization import Locale
-        from audible.login_service import LoginService
+        from audible.login import LoginService
 
         locale = Locale("us")
         with LoginService(device=IPHONE, locale=locale) as service:
@@ -35,8 +36,8 @@ Example:
 
     Custom callbacks::
 
-        from audible.login_service import LoginService
-        from audible.login_service.challenges import DefaultCaptchaCallback
+        from audible.login import LoginService
+        from audible.login.challenges import DefaultCaptchaCallback
 
         # Use custom timeout for CAPTCHA download
         custom_captcha = DefaultCaptchaCallback(timeout=30.0)
@@ -92,6 +93,16 @@ from .exceptions import (
     MFAError,
 )
 
+# External login functionality
+from .external import (
+    build_init_cookies,
+    default_login_url_callback,
+    external_login,
+    extract_authorization_code_from_response,
+    extract_authorization_code_from_url,
+    playwright_external_login_url_callback,
+)
+
 # Core login functionality
 from .login import LoginResult, LoginService
 
@@ -129,7 +140,13 @@ __all__ = [
     "OTPHandler",
     "OtpContext",
     "SoupPage",
+    "build_init_cookies",
     "decrypt_metadata",
+    "default_login_url_callback",
     "encrypt_metadata",
+    "external_login",
+    "extract_authorization_code_from_response",
+    "extract_authorization_code_from_url",
     "meta_audible_app",
+    "playwright_external_login_url_callback",
 ]

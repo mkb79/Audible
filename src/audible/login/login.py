@@ -15,7 +15,7 @@ Example:
 
         from audible.device import IPHONE
         from audible.localization import Locale
-        from audible.login_service import LoginService
+        from audible.login import LoginService
 
         locale = Locale("us")
         with LoginService(device=IPHONE, locale=locale) as service:
@@ -39,15 +39,14 @@ from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
-from urllib.parse import parse_qs
 
 import httpx
 
-from audible.login_service.base import (
+from audible.login.base import (
     BaseChallengeCallback,
     BaseChallengeHandler,
 )
-from audible.login_service.challenges import (
+from audible.login.challenges import (
     ApprovalAlertHandler,
     CaptchaChallengeHandler,
     CVFHandler,
@@ -59,10 +58,11 @@ from audible.login_service.challenges import (
     MFAChoiceHandler,
     OTPHandler,
 )
-from audible.login_service.metadata1 import encrypt_metadata, meta_audible_app
-from audible.login_service.pkce import PKCE
-from audible.login_service.soup_page import SoupPage
-from audible.login_service.url_builder import OAuthURLBuilder
+from audible.login.external import extract_authorization_code_from_response
+from audible.login.metadata1 import encrypt_metadata, meta_audible_app
+from audible.login.pkce import PKCE
+from audible.login.soup_page import SoupPage
+from audible.login.url_builder import OAuthURLBuilder
 
 
 if TYPE_CHECKING:
@@ -585,7 +585,7 @@ class LoginService:
         soup_page, last_resp = orchestrator.handle_all_challenges(soup_page, login_resp)
 
         # Extract authorization code
-        authorization_code = self._extract_authorization_code(last_resp)
+        authorization_code = extract_authorization_code_from_response(last_resp)
 
         return LoginResult(
             authorization_code=authorization_code,
@@ -744,38 +744,3 @@ class LoginService:
         method, url = login_page.get_next_action({"name": "signIn"})
         resp = self._session.request(method, url, data=password_inputs)
         return SoupPage(resp), resp
-
-    def _extract_authorization_code(self, last_resp: httpx.Response) -> str:
-        """Extract authorization code from response URL.
-
-        Args:
-            last_resp: Final HTTP response after all challenges
-
-        Returns:
-            str: OAuth2 authorization code
-
-        Raises:
-            RuntimeError: If authorization code not found in response
-        """
-        authcode_url = None
-
-        # Check final URL
-        if b"openid.oa2.authorization_code" in last_resp.url.query:
-            authcode_url = last_resp.url
-        # Check redirect history
-        elif last_resp.history:
-            for history in last_resp.history:
-                if b"openid.oa2.authorization_code" in history.url.query:
-                    authcode_url = history.url
-                    break
-
-        if authcode_url is None:
-            raise RuntimeError(
-                "Login failed - no authorization code in response. Check logs for errors."
-            )
-
-        parsed_url = parse_qs(authcode_url.query.decode())
-        authorization_code = parsed_url["openid.oa2.authorization_code"][0]
-
-        logger.debug("Login successful, authorization code extracted")
-        return authorization_code

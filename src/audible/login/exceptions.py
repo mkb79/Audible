@@ -15,7 +15,7 @@ Example:
 
     .. code-block:: python
 
-        from audible.login_service.exceptions import ChallengeError
+        from audible.login.exceptions import ChallengeError
 
         try:
             result = service.login(username, password)
@@ -26,7 +26,7 @@ Example:
 
     .. code-block:: python
 
-        from audible.login_service.exceptions import CaptchaExtractionError
+        from audible.login.exceptions import CaptchaExtractionError
 
         try:
             handler.resolve_challenge()

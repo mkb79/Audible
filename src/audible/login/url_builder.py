@@ -8,7 +8,7 @@ from urllib.parse import urlencode
 if TYPE_CHECKING:
     from audible.device import BaseDevice
     from audible.localization import Locale
-    from audible.login_service.pkce import PKCE
+    from audible.login.pkce import PKCE
 
 
 OAUTH_SCOPES = "device_auth_access"

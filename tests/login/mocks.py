@@ -17,8 +17,8 @@ Each mock callback:
 - Stores the last context for verification
 
 Example:
-    >>> from tests.login_service.mocks import MockCaptchaCallback
-    >>> from audible.login_service.base import ChallengeContext, ChallengeType
+    >>> from tests.login.mocks import MockCaptchaCallback
+    >>> from audible.login.base import ChallengeContext, ChallengeType
     >>>
     >>> callback = MockCaptchaCallback("test_solution")
     >>> context = ChallengeContext(
@@ -36,13 +36,13 @@ Example:
 
 Note:
     These mocks are ONLY for testing. They should never be imported into
-    production code. The production code in src/audible/login_service/ should
+    production code. The production code in src/audible/login/ should
     only use the Default callbacks.
 """
 
 from __future__ import annotations
 
-from audible.login_service.base import (
+from audible.login.base import (
     BaseChallengeCallback,
     ChallengeContext,
     ChallengeType,
@@ -375,7 +375,7 @@ ALL_MOCKS = {
 This is useful for programmatically creating mock callbacks in tests.
 
 Example:
-    >>> from tests.login_service.mocks import ALL_MOCKS
+    >>> from tests.login.mocks import ALL_MOCKS
     >>> captcha_mock = ALL_MOCKS["captcha"]("my_solution")
     >>> otp_mock = ALL_MOCKS["otp"]("999999")
 """

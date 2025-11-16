@@ -17,7 +17,7 @@ The handler automatically:
 Example:
     .. code-block:: python
 
-        from audible.login_service.challenges import OTPHandler, DefaultOTPCallback
+        from audible.login.challenges import OTPHandler, DefaultOTPCallback
 
         callback = DefaultOTPCallback()
         handler = OTPHandler(
@@ -45,14 +45,14 @@ from typing import TYPE_CHECKING
 
 from bs4 import BeautifulSoup, Tag
 
-from audible.login_service.base import (
+from audible.login.base import (
     BaseChallengeCallback,
     BaseChallengeHandler,
     ChallengeContext,
     ChallengeType,
     OtpContext,
 )
-from audible.login_service.soup_page import SoupPage
+from audible.login.soup_page import SoupPage
 
 
 if TYPE_CHECKING:
