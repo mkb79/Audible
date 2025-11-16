@@ -42,8 +42,8 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass
-from urllib.parse import urljoin
 from typing import TYPE_CHECKING
+from urllib.parse import urljoin
 
 from bs4 import BeautifulSoup, Tag
 
@@ -130,19 +130,19 @@ def extract_mfa_methods(soup: BeautifulSoup) -> list[MfaMethod]:
                 break
 
         if not method_type:
-            logger.debug(f"Skipping node without auth- class: {classes}")
+            logger.debug("Skipping node without auth- class: %s", classes)
             continue
 
         # Find radio input
         inp_node = node.find("input", {"type": "radio"})
         if not isinstance(inp_node, Tag):
-            logger.debug(f"No radio input found in node for {method_type}")
+            logger.debug("No radio input found in node for %s", method_type)
             continue
 
         # Extract form field value
         value = inp_node.get("value")
         if not isinstance(value, str):
-            logger.debug(f"Invalid value for {method_type}: {value}")
+            logger.debug("Invalid value for %s: %s", method_type, value)
             continue
 
         # Extract label text
@@ -151,7 +151,7 @@ def extract_mfa_methods(soup: BeautifulSoup) -> list[MfaMethod]:
             label = label_node.get_text(strip=True)
         else:
             label = method_type  # Fallback
-            logger.debug(f"No label found for {method_type}, using type as label")
+            logger.debug("No label found for %s, using type as label", method_type)
 
         # Check if default
         is_default = inp_node.has_attr("checked")
@@ -165,7 +165,10 @@ def extract_mfa_methods(soup: BeautifulSoup) -> list[MfaMethod]:
             )
         )
         logger.debug(
-            f"Extracted MFA method: {method_type} ({label[:50]}) - default: {is_default}"
+            "Extracted MFA method: %s (%s) - default: %s",
+            method_type,
+            label[:50],
+            is_default,
         )
 
     return methods
@@ -217,12 +220,13 @@ def select_mfa_method_by_priority(methods: list[MfaMethod]) -> MfaMethod:
     for preferred in priority:
         for method in methods:
             if preferred in method.method_type:
-                logger.info(f"Selected MFA method by priority: {method.method_type}")
+                logger.info("Selected MFA method by priority: %s", method.method_type)
                 return method
 
     # No match found, return first available
     logger.warning(
-        f"No priority match found, using first available method: {methods[0].method_type}"
+        "No priority match found, using first available method: %s",
+        methods[0].method_type,
     )
     return methods[0]
 
@@ -540,8 +544,8 @@ class MFAChoiceHandler(BaseChallengeHandler):
             raise MFAError("No MFA options found on MFA selection page")
 
         # Log available methods for debugging
-        method_summary = ", ".join(f"{opt.method}" for opt in mfa_options)
-        logger.info(f"Available MFA methods: {method_summary}")
+        method_summary = ", ".join(str(opt.method) for opt in mfa_options)
+        logger.info("Available MFA methods: %s", method_summary)
 
         # Rate limiting detection (optional - needs state tracking)
         # TODO: Implement state tracking across login attempts
@@ -556,8 +560,9 @@ class MFAChoiceHandler(BaseChallengeHandler):
         # Additional heuristic: Very few methods might indicate restriction
         if len(mfa_options) < 2:
             logger.info(
-                f"Only {len(mfa_options)} MFA method(s) available. "
-                "Some methods might be temporarily unavailable."
+                "Only %d MFA method(s) available. "
+                "Some methods might be temporarily unavailable.",
+                len(mfa_options),
             )
 
         # Build context and call callback (ALWAYS call - DD 12.1)
@@ -570,9 +575,9 @@ class MFAChoiceHandler(BaseChallengeHandler):
 
         try:
             selected_value = self.callback(context)
-            logger.info(f"MFA method selected (value: {selected_value[:20]}...)")
+            logger.info("MFA method selected (value: %s...)", selected_value[:20])
         except Exception as e:
-            logger.error(f"MFA choice callback failed: {e}")
+            logger.error("MFA choice callback failed: %s", e)
             # Fallback: Extract methods and use priority
             logger.warning("Falling back to priority-based selection")
             methods = []
@@ -580,7 +585,7 @@ class MFAChoiceHandler(BaseChallengeHandler):
                 methods.append(MfaMethod(opt.method, opt.input_value, opt.label, False))
             selected = select_mfa_method_by_priority(methods)
             selected_value = selected.value
-            logger.info(f"Auto-selected by priority: {selected.method_type}")
+            logger.info("Auto-selected by priority: %s", selected.method_type)
 
         # Validate selection
         for option in mfa_options:

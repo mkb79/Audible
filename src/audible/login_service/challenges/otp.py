@@ -120,7 +120,7 @@ def extract_otp_context(soup: BeautifulSoup) -> OtpContext | None:
             message = prev_p.get_text(strip=True)
 
             if message:
-                logger.debug(f"Found OTP message: {message[:100]}")
+                logger.debug("Found OTP message: %s", message[:100])
 
                 # Extract ending digits (language-agnostic)
                 # Patterns: "964 endet", "ending in 964", "termina en 964"
@@ -151,7 +151,9 @@ def extract_otp_context(soup: BeautifulSoup) -> OtpContext | None:
                             break
 
                     logger.info(
-                        f"Extracted OTP context: {method or 'unknown method'} to {destination}"
+                        "Extracted OTP context: %s to %s",
+                        method or "unknown method",
+                        destination,
                     )
 
                     return OtpContext(
@@ -168,7 +170,7 @@ def extract_otp_context(soup: BeautifulSoup) -> OtpContext | None:
             # deviceId might contain method info: "tokenXYZ, SMS"
             for method_type in ["SMS", "VOICE", "WhatsApp", "TOTP", "Email"]:
                 if method_type in value:
-                    logger.info(f"Extracted method from deviceId: {method_type}")
+                    logger.info("Extracted method from deviceId: %s", method_type)
                     return OtpContext(
                         destination="unknown",
                         method_type=method_type,
@@ -375,8 +377,9 @@ class OTPHandler(BaseChallengeHandler):
 
         if otp_context:
             logger.info(
-                f"OTP sent via {otp_context.method_type or 'unknown method'} "
-                f"to {otp_context.destination}"
+                "OTP sent via %s to %s",
+                otp_context.method_type or "unknown method",
+                otp_context.destination,
             )
         else:
             logger.debug("No OTP context available (older page format?)")

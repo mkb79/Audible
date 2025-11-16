@@ -301,7 +301,9 @@ class ApprovalAlertHandler(BaseChallengeHandler):
                 return soup_page
 
             logger.info(
-                f"Still waiting for approval ({poll_count + 1}/{self.max_polls})..."
+                "Still waiting for approval (%d/%d)...",
+                poll_count + 1,
+                self.max_polls,
             )
             time.sleep(self.poll_interval)
             poll_count += 1

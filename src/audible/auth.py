@@ -5,7 +5,6 @@ import logging
 import uuid
 import warnings
 from collections.abc import Callable, Generator, Iterator
-from dataclasses import asdict
 from datetime import datetime, timedelta, timezone
 from typing import (
     TYPE_CHECKING,
@@ -25,10 +24,10 @@ from .device import IPHONE, BaseDevice
 from .exceptions import AuthFlowError, FileEncryptionError, NoRefreshToken
 from .json import get_json_provider
 from .login import external_login
-from .register import RegistrationService
-from .utils import test_convert
 from .login_service.base import BaseChallengeCallback
 from .login_service.login import LoginService
+from .register import RegistrationService
+from .utils import test_convert
 
 
 if TYPE_CHECKING:
@@ -589,7 +588,7 @@ class Authenticator(httpx.Auth):
         auth.locale = cast("Locale", locale)
 
         if device is None:
-            from .device import IPHONE  # noqa: PLC0415
+            from .device import IPHONE
 
             device = IPHONE.copy()
 

@@ -35,7 +35,6 @@ from __future__ import annotations
 
 import logging
 import os
-from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
@@ -47,7 +46,6 @@ import httpx
 from audible.login_service.base import (
     BaseChallengeCallback,
     BaseChallengeHandler,
-    ChallengeContext,
 )
 from audible.login_service.challenges import (
     ApprovalAlertHandler,
@@ -207,9 +205,9 @@ class _ResponseDumper:
 
         try:
             filename.write_text(resp.text, encoding="utf-8")
-            logger.debug(f"Dumped response to {filename}")
+            logger.debug("Dumped response to %s", filename)
         except OSError as exc:
-            logger.warning(f"Failed to dump login response to {filename}: {exc}")
+            logger.warning("Failed to dump login response to %s: %s", filename, exc)
 
 
 # Global instance for use in response hooks
@@ -404,7 +402,7 @@ class ChallengeOrchestrator:
             for handler in handlers:
                 if handler.has_challenge():
                     handler_name = handler.__class__.__name__
-                    logger.info(f"Detected challenge: {handler_name}")
+                    logger.info("Detected challenge: %s", handler_name)
 
                     # Resolve challenge and update current page
                     current_page = handler.resolve_challenge()

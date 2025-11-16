@@ -103,7 +103,7 @@ class RegistrationResult:
     store_authentication_cookie: Any
     device_info: dict[str, Any]
     customer_info: dict[str, Any]
-    device: "BaseDevice"
+    device: BaseDevice
 
     def to_dict(self):
         return self.__dict__
@@ -129,7 +129,7 @@ class RegistrationService:
         >>> print(result.access_token)  # doctest: +SKIP
     """
 
-    def __init__(self, device: "BaseDevice"):
+    def __init__(self, device: BaseDevice):
         self.device = device
 
     def register(
