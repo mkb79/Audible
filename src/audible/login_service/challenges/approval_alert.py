@@ -228,9 +228,9 @@ class ApprovalAlertHandler(BaseChallengeHandler):
                 if handler.has_challenge():
                     print("Approval alert - check your email/app")
         """
-        alert = self.soup_page.soup.find(id="resend-approval-alert") or self.soup_page.soup.find(
-            id="resend-approval-form"
-        )
+        alert = self.soup_page.soup.find(
+            id="resend-approval-alert"
+        ) or self.soup_page.soup.find(id="resend-approval-form")
         return bool(alert)
 
     def resolve_challenge(self) -> SoupPage:
@@ -294,11 +294,15 @@ class ApprovalAlertHandler(BaseChallengeHandler):
 
             # Check if approval is still pending
             # When approved, the transaction-approval-word-break element disappears
-            if not soup_page.soup.find("span", {"class": "transaction-approval-word-break"}):
+            if not soup_page.soup.find(
+                "span", {"class": "transaction-approval-word-break"}
+            ):
                 logger.info("Approval received!")
                 return soup_page
 
-            logger.info(f"Still waiting for approval ({poll_count + 1}/{self.max_polls})...")
+            logger.info(
+                f"Still waiting for approval ({poll_count + 1}/{self.max_polls})..."
+            )
             time.sleep(self.poll_interval)
             poll_count += 1
 

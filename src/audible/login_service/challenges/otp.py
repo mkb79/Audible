@@ -127,7 +127,9 @@ def extract_otp_context(soup: BeautifulSoup) -> OtpContext | None:
                 match = re.search(r"(\d{3,4})\s+\w+\s*$", message)
                 if not match:
                     # Alternative pattern: "ending/termina/endet + in/en + digits"
-                    match = re.search(r"\w+\s+(?:in|en)\s+(\d{3,4})", message, re.IGNORECASE)
+                    match = re.search(
+                        r"\w+\s+(?:in|en)\s+(\d{3,4})", message, re.IGNORECASE
+                    )
 
                 if match:
                     digits = match.group(1)

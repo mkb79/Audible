@@ -314,7 +314,9 @@ class DefaultMFAChoiceCallback(BaseChallengeCallback):
         # Retry loop until valid selection
         while True:
             try:
-                choice = input(f"\nSelect method (1-{len(methods)}, or press Enter): ").strip()
+                choice = input(
+                    f"\nSelect method (1-{len(methods)}, or press Enter): "
+                ).strip()
 
                 # Empty input → use priority
                 if not choice:
@@ -344,7 +346,9 @@ class DefaultMFAChoiceCallback(BaseChallengeCallback):
                     )
 
             except ValueError:
-                print(f"❌ Invalid input: '{choice}'. Please enter a number or press Enter.")
+                print(
+                    f"❌ Invalid input: '{choice}'. Please enter a number or press Enter."
+                )
 
             except KeyboardInterrupt:
                 print("\n\n⚠️  Selection cancelled by user.")
@@ -458,7 +462,9 @@ class MFAChoiceHandler(BaseChallengeHandler):
         """
         options = []
 
-        for node in self.soup_page.soup.select("div[data-a-input-name=otpDeviceContext]"):
+        for node in self.soup_page.soup.select(
+            "div[data-a-input-name=otpDeviceContext]"
+        ):
             inp_node = node.find("input")
             if not isinstance(inp_node, Tag):
                 continue
@@ -571,9 +577,7 @@ class MFAChoiceHandler(BaseChallengeHandler):
             logger.warning("Falling back to priority-based selection")
             methods = []
             for opt in mfa_options:
-                methods.append(
-                    MfaMethod(opt.method, opt.input_value, opt.label, False)
-                )
+                methods.append(MfaMethod(opt.method, opt.input_value, opt.label, False))
             selected = select_mfa_method_by_priority(methods)
             selected_value = selected.value
             logger.info(f"Auto-selected by priority: {selected.method_type}")

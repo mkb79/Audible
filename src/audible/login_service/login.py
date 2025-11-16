@@ -198,7 +198,8 @@ class _ResponseDumper:
         timestamp = datetime.utcnow().strftime("%Y%m%d_%H%M%S")
         safe_label = label.replace(" ", "_")
         filename = (
-            self._directory / f"login_response_{timestamp}_{self._counter:03d}_{safe_label}.html"
+            self._directory
+            / f"login_response_{timestamp}_{self._counter:03d}_{safe_label}.html"
         )
 
         # Ensure response body is read
@@ -682,7 +683,9 @@ class LoginService:
         metadata = meta_audible_app(self.device.user_agent, base_url)
         login_inputs["metadata1"] = encrypt_metadata(metadata)
 
-        return self._submit_initial_login_form(oauth_page, login_inputs, username, password)
+        return self._submit_initial_login_form(
+            oauth_page, login_inputs, username, password
+        )
 
     def _submit_initial_login_form(
         self,
@@ -712,7 +715,9 @@ class LoginService:
 
         app_action = (login_inputs.get("appAction") or "").upper()
         sub_page = login_inputs.get("subPageType", "")
-        requires_username_first = app_action == "SIGNIN_PWD_COLLECT" or sub_page == "SignInClaimCollect"
+        requires_username_first = (
+            app_action == "SIGNIN_PWD_COLLECT" or sub_page == "SignInClaimCollect"
+        )
 
         if not requires_username_first:
             # Standard single-step login
@@ -763,7 +768,9 @@ class LoginService:
                     break
 
         if authcode_url is None:
-            raise RuntimeError("Login failed - no authorization code in response. Check logs for errors.")
+            raise RuntimeError(
+                "Login failed - no authorization code in response. Check logs for errors."
+            )
 
         parsed_url = parse_qs(authcode_url.query.decode())
         authorization_code = parsed_url["openid.oa2.authorization_code"][0]

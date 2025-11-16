@@ -13,8 +13,7 @@ DEFAULT_FORM_SEARCH_FIELD = {"name": "signIn"}
 
 
 def _extract_message_from_box(box: Tag) -> str:
-    """Extracts and concatenates message text from an HTML message box.
-    """
+    """Extracts and concatenates message text from an HTML message box."""
     message = ""
 
     header = box.find("h4")
@@ -136,7 +135,9 @@ class SoupPage:
 
     # ---------- Internal Helpers ----------
 
-    def _find_form(self, search_field: dict[str, str] | None, strict: bool = False) -> Tag:
+    def _find_form(
+        self, search_field: dict[str, str] | None, strict: bool = False
+    ) -> Tag:
         """Finds a form on the page based on search criteria.
 
         Args:

@@ -42,7 +42,11 @@ Note:
 
 from __future__ import annotations
 
-from audible.login_service.base import BaseChallengeCallback, ChallengeContext, ChallengeType
+from audible.login_service.base import (
+    BaseChallengeCallback,
+    ChallengeContext,
+    ChallengeType,
+)
 
 
 # ============================================================================
