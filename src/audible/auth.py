@@ -3,7 +3,9 @@ from __future__ import annotations
 import base64
 import logging
 import uuid
+import warnings
 from collections.abc import Callable, Generator, Iterator
+from dataclasses import asdict
 from datetime import datetime, timedelta, timezone
 from typing import (
     TYPE_CHECKING,
@@ -22,10 +24,11 @@ from .crypto import get_crypto_providers
 from .device import IPHONE, BaseDevice
 from .exceptions import AuthFlowError, FileEncryptionError, NoRefreshToken
 from .json import get_json_provider
-from .login import external_login, login
-from .register import deregister as deregister_
-from .register import register as register_
+from .login import external_login
+from .register import RegistrationService
 from .utils import test_convert
+from .login_service.base import BaseChallengeCallback
+from .login_service.login import LoginService
 
 
 if TYPE_CHECKING:
@@ -537,10 +540,11 @@ class Authenticator(httpx.Auth):
         locale: str | Locale,
         serial: str | None = None,
         with_username: bool = False,
-        captcha_callback: Callable[[str], str] | None = None,
-        otp_callback: Callable[[], str] | None = None,
-        cvf_callback: Callable[[], str] | None = None,
-        approval_callback: Callable[[], Any] | None = None,
+        captcha_callback: BaseChallengeCallback | None = None,
+        otp_callback: BaseChallengeCallback | None = None,
+        mfa_choice_callback: BaseChallengeCallback | None = None,
+        cvf_callback: BaseChallengeCallback | None = None,
+        approval_callback: BaseChallengeCallback | None = None,
         crypto_provider: CryptoProvider | type[CryptoProvider] | None = None,
         device: BaseDevice | None = None,
     ) -> Authenticator:
@@ -584,24 +588,49 @@ class Authenticator(httpx.Auth):
         auth = cls(crypto_provider=crypto_provider)
         auth.locale = cast("Locale", locale)
 
-        login_device = login(
-            username=username,
-            password=password,
-            country_code=auth.locale.country_code,
-            domain=auth.locale.domain,
-            market_place_id=auth.locale.market_place_id,
-            serial=serial,
-            with_username=with_username,
+        if device is None:
+            from .device import IPHONE  # noqa: PLC0415
+
+            device = IPHONE.copy()
+
+            # Handle backward compatibility with serial parameter
+        if serial is not None:
+            warnings.warn(
+                "The 'serial' parameter is deprecated and will be removed in v0.12.0. "
+                "Use 'device' parameter instead.",
+                DeprecationWarning,
+                stacklevel=2,
+            )
+            # Create a copy of device with the provided serial
+            device = device.copy(device_serial=serial)
+
+        login_service = LoginService(
+            device=device,
+            locale=auth.locale,
             captcha_callback=captcha_callback,
+            mfa_choice_callback=mfa_choice_callback,
             otp_callback=otp_callback,
             cvf_callback=cvf_callback,
             approval_callback=approval_callback,
-            device=device,
+        )
+        login_device = login_service.login(
+            username=username,
+            password=password,
+            with_username=with_username,
         )
         logger.info("logged in to Audible as %s", username)
-        register_device = register_(with_username=with_username, **login_device)
+        registration_service = RegistrationService(device=device)
+        register_device = registration_service.register(
+            with_username=with_username,
+            authorization_code=login_device.authorization_code,
+            code_verifier=login_device.code_verifier,
+            domain=auth.locale.domain,
+        )
 
-        auth._update_attrs(with_username=with_username, **register_device)
+        auth._update_attrs(
+            with_username=with_username,
+            **register_device.to_dict(),
+        )
         logger.info("registered Audible device")
 
         return auth
@@ -660,9 +689,18 @@ class Authenticator(httpx.Auth):
         )
         logger.info("logged in to Audible.")
 
-        register_device = register_(with_username=with_username, **login_device)
+        registration_service = RegistrationService(device=device)
+        register_device = registration_service.register(
+            with_username=with_username,
+            authorization_code=login_device["authorization_code"],
+            code_verifier=login_device["code_verifier"],
+            domain=auth.locale.domain,
+        )
 
-        auth._update_attrs(with_username=with_username, **register_device)
+        auth._update_attrs(
+            with_username=with_username,
+            **register_device.to_dict(),
+        )
         logger.info("registered Audible device")
 
         return auth
@@ -870,7 +908,8 @@ class Authenticator(httpx.Auth):
         if self.locale is None:
             raise Exception("No locale found.")
 
-        return deregister_(
+        registration_service = RegistrationService(device=self.device)
+        return registration_service.deregister(
             access_token=self.access_token,
             deregister_all=deregister_all,
             domain=self.locale.domain,

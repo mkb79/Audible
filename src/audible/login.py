@@ -443,6 +443,7 @@ def login(
            Now uses LoginService internally. Prefer using LoginService directly.
     """
     from .login_service import login as _login_impl
+    # from .login_service_working import login as _login_impl
 
     warnings.warn(
         "Importing from audible.login is deprecated and will be removed in v0.12.0. "
@@ -509,7 +510,7 @@ def external_login(
     if device is None:
         from .device import IPHONE
 
-        device = IPHONE
+        device = IPHONE.copy()
 
     # Handle backward compatibility with serial parameter
     if serial is not None:
