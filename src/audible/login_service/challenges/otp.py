@@ -67,6 +67,116 @@ logger = logging.getLogger(__name__)
 # ============================================================================
 
 
+def _extract_destination_from_message(message: str) -> str | None:
+    """Extract destination digits from OTP message.
+
+    Args:
+        message: Message text from page
+
+    Returns:
+        Destination string (e.g., "number ending in 964") or None
+    """
+    # Pattern 1: "964 endet", "964 ends"
+    match = re.search(r"(\d{3,4})\s+\w+\s*$", message)
+    if not match:
+        # Pattern 2: "ending/termina/endet + in/en + digits"
+        match = re.search(r"\w+\s+(?:in|en)\s+(\d{3,4})", message, re.IGNORECASE)
+
+    if match:
+        digits = match.group(1)
+        return f"number ending in {digits}"
+    return None
+
+
+def _extract_method_from_message(message: str) -> str | None:
+    """Extract OTP method type from message keywords.
+
+    Args:
+        message: Message text from page
+
+    Returns:
+        Method type (SMS, WhatsApp, etc.) or None
+    """
+    method_keywords = {
+        "WhatsApp": ["whatsapp", "whatsapp-"],
+        "SMS": ["telefon", "phone", "número", "sms", "text"],
+        "Email": ["email", "e-mail", "mail"],
+        "Voice Call": ["anruf", "call", "llamada", "voice"],
+    }
+
+    message_lower = message.lower()
+    for method_type, keywords in method_keywords.items():
+        if any(kw in message_lower for kw in keywords):
+            return method_type
+    return None
+
+
+def _try_extract_from_message(soup: BeautifulSoup) -> OtpContext | None:
+    """Try to extract OTP context from message near form (Strategy 1).
+
+    Args:
+        soup: BeautifulSoup object
+
+    Returns:
+        OtpContext if found, None otherwise
+    """
+    form = soup.find("form", id=lambda x: x and "mfa-form" in str(x))
+    if not isinstance(form, Tag):
+        return None
+
+    prev_p = form.find_previous("p")
+    if not isinstance(prev_p, Tag):
+        return None
+
+    message = prev_p.get_text(strip=True)
+    if not message:
+        return None
+
+    logger.debug("Found OTP message: %s", message[:100])
+
+    destination = _extract_destination_from_message(message)
+    if not destination:
+        return None
+
+    method = _extract_method_from_message(message)
+    logger.info("Extracted OTP context: %s to %s", method or "unknown method", destination)
+
+    return OtpContext(
+        destination=destination,
+        method_type=method,
+        raw_message=message,
+    )
+
+
+def _try_extract_from_device_id(soup: BeautifulSoup) -> OtpContext | None:
+    """Try to extract OTP context from deviceId field (Strategy 2).
+
+    Args:
+        soup: BeautifulSoup object
+
+    Returns:
+        OtpContext if found, None otherwise
+    """
+    device_id = soup.find("input", {"name": "deviceId"})
+    if not isinstance(device_id, Tag):
+        return None
+
+    value = device_id.get("value")
+    if not isinstance(value, str):
+        return None
+
+    # deviceId might contain method info: "tokenXYZ, SMS"
+    for method_type in ["SMS", "VOICE", "WhatsApp", "TOTP", "Email"]:
+        if method_type in value:
+            logger.info("Extracted method from deviceId: %s", method_type)
+            return OtpContext(
+                destination="unknown",
+                method_type=method_type,
+                raw_message="",
+            )
+    return None
+
+
 def extract_otp_context(soup: BeautifulSoup) -> OtpContext | None:
     """Extract OTP context information from page.
 
@@ -111,71 +221,15 @@ def extract_otp_context(soup: BeautifulSoup) -> OtpContext | None:
         >>> context.method_type
         'SMS'
     """
-    # Strategy 1: Find <p> tag with destination info
-    form = soup.find("form", id=lambda x: x and "mfa-form" in str(x))
-    if isinstance(form, Tag):
-        # Look for <p> tag before/near form
-        prev_p = form.find_previous("p")
-        if isinstance(prev_p, Tag):
-            message = prev_p.get_text(strip=True)
+    # Strategy 1: Try to extract from message near form
+    result = _try_extract_from_message(soup)
+    if result:
+        return result
 
-            if message:
-                logger.debug("Found OTP message: %s", message[:100])
-
-                # Extract ending digits (language-agnostic)
-                # Patterns: "964 endet", "ending in 964", "termina en 964"
-                match = re.search(r"(\d{3,4})\s+\w+\s*$", message)
-                if not match:
-                    # Alternative pattern: "ending/termina/endet + in/en + digits"
-                    match = re.search(
-                        r"\w+\s+(?:in|en)\s+(\d{3,4})", message, re.IGNORECASE
-                    )
-
-                if match:
-                    digits = match.group(1)
-                    destination = f"number ending in {digits}"
-
-                    # Determine method type from keywords (case-insensitive)
-                    method_keywords = {
-                        "WhatsApp": ["whatsapp", "whatsapp-"],
-                        "SMS": ["telefon", "phone", "número", "sms", "text"],
-                        "Email": ["email", "e-mail", "mail"],
-                        "Voice Call": ["anruf", "call", "llamada", "voice"],
-                    }
-
-                    method = None
-                    message_lower = message.lower()
-                    for method_type, keywords in method_keywords.items():
-                        if any(kw in message_lower for kw in keywords):
-                            method = method_type
-                            break
-
-                    logger.info(
-                        "Extracted OTP context: %s to %s",
-                        method or "unknown method",
-                        destination,
-                    )
-
-                    return OtpContext(
-                        destination=destination,
-                        method_type=method,
-                        raw_message=message,
-                    )
-
-    # Strategy 2: Check deviceId hidden field
-    device_id = soup.find("input", {"name": "deviceId"})
-    if isinstance(device_id, Tag):
-        value = device_id.get("value")
-        if isinstance(value, str):
-            # deviceId might contain method info: "tokenXYZ, SMS"
-            for method_type in ["SMS", "VOICE", "WhatsApp", "TOTP", "Email"]:
-                if method_type in value:
-                    logger.info("Extracted method from deviceId: %s", method_type)
-                    return OtpContext(
-                        destination="unknown",
-                        method_type=method_type,
-                        raw_message="",
-                    )
+    # Strategy 2: Try to extract from deviceId field
+    result = _try_extract_from_device_id(soup)
+    if result:
+        return result
 
     # Strategy 3: No context available
     logger.debug("Could not extract OTP context from page")

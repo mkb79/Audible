@@ -504,6 +504,57 @@ class MFAChoiceHandler(BaseChallengeHandler):
 
         return options
 
+    def _select_mfa_method(
+        self, mfa_options: list[MfaOption], context: ChallengeContext
+    ) -> str:
+        """Select MFA method using callback or fallback to priority.
+
+        Args:
+            mfa_options: Available MFA options
+            context: Challenge context for callback
+
+        Returns:
+            Selected option value string
+        """
+        try:
+            selected_value = self.callback(context)
+            logger.info("MFA method selected (value: %s...)", selected_value[:20])
+            return selected_value
+        except Exception as e:
+            logger.error("MFA choice callback failed: %s", e)
+            # Fallback: Extract methods and use priority
+            logger.warning("Falling back to priority-based selection")
+            methods = [
+                MfaMethod(opt.method, opt.input_value, opt.label, False)
+                for opt in mfa_options
+            ]
+            selected = select_mfa_method_by_priority(methods)
+            logger.info("Auto-selected by priority: %s", selected.method_type)
+            return selected.value
+
+    def _extract_form_inputs(self, form: Tag, selected_value: str) -> dict[str, str]:
+        """Extract and prepare form inputs for submission.
+
+        Args:
+            form: Form tag from page
+            selected_value: Selected MFA option value
+
+        Returns:
+            Dict of form inputs
+        """
+        inputs: dict[str, str] = {}
+        for field in form.find_all("input"):
+            name = field.get("name")
+            if not isinstance(name, str):
+                continue
+            value = ""
+            if field.get("type") == "hidden":
+                value = field.get("value", "")
+            inputs[name] = value
+
+        inputs["otpDeviceContext"] = selected_value
+        return inputs
+
     def resolve_challenge(self) -> SoupPage:
         """Resolve MFA device selection with enhanced logging and rate limiting detection.
 
@@ -573,25 +624,11 @@ class MFAChoiceHandler(BaseChallengeHandler):
             mfa_options=mfa_options,
         )
 
-        try:
-            selected_value = self.callback(context)
-            logger.info("MFA method selected (value: %s...)", selected_value[:20])
-        except Exception as e:
-            logger.error("MFA choice callback failed: %s", e)
-            # Fallback: Extract methods and use priority
-            logger.warning("Falling back to priority-based selection")
-            methods = []
-            for opt in mfa_options:
-                methods.append(MfaMethod(opt.method, opt.input_value, opt.label, False))
-            selected = select_mfa_method_by_priority(methods)
-            selected_value = selected.value
-            logger.info("Auto-selected by priority: %s", selected.method_type)
+        # Select method using callback or fallback
+        selected_value = self._select_mfa_method(mfa_options, context)
 
         # Validate selection
-        for option in mfa_options:
-            if option.input_value == selected_value:
-                break
-        else:
+        if not any(opt.input_value == selected_value for opt in mfa_options):
             raise MFAError("Selected value not in available options")
 
         # Submit selection via explicit MFA form to avoid posting to wrong endpoint
@@ -600,17 +637,8 @@ class MFAChoiceHandler(BaseChallengeHandler):
             logger.error("MFA selection form not found on page")
             raise MFAError("Unable to locate MFA selection form")
 
-        inputs: dict[str, str] = {}
-        for field in form.find_all("input"):
-            name = field.get("name")
-            if not isinstance(name, str):
-                continue
-            value = ""
-            if field.get("type") == "hidden":
-                value = field.get("value", "")
-            inputs[name] = value
-
-        inputs["otpDeviceContext"] = selected_value
+        # Extract and prepare form inputs
+        inputs = self._extract_form_inputs(form, selected_value)
 
         method = form.get("method", "GET")
         action = form.get("action") or ""
