@@ -469,6 +469,10 @@ class BaseChallengeHandler(ABC):
             bool: True if the challenge is detected in the current page,
                 False otherwise.
 
+        Raises:
+            NotImplementedError: This is an abstract method that must be
+                implemented by subclasses.
+
         Example:
             .. code-block:: python
 
@@ -501,8 +505,8 @@ class BaseChallengeHandler(ABC):
             SoupPage: The parsed page after challenge submission.
 
         Raises:
-            ChallengeError: If challenge resolution fails. Specific exception
-                types depend on the concrete handler implementation.
+            NotImplementedError: This is an abstract method that must be
+                implemented by subclasses.
 
         Example:
             .. code-block:: python
@@ -532,7 +536,6 @@ class BaseChallengeHandler(ABC):
 
         Raises:
             TypeError: If callback is not a BaseChallengeCallback instance.
-            ValueError: If configuration is invalid (subclass-specific).
 
         Example:
             >>> def __post_init__(self) -> None:
