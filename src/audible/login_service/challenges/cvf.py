@@ -153,13 +153,12 @@ class CVFHandler(BaseChallengeHandler):
     1. Select "code" as the verification method
     2. Submit the actual verification code
 
-    The handler inherits all attributes from BaseChallengeHandler:
-    - username: Amazon account username (optional for this challenge)
-    - password: Amazon account password (optional for this challenge)
-    - session: HTTP client session
-    - soup_page: Parsed page with CVF form
-    - callback: CVF callback (REQUIRED)
-    - log_errors: Enable error logging
+    The handler inherits username, password, session, soup_page, and log_errors
+    from BaseChallengeHandler.
+
+    Attributes:
+        callback: Callback to obtain CVF code from user. Required for this
+            handler.
 
     Amazon CVF pages are identified by:
     - div#cvf-page-content
@@ -227,10 +226,6 @@ class CVFHandler(BaseChallengeHandler):
             SoupPage: The parsed page after CVF code submission. This is
                 typically either a successful login (with authorization code
                 in URL) or an error page (incorrect code).
-
-        Raises:
-            CallbackError: If callback execution fails.
-            httpx.HTTPError: If either submission request fails.
 
         Example:
             .. code-block:: python

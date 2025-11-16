@@ -139,7 +139,9 @@ def _try_extract_from_message(soup: BeautifulSoup) -> OtpContext | None:
         return None
 
     method = _extract_method_from_message(message)
-    logger.info("Extracted OTP context: %s to %s", method or "unknown method", destination)
+    logger.info(
+        "Extracted OTP context: %s to %s", method or "unknown method", destination
+    )
 
     return OtpContext(
         destination=destination,
@@ -341,13 +343,12 @@ class OTPHandler(BaseChallengeHandler):
     obtains the code from the callback, and submits it with the appropriate
     form fields.
 
-    The handler inherits all attributes from BaseChallengeHandler:
-    - username: Amazon account username (optional for this challenge)
-    - password: Amazon account password (optional for this challenge)
-    - session: HTTP client session
-    - soup_page: Parsed page with OTP entry form
-    - callback: OTP callback (REQUIRED)
-    - log_errors: Enable error logging
+    The handler inherits username, password, session, soup_page, and log_errors
+    from BaseChallengeHandler.
+
+    Attributes:
+        callback: Callback to obtain OTP code from user. Required for this
+            handler.
 
     Amazon OTP forms are identified by specific form IDs:
     - "verification-code-form" (newer pages)
@@ -417,10 +418,6 @@ class OTPHandler(BaseChallengeHandler):
         Returns:
             SoupPage: The parsed page after OTP submission. This is typically
                 either a successful login or another challenge page.
-
-        Raises:
-            CallbackError: If callback execution fails.
-            httpx.HTTPError: If the submission request fails.
 
         Note:
             The OTP context extraction is best-effort. If it fails, the callback

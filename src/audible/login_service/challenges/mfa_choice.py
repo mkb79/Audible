@@ -79,13 +79,11 @@ def extract_mfa_methods(soup: BeautifulSoup) -> list[MfaMethod]:
     and HTML structure rather than text content.
 
     Args:
-        soup: BeautifulSoup object of MFA-Choice page
+        soup: BeautifulSoup object of MFA-Choice page.
 
     Returns:
-        List of MfaMethod objects, empty list if none found
-
-    Raises:
-        None - returns empty list on failure for graceful degradation
+        list[MfaMethod]: List of MfaMethod objects. Returns empty list if
+            none found for graceful degradation.
 
     Algorithm:
         1. Find all <div> elements with data-a-input-name="otpDeviceContext"
@@ -380,13 +378,11 @@ class MFAChoiceHandler(BaseChallengeHandler):
     from the page, presents them to the callback for selection, and submits the
     chosen device.
 
-    The handler inherits all attributes from BaseChallengeHandler:
-    - username: Amazon account username (optional for this challenge)
-    - password: Amazon account password (optional for this challenge)
-    - session: HTTP client session
-    - soup_page: Parsed page with MFA choice form
-    - callback: MFA choice callback (REQUIRED)
-    - log_errors: Enable error logging
+    The handler inherits username, password, session, soup_page, and log_errors
+    from BaseChallengeHandler.
+
+    Attributes:
+        callback: Callback to select MFA device. Required for this handler.
 
     Amazon presents MFA options with specific HTML structure:
     - Form ID: "auth-select-device-form"
@@ -571,10 +567,9 @@ class MFAChoiceHandler(BaseChallengeHandler):
                 typically an OTP entry page.
 
         Raises:
-            MFAError: If no MFA options are found on the page or the selected
-                value doesn't match any available option.
-            CallbackError: If callback execution fails.
-            httpx.HTTPError: If the submission request fails.
+            MFAError: If no MFA options are found on the page, the selected
+                value doesn't match any available option, or the MFA selection
+                form cannot be located.
 
         Design Decision (DD 12.1):
             Always call callback when MFA-Choice page appears. User can

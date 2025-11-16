@@ -100,8 +100,10 @@ class DefaultCaptchaCallback(BaseChallengeCallback):
     - Console input prompt with automatic whitespace stripping and lowercase
 
     Attributes:
-        challenge_type: Set to ChallengeType.CAPTCHA
-        timeout: HTTP timeout for downloading CAPTCHA image in seconds.
+        challenge_type: Set to ChallengeType.CAPTCHA.
+
+    Args:
+        timeout: HTTP timeout in seconds for downloading CAPTCHA image.
             Default is 10.0 seconds.
 
     Example:
@@ -129,12 +131,6 @@ class DefaultCaptchaCallback(BaseChallengeCallback):
     challenge_type = ChallengeType.CAPTCHA
 
     def __init__(self, timeout: float = DEFAULT_HTTP_TIMEOUT) -> None:
-        """Initialize the CAPTCHA callback.
-
-        Args:
-            timeout: HTTP timeout in seconds for downloading CAPTCHA image.
-                Default is 10.0 seconds.
-        """
         self.timeout = timeout
 
     def _resolve_challenge(self, context: ChallengeContext) -> str:
@@ -197,13 +193,13 @@ class CaptchaChallengeHandler(BaseChallengeHandler):
     CAPTCHA image URL, obtains a solution from the user via callback, and
     submits the complete login form with credentials and CAPTCHA answer.
 
-    The handler inherits all attributes from BaseChallengeHandler:
-    - username: Amazon account email (REQUIRED)
-    - password: Amazon account password (REQUIRED)
-    - session: HTTP client session
-    - soup_page: Parsed page with CAPTCHA challenge
-    - callback: CAPTCHA callback (REQUIRED)
-    - log_errors: Enable error logging
+    The handler inherits username, password, session, soup_page, and log_errors
+    from BaseChallengeHandler. Username and password are REQUIRED for CAPTCHA
+    resolution.
+
+    Attributes:
+        callback: Callback to obtain CAPTCHA solution from user. Required for
+            this handler.
 
     The CAPTCHA submission includes:
     - User credentials (email and password)
@@ -248,13 +244,13 @@ class CaptchaChallengeHandler(BaseChallengeHandler):
         """Validate CAPTCHA handler configuration.
 
         Ensures username, password, and callback are provided, as they are
-        required for CAPTCHA resolution.
+        required for CAPTCHA resolution. Also calls parent validation which
+        checks callback type.
 
         Raises:
-            TypeError: If callback is not BaseChallengeCallback.
             ValueError: If username or password is None.
         """
-        super().__post_init__()  # Validates callback type
+        super().__post_init__()  # Validates callback type (may raise TypeError)
 
         if not self.username:
             msg = "Username is required for CAPTCHA resolution"
@@ -380,9 +376,8 @@ class CaptchaChallengeHandler(BaseChallengeHandler):
             CaptchaExtractionError: If CAPTCHA URL cannot be extracted from
                 the page structure.
             CallbackError: If callback execution fails.
-            httpx.HTTPError: If the submission request fails due to network
-                errors or server responses.
-            ValueError: If credentials are invalid or missing.
+            Exception: Other exceptions (network errors, validation errors, etc.)
+                are logged and re-raised.
 
         Example:
             .. code-block:: python

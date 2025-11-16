@@ -160,19 +160,15 @@ class ApprovalAlertHandler(BaseChallengeHandler):
     3. Polls the URL repeatedly until approval is detected or timeout occurs
     4. Returns the approved page
 
-    The handler inherits all attributes from BaseChallengeHandler plus:
-    - poll_interval: Seconds to wait between polling attempts (default: 4.0)
-    - max_polls: Maximum number of polling attempts (default: 60 = 4 minutes)
+    The handler inherits username, password, session, soup_page, and log_errors
+    from BaseChallengeHandler.
 
-    Additional attributes:
-        username: Amazon account username (optional for this challenge)
-        password: Amazon account password (optional for this challenge)
-        session: HTTP client session
-        soup_page: Parsed page with approval alert
-        callback: Approval callback (REQUIRED)
-        log_errors: Enable error logging
-        poll_interval: Seconds between polls (default: 4.0)
-        max_polls: Maximum number of polls before timeout (default: 60)
+    Attributes:
+        callback: Callback to notify user about approval alert. Required for
+            this handler.
+        poll_interval: Seconds to wait between polling attempts. Default: 4.0.
+        max_polls: Maximum number of polling attempts before timeout.
+            Default: 60 (= 4 minutes with default interval).
 
     Amazon approval alert pages are identified by:
     - id="resend-approval-alert" OR
@@ -259,7 +255,6 @@ class ApprovalAlertHandler(BaseChallengeHandler):
         Raises:
             TimeoutError: If approval is not received within the timeout
                 period (max_polls * poll_interval seconds).
-            httpx.HTTPError: If polling requests fail.
 
         Example:
             .. code-block:: python
