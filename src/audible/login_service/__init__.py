@@ -103,51 +103,33 @@ from .url_builder import OAuthURLBuilder
 
 
 __all__ = [
-    # ========================================================================
-    # Core API - Most users only need these
-    # ========================================================================
-    "LoginService",
-    "LoginResult",
-    # ========================================================================
-    # Base Classes - For custom implementations
-    # ========================================================================
+    "PKCE",
+    "ApprovalAlertHandler",
     "BaseChallengeCallback",
     "BaseChallengeHandler",
-    "ChallengeContext",
-    "ChallengeType",
-    "MFADeviceOption",
-    "MfaMethod",
-    "OtpContext",
-    # ========================================================================
-    # Exceptions - For error handling
-    # ========================================================================
-    "ChallengeError",
-    "CaptchaExtractionError",
-    "MFAError",
-    "CallbackError",
-    # ========================================================================
-    # Challenge Handlers - For advanced customization
-    # ========================================================================
-    "CaptchaChallengeHandler",
-    "MFAChoiceHandler",
-    "OTPHandler",
     "CVFHandler",
-    "ApprovalAlertHandler",
-    # ========================================================================
-    # Default Callbacks - Can be replaced with custom implementations
-    # ========================================================================
+    "CallbackError",
+    "CaptchaChallengeHandler",
+    "CaptchaExtractionError",
+    "ChallengeContext",
+    "ChallengeError",
+    "ChallengeType",
+    "DefaultApprovalAlertCallback",
+    "DefaultCVFCallback",
     "DefaultCaptchaCallback",
     "DefaultMFAChoiceCallback",
     "DefaultOTPCallback",
-    "DefaultCVFCallback",
-    "DefaultApprovalAlertCallback",
-    # ========================================================================
-    # Utility Classes - Internal use, but exposed for advanced scenarios
-    # ========================================================================
-    "PKCE",
-    "SoupPage",
+    "LoginResult",
+    "LoginService",
+    "MFAChoiceHandler",
+    "MFADeviceOption",
+    "MFAError",
+    "MfaMethod",
     "OAuthURLBuilder",
-    "encrypt_metadata",
+    "OTPHandler",
+    "OtpContext",
+    "SoupPage",
     "decrypt_metadata",
+    "encrypt_metadata",
     "meta_audible_app",
 ]

@@ -54,16 +54,14 @@ from .otp import DefaultOTPCallback, OTPHandler
 
 
 __all__ = [
-    # Challenge Handlers
-    "CaptchaChallengeHandler",
-    "MFAChoiceHandler",
-    "OTPHandler",
-    "CVFHandler",
     "ApprovalAlertHandler",
-    # Default Callbacks (production code only - no Mocks!)
+    "CVFHandler",
+    "CaptchaChallengeHandler",
+    "DefaultApprovalAlertCallback",
+    "DefaultCVFCallback",
     "DefaultCaptchaCallback",
     "DefaultMFAChoiceCallback",
     "DefaultOTPCallback",
-    "DefaultCVFCallback",
-    "DefaultApprovalAlertCallback",
+    "MFAChoiceHandler",
+    "OTPHandler",
 ]
