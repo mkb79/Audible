@@ -637,6 +637,11 @@ class MFAChoiceHandler(BaseChallengeHandler):
 
         method = form.get("method", "GET")
         action = form.get("action") or ""
+
+        # Type narrowing for mypy
+        if not isinstance(method, str) or not isinstance(action, str):
+            raise MFAError("Invalid form method or action")
+
         current_url = str(self.soup_page.resp.url)
         target_url = urljoin(current_url, action)
 

@@ -105,7 +105,7 @@ class RegistrationResult:
     customer_info: dict[str, Any]
     device: BaseDevice
 
-    def to_dict(self):
+    def to_dict(self) -> dict[str, Any]:
         return self.__dict__
 
 

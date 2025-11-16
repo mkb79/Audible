@@ -88,7 +88,7 @@ class SoupPage:
         method = form.get("method", "GET")
         url = form.get("action")
 
-        if not all(isinstance(x, str) for x in (method, url)):
+        if not isinstance(method, str) or not isinstance(url, str):
             raise ValueError("Failed to extract form method or action URL.")
         return method, url
 

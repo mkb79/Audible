@@ -260,14 +260,15 @@ class CaptchaChallengeHandler(BaseChallengeHandler):
             msg = "Password is required for CAPTCHA resolution"
             raise ValueError(msg)
 
-    def _find_captcha_element(self) -> Tag | None:
+    def _find_captcha_element(self) -> Tag | NavigableString | None:
         """Find the CAPTCHA image element in the page.
 
         Searches for an img tag with an alt attribute containing "CAPTCHA".
         This is Amazon's standard CAPTCHA image identification.
 
         Returns:
-            Tag | None: The CAPTCHA img element if found, None otherwise.
+            Tag | NavigableString | None: The CAPTCHA img element if found, None
+                otherwise. In practice, find() with "img" always returns Tag or None.
 
         Example:
             .. code-block:: python
