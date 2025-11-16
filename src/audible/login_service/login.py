@@ -660,7 +660,9 @@ class LoginService:
         Returns:
             tuple[SoupPage, httpx.Response]: Initial response page and HTTP response
         """
-        assert self._session is not None
+        if self._session is None:
+            msg = "Session not initialized. Call login() first."
+            raise RuntimeError(msg)
 
         base_url = (
             f"https://www.audible.{self.locale.domain}"
@@ -709,7 +711,9 @@ class LoginService:
         Returns:
             tuple[SoupPage, httpx.Response]: Login response page and HTTP response
         """
-        assert self._session is not None
+        if self._session is None:
+            msg = "Session not initialized. Call login() first."
+            raise RuntimeError(msg)
 
         app_action = (login_inputs.get("appAction") or "").upper()
         sub_page = login_inputs.get("subPageType", "")

@@ -574,6 +574,8 @@ class Authenticator(httpx.Auth):
                 during login.
             otp_callback: A custom callback to handle one-time password
                 requests during login.
+            mfa_choice_callback: A custom callback to handle MFA device
+                selection during login.
             cvf_callback: A custom callback to handle verify code requests
                 during login.
             approval_callback: A custom Callable for handling approval alerts.

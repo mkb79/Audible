@@ -1,5 +1,10 @@
 """JSON abstraction layer with support for multiple backends.
 
+Note: This module is named 'json' (full path: audible.json) which shadows
+the standard library 'json' module. This is intentional to provide a drop-in
+replacement with automatic backend selection. Users import it as 'audible.json'
+which avoids any actual shadowing in practice.
+
 This module provides a clean abstraction layer for JSON operations,
 supporting multiple backend libraries: orjson, ujson, python-rapidjson,
 and stdlib json.
@@ -25,6 +30,7 @@ Example:
     >>> provider.provider_name  # doctest: +SKIP
     'orjson'
 """
+# ruff: noqa: A005 - Module name intentionally shadows stdlib for API consistency
 
 from .exceptions import JSONDecodeError, JSONEncodeError
 from .orjson_provider import OrjsonProvider

@@ -58,10 +58,10 @@ from PIL import Image
 from audible.login_service.base import (
     DEFAULT_HTTP_TIMEOUT,
     FALSE_VALUE,
-    FORM_FIELD_EMAIL,
     FORM_FIELD_GUESS,
-    FORM_FIELD_PASSWORD,
-    FORM_FIELD_SHOW_PASSWORD,
+    FORM_FIELD_NAME_EMAIL,
+    FORM_FIELD_NAME_PASSWORD,
+    FORM_FIELD_NAME_SHOW_PASSWORD,
     FORM_FIELD_USE_AUDIO_CAPTCHA,
     FORM_FIELD_USE_IMAGE_CAPTCHA,
     TRUE_VALUE,
@@ -353,9 +353,9 @@ class CaptchaChallengeHandler(BaseChallengeHandler):
         inputs[FORM_FIELD_GUESS] = captcha_guess
         inputs[FORM_FIELD_USE_IMAGE_CAPTCHA] = TRUE_VALUE
         inputs[FORM_FIELD_USE_AUDIO_CAPTCHA] = FALSE_VALUE
-        inputs[FORM_FIELD_SHOW_PASSWORD] = FALSE_VALUE
-        inputs[FORM_FIELD_EMAIL] = self.username  # type: ignore[assignment]
-        inputs[FORM_FIELD_PASSWORD] = self.password  # type: ignore[assignment]
+        inputs[FORM_FIELD_NAME_SHOW_PASSWORD] = FALSE_VALUE
+        inputs[FORM_FIELD_NAME_EMAIL] = self.username  # type: ignore[assignment]
+        inputs[FORM_FIELD_NAME_PASSWORD] = self.password  # type: ignore[assignment]
         return inputs
 
     def resolve_challenge(self) -> SoupPage:

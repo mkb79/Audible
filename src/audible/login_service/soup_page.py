@@ -30,6 +30,7 @@ def _extract_message_from_box(box: Tag) -> str:
 
 class SoupPage:
     """Represents a parsed HTML page based on a httpx.Response.
+
     - Parses the response text once into a BeautifulSoup instance.
     - Optionally logs detected error or warning messages.
     """

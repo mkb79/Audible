@@ -59,9 +59,9 @@ logger = logging.getLogger(__name__)
 FORM_FIELD_GUESS: Final[str] = "guess"
 FORM_FIELD_USE_IMAGE_CAPTCHA: Final[str] = "use_image_captcha"
 FORM_FIELD_USE_AUDIO_CAPTCHA: Final[str] = "use_audio_captcha"
-FORM_FIELD_SHOW_PASSWORD: Final[str] = "showPasswordChecked"
-FORM_FIELD_EMAIL: Final[str] = "email"
-FORM_FIELD_PASSWORD: Final[str] = "password"
+FORM_FIELD_NAME_SHOW_PASSWORD: Final[str] = "showPasswordChecked"  # noqa: S105
+FORM_FIELD_NAME_EMAIL: Final[str] = "email"
+FORM_FIELD_NAME_PASSWORD: Final[str] = "password"  # noqa: S105
 
 # Form field values
 TRUE_VALUE: Final[str] = "true"

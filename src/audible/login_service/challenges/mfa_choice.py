@@ -505,7 +505,7 @@ class MFAChoiceHandler(BaseChallengeHandler):
         return options
 
     def _select_mfa_method(
-        self, mfa_options: list[MfaOption], context: ChallengeContext
+        self, mfa_options: list[MFADeviceOption], context: ChallengeContext
     ) -> str:
         """Select MFA method using callback or fallback to priority.
 
