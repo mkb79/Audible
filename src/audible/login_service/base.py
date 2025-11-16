@@ -548,7 +548,7 @@ class BaseChallengeHandler(ABC):
             validation is performed.
         """
         if not isinstance(self.callback, BaseChallengeCallback):
-            msg = (
+            msg = (  # type: ignore[unreachable]
                 f"callback must be a BaseChallengeCallback instance, "
                 f"got {type(self.callback).__name__}"
             )

@@ -452,7 +452,7 @@ def login(
         stacklevel=2,
     )
 
-    return _login_impl(
+    return _login_impl(  # type: ignore[operator, no-any-return]
         username=username,
         password=password,
         country_code=country_code,
