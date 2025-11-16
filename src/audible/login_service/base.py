@@ -365,8 +365,8 @@ class BaseChallengeCallback(ABC):
                 - APPROVAL_ALERT: Any non-empty string (actual value ignored)
 
         Raises:
-            CallbackError: If callback execution fails (e.g., network error,
-                invalid input, user cancellation).
+            NotImplementedError: This is an abstract method that must be
+                implemented by subclasses.
 
         Example:
             >>> def _resolve_challenge(self, context: ChallengeContext) -> str:

@@ -31,16 +31,14 @@ def _extract_message_from_box(box: Tag) -> str:
 class SoupPage:
     """Represents a parsed HTML page based on a httpx.Response.
 
-    - Parses the response text once into a BeautifulSoup instance.
-    - Optionally logs detected error or warning messages.
+    Parses the response text once into a BeautifulSoup instance and
+    optionally logs detected error or warning messages.
+
+    Args:
+        resp: The httpx.Response object containing the HTML source.
     """
 
     def __init__(self, resp: httpx.Response) -> None:
-        """Initialize a SoupPage instance.
-
-        Args:
-            resp: The httpx.Response object containing the HTML source.
-        """
         self.resp = resp
         self.soup = BeautifulSoup(resp.text, "html.parser")
 
@@ -55,11 +53,8 @@ class SoupPage:
             search_field: Optional dictionary to locate a specific form (e.g. {"name": "signIn"}).
 
         Returns:
-            A dictionary of form input names and values.
-            Hidden inputs include their actual values; others are empty strings.
-
-        Raises:
-            ValueError: If no form is found in the HTML.
+            dict[str, str]: A dictionary of form input names and values.
+                Hidden inputs include their actual values; others are empty strings.
         """
         form = self._find_form(search_field)
 
