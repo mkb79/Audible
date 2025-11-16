@@ -690,6 +690,11 @@ class Authenticator(httpx.Auth):
         )
         logger.info("logged in to Audible.")
 
+        if device is None:
+            from .device import IPHONE
+
+            device = IPHONE.copy()
+
         registration_service = RegistrationService(device=device)
         register_device = registration_service.register(
             with_username=with_username,
@@ -908,6 +913,8 @@ class Authenticator(httpx.Auth):
             raise Exception("No access token found.")
         if self.locale is None:
             raise Exception("No locale found.")
+        if self.device is None:
+            raise Exception("No device found.")
 
         registration_service = RegistrationService(device=self.device)
         return registration_service.deregister(

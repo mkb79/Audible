@@ -52,7 +52,7 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
 import httpx
-from bs4 import Tag
+from bs4 import NavigableString, Tag
 from PIL import Image
 
 from audible.login_service.base import (
