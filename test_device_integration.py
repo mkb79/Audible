@@ -253,14 +253,12 @@ def test_api_requests(client):
     # Test 3: Get library statistics
     logger.info("Test 3: Getting library statistics...")
     try:
-        stats = client.get(
-            "library", params={"num_results": 1, "response_groups": "stats"}
+        product_attrs = client.get(
+            "library", params={"num_results": 1, "response_groups": "product_attrs"}
         )
-        if stats and "stats" in stats:
-            logger.info("✓ Library stats request successful!")
-            logger.info(
-                "  Total items: %s", stats.get("stats", {}).get("total", "Unknown")
-            )
+        if product_attrs and "product_attrs" in product_attrs["response_groups"]:
+            logger.info("✓ Library request successful!")
+            logger.info("  Total items: %s", len(product_attrs.get("items", {})))
     except Exception as e:
         logger.warning("Stats request failed: %s", e)
 
