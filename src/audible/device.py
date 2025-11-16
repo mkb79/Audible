@@ -423,12 +423,12 @@ class AndroidDevice(BaseDevice):
         """Generate Android User-Agent string (Dalvik format)."""
         if "/" in self.os_version and ":" in self.os_version:
             # Full Android version string format
-            android_version = (
-                self.os_version.split("/")[0].replace("Android", "").strip()
-            )
+            # Extract build ID from the version string
             build = self.os_version.split(":")[1].split("/")[0]
+            # Use os_version_number for the Android version (e.g., "14", "13")
+            android_version = self.os_version_number or build
             return (
-                f"Dalvik/2.1.0 (Linux; U; {android_version}; "
+                f"Dalvik/2.1.0 (Linux; U; Android {android_version}; "
                 f"{self.device_model} Build/{build})"
             )
         else:
