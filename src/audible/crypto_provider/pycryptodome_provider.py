@@ -327,7 +327,7 @@ class PycryptodomeProvider:
         ImportError: If pycryptodome is not installed.
 
     Example:
-        >>> from audible.crypto import get_crypto_providers, PycryptodomeProvider  # doctest: +SKIP
+        >>> from audible.crypto_provider import get_crypto_providers, PycryptodomeProvider  # doctest: +SKIP
         >>> providers = get_crypto_providers(PycryptodomeProvider)  # doctest: +SKIP
         >>> providers.provider_name  # doctest: +SKIP
         'pycryptodome'

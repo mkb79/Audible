@@ -63,7 +63,7 @@ class OrjsonProvider:
         ImportError: If orjson library is not installed.
 
     Example:
-        >>> from audible.json import get_json_provider, OrjsonProvider
+        >>> from audible.json_provider import get_json_provider, OrjsonProvider
         >>> provider = get_json_provider(OrjsonProvider)
         >>> provider.provider_name
         'orjson'

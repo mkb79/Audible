@@ -228,7 +228,7 @@ class LegacyProvider:
     A UserWarning is shown on first use to encourage installing faster alternatives.
 
     Example:
-        >>> from audible.crypto import get_crypto_providers, LegacyProvider
+        >>> from audible.crypto_provider import get_crypto_providers, LegacyProvider
         >>> providers = get_crypto_providers(LegacyProvider)
         >>> providers.provider_name
         'legacy'

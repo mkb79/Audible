@@ -38,7 +38,7 @@ class StdlibProvider:
     - Guaranteed compatibility
 
     Example:
-        >>> from audible.json import get_json_provider, StdlibProvider
+        >>> from audible.json_provider import get_json_provider, StdlibProvider
         >>> provider = get_json_provider(StdlibProvider)
         >>> provider.provider_name
         'stdlib'

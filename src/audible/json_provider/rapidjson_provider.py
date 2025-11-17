@@ -55,7 +55,7 @@ class RapidjsonProvider:
         ImportError: If python-rapidjson library is not installed.
 
     Example:
-        >>> from audible.json import get_json_provider, RapidjsonProvider
+        >>> from audible.json_provider import get_json_provider, RapidjsonProvider
         >>> provider = get_json_provider(RapidjsonProvider)
         >>> provider.provider_name
         'rapidjson'

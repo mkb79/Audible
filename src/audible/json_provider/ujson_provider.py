@@ -55,7 +55,7 @@ class UjsonProvider:
         ImportError: If ujson library is not installed.
 
     Example:
-        >>> from audible.json import get_json_provider, UjsonProvider
+        >>> from audible.json_provider import get_json_provider, UjsonProvider
         >>> provider = get_json_provider(UjsonProvider)
         >>> provider.provider_name
         'ujson'

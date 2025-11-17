@@ -13,17 +13,17 @@ type-safe class-based API. Custom providers can be created by implementing the
 CryptoProvider protocol.
 
 Example:
-    >>> from audible.crypto import get_crypto_providers
+    >>> from audible.crypto_provider import get_crypto_providers
     >>> providers = get_crypto_providers()  # Auto-detect
     >>> providers.provider_name in {"cryptography", "pycryptodome", "legacy"}
     True
 
-    >>> from audible.crypto import PycryptodomeProvider  # doctest: +SKIP
+    >>> from audible.crypto_provider import PycryptodomeProvider  # doctest: +SKIP
     >>> providers = get_crypto_providers(PycryptodomeProvider)  # doctest: +SKIP
     >>> providers.provider_name  # doctest: +SKIP
     'pycryptodome'
 
-    >>> from audible.crypto import CryptographyProvider  # doctest: +SKIP
+    >>> from audible.crypto_provider import CryptographyProvider  # doctest: +SKIP
     >>> providers = get_crypto_providers(CryptographyProvider)  # doctest: +SKIP
     >>> providers.provider_name  # doctest: +SKIP
     'cryptography'
@@ -128,12 +128,12 @@ def get_crypto_providers(
         ImportError: If specified provider is unavailable.
 
     Example:
-        >>> from audible.crypto import get_crypto_providers
+        >>> from audible.crypto_provider import get_crypto_providers
         >>> providers = get_crypto_providers()  # Auto-detect
         >>> providers.provider_name in {"cryptography", "pycryptodome", "legacy"}
         True
 
-        >>> from audible.crypto import CryptographyProvider  # doctest: +SKIP
+        >>> from audible.crypto_provider import CryptographyProvider  # doctest: +SKIP
         >>> providers = get_crypto_providers(CryptographyProvider)  # doctest: +SKIP
         >>> providers.provider_name  # doctest: +SKIP
         'cryptography'

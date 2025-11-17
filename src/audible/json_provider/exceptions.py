@@ -25,7 +25,7 @@ class JSONDecodeError(json.JSONDecodeError):
         pos: Position in document where error occurred (default: 0).
 
     Example:
-        >>> from audible.json import JSONDecodeError
+        >>> from audible.json_provider import JSONDecodeError
         >>> try:
         ...     raise JSONDecodeError("Invalid JSON syntax")
         ... except JSONDecodeError as e:
@@ -50,7 +50,7 @@ class JSONEncodeError(TypeError):
         msg: Error message describing what went wrong.
 
     Example:
-        >>> from audible.json import JSONEncodeError
+        >>> from audible.json_provider import JSONEncodeError
         >>> try:
         ...     raise JSONEncodeError("Object not serializable")
         ... except JSONEncodeError as e:

@@ -329,7 +329,7 @@ class CryptographyProvider:
         ImportError: If cryptography library is not installed.
 
     Example:
-        >>> from audible.crypto import get_crypto_providers, CryptographyProvider  # doctest: +SKIP
+        >>> from audible.crypto_provider import get_crypto_providers, CryptographyProvider  # doctest: +SKIP
         >>> providers = get_crypto_providers(CryptographyProvider)  # doctest: +SKIP
         >>> providers.provider_name  # doctest: +SKIP
         'cryptography'
