@@ -29,7 +29,7 @@ class JSONProvider(Protocol):
 
         Custom providers should wrap library-specific exceptions::
 
-            from audible.json import JSONDecodeError, JSONEncodeError
+            from audible.json_provider import JSONDecodeError, JSONEncodeError
             import some_json_lib
 
             def loads(self, s: str | bytes) -> Any:
