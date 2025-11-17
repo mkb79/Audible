@@ -42,7 +42,7 @@ if TYPE_CHECKING:
     from .protocols import JSONProvider
 
 
-logger = logging.getLogger("audible.json")
+logger = logging.getLogger("audible.json_provider")
 
 # Registry state shared between helper functions
 _STATE: dict[str, JSONProvider | None] = {"auto": None, "default": None}

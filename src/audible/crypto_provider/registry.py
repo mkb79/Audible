@@ -42,7 +42,7 @@ if TYPE_CHECKING:
     from .protocols import CryptoProvider
 
 
-logger = logging.getLogger("audible.crypto")
+logger = logging.getLogger("audible.crypto_provider")
 
 # Registry state shared between helper functions
 _STATE: dict[str, CryptoProvider | None] = {"auto": None, "default": None}

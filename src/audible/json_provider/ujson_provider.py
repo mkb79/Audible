@@ -31,7 +31,7 @@ except ImportError:
     UJSON_AVAILABLE = False
 
 
-logger = logging.getLogger("audible.json.ujson")
+logger = logging.getLogger("audible.json_provider.ujson")
 
 
 class UjsonProvider:

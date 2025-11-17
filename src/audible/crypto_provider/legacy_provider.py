@@ -27,7 +27,7 @@ from pyaes import (  # type: ignore[import-untyped]
 )
 
 
-logger = logging.getLogger("audible.crypto.legacy")
+logger = logging.getLogger("audible.crypto_provider.legacy")
 
 
 def _load_rsa_private_key_legacy(pem_data: str) -> rsa.PrivateKey:

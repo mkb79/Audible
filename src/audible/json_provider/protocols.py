@@ -22,8 +22,8 @@ class JSONProvider(Protocol):
     - ASCII vs Unicode output control
 
     Exception Handling:
-        All implementations MUST raise :exc:`audible.json.JSONDecodeError` when
-        JSON parsing fails, and :exc:`audible.json.JSONEncodeError` when
+        All implementations MUST raise :exc:`audible.json_provider.JSONDecodeError` when
+        JSON parsing fails, and :exc:`audible.json_provider.JSONEncodeError` when
         serialization fails. This ensures consistent error handling across
         all providers and calling code.
 

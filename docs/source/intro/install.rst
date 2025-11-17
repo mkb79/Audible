@@ -130,7 +130,7 @@ Most use cases do not need direct access to the crypto registry. Prefer wiring
 providers through high-level APIs such as ``Authenticator``::
 
     from audible import Authenticator
-    from audible.crypto import CryptographyProvider, set_default_crypto_provider
+    from audible.crypto_provider import CryptographyProvider, set_default_crypto_provider
 
     auth = Authenticator.from_file(
         "auth.json",
@@ -151,7 +151,7 @@ for general external use.
 The library automatically selects the best available JSON provider. For explicit
 control, use ``set_default_json_provider()``::
 
-    from audible.json import set_default_json_provider
+    from audible.json_provider import set_default_json_provider
 
     # Use orjson explicitly (if installed)
     set_default_json_provider("orjson")

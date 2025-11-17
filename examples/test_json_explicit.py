@@ -4,7 +4,7 @@ This example demonstrates how to explicitly select and configure JSON providers
 for specific use cases or performance requirements.
 """
 
-from audible.json import (
+from audible.json_provider import (
     OrjsonProvider,
     StdlibProvider,
     UjsonProvider,

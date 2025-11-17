@@ -29,7 +29,7 @@ from .exceptions import (
     Unauthorized,
     UnexpectedError,
 )
-from .json import JSONDecodeError, get_json_provider
+from .json_provider import JSONDecodeError, get_json_provider
 from .localization import LOCALE_TEMPLATES, Locale
 
 

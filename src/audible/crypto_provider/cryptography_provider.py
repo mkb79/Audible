@@ -40,7 +40,7 @@ except ImportError:
     CRYPTOGRAPHY_AVAILABLE = False
 
 
-logger = logging.getLogger("audible.crypto.cryptography")
+logger = logging.getLogger("audible.crypto_provider.cryptography")
 
 
 def _load_rsa_private_key_cryptography(pem_data: str) -> Any:

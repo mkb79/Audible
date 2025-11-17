@@ -1,6 +1,6 @@
 """Integration tests for JSON providers in real-world scenarios."""
 
-from audible.json import get_json_provider
+from audible.json_provider import get_json_provider
 
 
 class TestRealWorldUsage:

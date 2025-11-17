@@ -31,7 +31,7 @@ except ImportError:
     RAPIDJSON_AVAILABLE = False
 
 
-logger = logging.getLogger("audible.json.rapidjson")
+logger = logging.getLogger("audible.json_provider.rapidjson")
 
 
 class RapidjsonProvider:

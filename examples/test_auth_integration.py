@@ -14,7 +14,7 @@ from pathlib import Path
 from audible import Authenticator
 from audible.aescipher import AESCipher
 from audible.auth import sign_request
-from audible.crypto import (
+from audible.crypto_provider import (
     CryptographyProvider,
     LegacyProvider,
     PycryptodomeProvider,

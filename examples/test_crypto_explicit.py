@@ -6,7 +6,7 @@ Run with:
 
 from __future__ import annotations
 
-from audible.crypto import (
+from audible.crypto_provider import (
     CryptographyProvider,
     LegacyProvider,
     PycryptodomeProvider,

@@ -2,7 +2,7 @@
 
 import pytest
 
-from audible.json import (
+from audible.json_provider import (
     OrjsonProvider,
     RapidjsonProvider,
     StdlibProvider,

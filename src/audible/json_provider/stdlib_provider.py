@@ -18,7 +18,7 @@ from typing import Any
 from .exceptions import JSONDecodeError, JSONEncodeError
 
 
-logger = logging.getLogger("audible.json.stdlib")
+logger = logging.getLogger("audible.json_provider.stdlib")
 
 # stdlib is always available
 STDLIB_AVAILABLE = True

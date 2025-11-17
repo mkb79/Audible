@@ -38,7 +38,7 @@ except ImportError:
     ORJSON_AVAILABLE = False
 
 
-logger = logging.getLogger("audible.json.orjson")
+logger = logging.getLogger("audible.json_provider.orjson")
 
 
 class OrjsonProvider:

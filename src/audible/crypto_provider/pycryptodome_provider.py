@@ -40,7 +40,7 @@ except ImportError:
     PYCRYPTODOME_AVAILABLE = False
 
 
-logger = logging.getLogger("audible.crypto.pycryptodome")
+logger = logging.getLogger("audible.crypto_provider.pycryptodome")
 
 
 def _load_rsa_private_key_pycryptodome(pem_data: str) -> Any:
