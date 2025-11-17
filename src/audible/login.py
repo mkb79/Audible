@@ -15,7 +15,7 @@ from bs4 import BeautifulSoup, NavigableString, Tag
 from PIL import Image
 
 from .exceptions import AudibleError
-from .json import get_json_provider
+from .json_provider import get_json_provider
 from .metadata import encrypt_metadata, meta_audible_app
 
 

@@ -102,7 +102,7 @@ Prefer configuring providers through high-level APIs such as `Authenticator`:
 
 ```python
 from audible import Authenticator
-from audible.crypto import CryptographyProvider, set_default_crypto_provider
+from audible.crypto_provider import CryptographyProvider, set_default_crypto_provider
 
 # Force a specific provider for this authenticator instance
 auth = Authenticator.from_file(
@@ -197,7 +197,7 @@ Most applications do not need to interact with the JSON layer directly.
 The library automatically uses the best provider. However, you can override:
 
 ```python
-from audible.json import OrjsonProvider, get_json_provider, set_default_json_provider
+from audible.json_provider import OrjsonProvider, get_json_provider, set_default_json_provider
 
 # Get auto-detected provider
 provider = get_json_provider()

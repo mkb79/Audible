@@ -2,7 +2,7 @@
 
 import pytest
 
-from audible.json import (
+from audible.json_provider import (
     OrjsonProvider,
     RapidjsonProvider,
     StdlibProvider,
@@ -84,7 +84,7 @@ class TestUjsonProvider:
 
     def test_import_available(self) -> None:
         """Test that UJSON_AVAILABLE flag is correct."""
-        from audible.json.ujson_provider import UJSON_AVAILABLE
+        from audible.json_provider.ujson_provider import UJSON_AVAILABLE
 
         try:
             import ujson  # noqa: F401
@@ -165,7 +165,7 @@ class TestRapidjsonProvider:
 
     def test_import_available(self) -> None:
         """Test that RAPIDJSON_AVAILABLE flag is correct."""
-        from audible.json.rapidjson_provider import RAPIDJSON_AVAILABLE
+        from audible.json_provider.rapidjson_provider import RAPIDJSON_AVAILABLE
 
         try:
             import rapidjson  # noqa: F401
@@ -218,7 +218,7 @@ class TestOrjsonProvider:
 
     def test_import_available(self) -> None:
         """Test that ORJSON_AVAILABLE flag is correct."""
-        from audible.json.orjson_provider import ORJSON_AVAILABLE
+        from audible.json_provider.orjson_provider import ORJSON_AVAILABLE
 
         try:
             import orjson  # noqa: F401
@@ -395,9 +395,9 @@ class TestRegistry:
         # We'll test by trying to force a provider that might not exist
         try:
             # Try to import all providers to see which ones exist
-            from audible.json.orjson_provider import ORJSON_AVAILABLE
-            from audible.json.rapidjson_provider import RAPIDJSON_AVAILABLE
-            from audible.json.ujson_provider import UJSON_AVAILABLE
+            from audible.json_provider.orjson_provider import ORJSON_AVAILABLE
+            from audible.json_provider.rapidjson_provider import RAPIDJSON_AVAILABLE
+            from audible.json_provider.ujson_provider import UJSON_AVAILABLE
 
             # If all are available, skip this test
             if ORJSON_AVAILABLE and UJSON_AVAILABLE and RAPIDJSON_AVAILABLE:

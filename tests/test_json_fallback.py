@@ -2,7 +2,7 @@
 
 import pytest
 
-from audible.json import OrjsonProvider, get_json_provider
+from audible.json_provider import OrjsonProvider, get_json_provider
 
 
 class TestOrjsonFallback:

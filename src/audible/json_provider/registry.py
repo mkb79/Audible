@@ -14,17 +14,17 @@ type-safe class-based API. Custom providers can be created by implementing the
 JSONProvider protocol.
 
 Example:
-    >>> from audible.json import get_json_provider
+    >>> from audible.json_provider import get_json_provider
     >>> provider = get_json_provider()  # Auto-detect
     >>> provider.provider_name in {"orjson", "ujson", "rapidjson", "stdlib"}
     True
 
-    >>> from audible.json import UjsonProvider  # doctest: +SKIP
+    >>> from audible.json_provider import UjsonProvider  # doctest: +SKIP
     >>> provider = get_json_provider(UjsonProvider)  # doctest: +SKIP
     >>> provider.provider_name  # doctest: +SKIP
     'ujson'
 
-    >>> from audible.json import OrjsonProvider  # doctest: +SKIP
+    >>> from audible.json_provider import OrjsonProvider  # doctest: +SKIP
     >>> provider = get_json_provider(OrjsonProvider)  # doctest: +SKIP
     >>> provider.provider_name  # doctest: +SKIP
     'orjson'
@@ -42,7 +42,7 @@ if TYPE_CHECKING:
     from .protocols import JSONProvider
 
 
-logger = logging.getLogger("audible.json")
+logger = logging.getLogger("audible.json_provider")
 
 # Registry state shared between helper functions
 _STATE: dict[str, JSONProvider | None] = {"auto": None, "default": None}
@@ -170,12 +170,12 @@ def get_json_provider(
         provider instances.
 
     Example:
-        >>> from audible.json import get_json_provider
+        >>> from audible.json_provider import get_json_provider
         >>> provider = get_json_provider()  # Auto-detect
         >>> provider.provider_name in {"orjson", "ujson", "rapidjson", "stdlib"}
         True
 
-        >>> from audible.json import OrjsonProvider  # doctest: +SKIP
+        >>> from audible.json_provider import OrjsonProvider  # doctest: +SKIP
         >>> provider = get_json_provider(OrjsonProvider)  # doctest: +SKIP
         >>> provider.provider_name  # doctest: +SKIP
         'orjson'
@@ -226,7 +226,7 @@ def set_default_json_provider(
         This function is thread-safe.
 
     Example:
-        >>> from audible.json import set_default_json_provider, StdlibProvider
+        >>> from audible.json_provider import set_default_json_provider, StdlibProvider
         >>> set_default_json_provider(StdlibProvider)  # Force stdlib
         >>> set_default_json_provider(None)  # Restore auto-detection
     """

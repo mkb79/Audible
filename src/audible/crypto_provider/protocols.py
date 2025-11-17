@@ -196,7 +196,7 @@ class CryptoProvider(Protocol):
         ...     @property
         ...     def provider_name(self) -> str:
         ...         return "my-custom-provider"
-        >>> from audible.crypto import get_crypto_providers  # doctest: +SKIP
+        >>> from audible.crypto_provider import get_crypto_providers  # doctest: +SKIP
         >>> providers = get_crypto_providers(MyProvider)  # doctest: +SKIP
         >>> providers.provider_name  # doctest: +SKIP
         'my-custom-provider'

@@ -12,7 +12,7 @@ The provider is automatically selected at runtime based on availability:
 Users can explicitly select a provider using the class-based API.
 
 Example:
-    >>> from audible.crypto import get_crypto_providers
+    >>> from audible.crypto_provider import get_crypto_providers
     >>> providers = get_crypto_providers()  # Auto-detect
     >>> key = bytes([0]) * 16
     >>> iv = bytes([1]) * 16
@@ -20,7 +20,7 @@ Example:
     >>> providers.aes.decrypt(key, iv, ciphertext)
     'hello'
 
-    >>> from audible.crypto import CryptographyProvider  # doctest: +SKIP
+    >>> from audible.crypto_provider import CryptographyProvider  # doctest: +SKIP
     >>> providers = get_crypto_providers(CryptographyProvider)  # doctest: +SKIP
     >>> providers.provider_name  # doctest: +SKIP
     'cryptography'

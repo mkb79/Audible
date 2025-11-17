@@ -9,17 +9,17 @@ from typing import Any, cast
 
 import pytest
 
-from audible.crypto import set_default_crypto_provider
-from audible.json import set_default_json_provider
+from audible.crypto_provider import set_default_crypto_provider
+from audible.json_provider import set_default_json_provider
 
 
 try:
-    from audible.crypto.cryptography_provider import CRYPTOGRAPHY_AVAILABLE
+    from audible.crypto_provider.cryptography_provider import CRYPTOGRAPHY_AVAILABLE
 except ImportError:  # pragma: no cover - module missing when extra absent
     CRYPTOGRAPHY_AVAILABLE = False
 
 try:
-    from audible.crypto.pycryptodome_provider import PYCRYPTODOME_AVAILABLE
+    from audible.crypto_provider.pycryptodome_provider import PYCRYPTODOME_AVAILABLE
 except ImportError:  # pragma: no cover - module missing when extra absent
     PYCRYPTODOME_AVAILABLE = False
 

@@ -18,7 +18,7 @@ from typing import Any
 from .exceptions import JSONDecodeError, JSONEncodeError
 
 
-logger = logging.getLogger("audible.json.stdlib")
+logger = logging.getLogger("audible.json_provider.stdlib")
 
 # stdlib is always available
 STDLIB_AVAILABLE = True
@@ -38,7 +38,7 @@ class StdlibProvider:
     - Guaranteed compatibility
 
     Example:
-        >>> from audible.json import get_json_provider, StdlibProvider
+        >>> from audible.json_provider import get_json_provider, StdlibProvider
         >>> provider = get_json_provider(StdlibProvider)
         >>> provider.provider_name
         'stdlib'

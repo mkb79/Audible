@@ -1,16 +1,16 @@
-"""python-rapidjson provider using the python-rapidjson library.
+"""ujson provider using the ujson library.
 
-This module implements the JSON protocol using python-rapidjson, a Python
-wrapper for the C++ RapidJSON library.
+This module implements the JSON protocol using ujson, a C-based JSON library
+that provides excellent performance while maintaining good compatibility with
+stdlib json.
 
-python-rapidjson characteristics:
+ujson characteristics:
 - 2-3x faster than stdlib for serialization/deserialization
-- Native support for custom indentation
+- Native support for custom indentation (including indent=4)
 - Good compatibility with stdlib json API
-- No native separators support
-- Excellent for both compact and pretty-printed output
+- No native separators support (uses default: ', ' and ': ')
 
-This serves as an alternative fallback provider to ujson.
+This is the preferred fallback provider for orjson when indent=4 is needed.
 """
 
 from __future__ import annotations
@@ -22,43 +22,43 @@ from typing import Any
 from .exceptions import JSONDecodeError, JSONEncodeError
 
 
-# Optional import - only available if python-rapidjson is installed
+# Optional import - only available if ujson is installed
 try:
-    import rapidjson
+    import ujson
 
-    RAPIDJSON_AVAILABLE = True
+    UJSON_AVAILABLE = True
 except ImportError:
-    RAPIDJSON_AVAILABLE = False
+    UJSON_AVAILABLE = False
 
 
-logger = logging.getLogger("audible.json.rapidjson")
+logger = logging.getLogger("audible.json_provider.ujson")
 
 
-class RapidjsonProvider:
-    r"""JSON provider using the python-rapidjson library.
+class UjsonProvider:
+    r"""JSON provider using the ujson library.
 
-    This provider implements JSON operations using python-rapidjson, a C++
-    wrapper that provides excellent performance. It supports custom indentation
-    natively, making it suitable for all common use cases.
+    This provider implements JSON operations using ujson, a C-based library
+    that offers excellent performance. It supports custom indentation natively,
+    making it an ideal fallback for orjson when indent=4 is required.
 
     Performance characteristics:
-    - 2-3x faster than stdlib (C++ implementation)
-    - Native indent support
-    - No separators customization
-    - Robust error handling
+    - 2-3x faster than stdlib (C implementation)
+    - Native indent support (any positive integer)
+    - No separators customization (uses defaults)
+    - Excellent for pretty-printed output
 
     Limitations:
     - No custom separators support
     - Falls back to stdlib for separators
 
     Raises:
-        ImportError: If python-rapidjson library is not installed.
+        ImportError: If ujson library is not installed.
 
     Example:
-        >>> from audible.json import get_json_provider, RapidjsonProvider
-        >>> provider = get_json_provider(RapidjsonProvider)
+        >>> from audible.json_provider import get_json_provider, UjsonProvider
+        >>> provider = get_json_provider(UjsonProvider)
         >>> provider.provider_name
-        'rapidjson'
+        'ujson'
         >>> print(provider.dumps({"key": "value"}, indent=4))
         {
             "key": "value"
@@ -66,10 +66,10 @@ class RapidjsonProvider:
     """
 
     def __init__(self) -> None:
-        if not RAPIDJSON_AVAILABLE:
+        if not UJSON_AVAILABLE:
             raise ImportError(
-                "python-rapidjson is not installed. Install with: pip install "
-                "audible[rapidjson] or audible[json-full] for complete coverage."
+                "ujson is not installed. Install with: pip install "
+                "audible[ujson] or audible[json-full] for complete coverage."
             )
 
     def dumps(
@@ -80,12 +80,12 @@ class RapidjsonProvider:
         separators: tuple[str, str] | None = None,
         ensure_ascii: bool = True,
     ) -> str:
-        """Serialize obj to JSON string using python-rapidjson.
+        """Serialize obj to JSON string using ujson.
 
         Args:
             obj: Python object to serialize.
             indent: Number of spaces for indentation.
-            separators: If specified, falls back to stdlib (rapidjson doesn't support this).
+            separators: If specified, falls back to stdlib (ujson doesn't support this).
             ensure_ascii: If True, escape non-ASCII characters.
 
         Returns:
@@ -95,12 +95,12 @@ class RapidjsonProvider:
             JSONEncodeError: If obj cannot be serialized to JSON.
 
         Note:
-            Falls back to stdlib json if separators are specified, as rapidjson
+            Falls back to stdlib json if separators are specified, as ujson
             doesn't support custom separators.
         """
-        # Fallback to stdlib for separators (rapidjson doesn't support this)
+        # Fallback to stdlib for separators (ujson doesn't support this)
         if separators is not None:
-            logger.debug("rapidjson -> stdlib fallback (separators not supported)")
+            logger.debug("ujson -> stdlib fallback (separators not supported)")
             try:
                 return json.dumps(
                     obj,
@@ -111,17 +111,18 @@ class RapidjsonProvider:
             except (TypeError, ValueError) as e:
                 raise JSONEncodeError(f"Object not JSON serializable: {e}") from e
 
-        # rapidjson native handling
-        # Note: rapidjson uses different parameter names
+        # ujson native handling
         try:
-            if indent is not None:
-                return rapidjson.dumps(obj, indent=indent, ensure_ascii=ensure_ascii)
-            return rapidjson.dumps(obj, ensure_ascii=ensure_ascii)
+            return ujson.dumps(
+                obj,
+                indent=indent if indent is not None else 0,
+                ensure_ascii=ensure_ascii,
+            )
         except (TypeError, ValueError, OverflowError) as e:
             raise JSONEncodeError(f"Object not JSON serializable: {e}") from e
 
     def loads(self, s: str | bytes) -> Any:
-        """Deserialize JSON string using python-rapidjson.
+        """Deserialize JSON string using ujson.
 
         Args:
             s: JSON string or bytes to deserialize.
@@ -139,14 +140,14 @@ class RapidjsonProvider:
                 raise JSONDecodeError(f"Invalid UTF-8 in JSON bytes: {e}") from e
 
         try:
-            return rapidjson.loads(s)
-        except (rapidjson.JSONDecodeError, ValueError) as e:
+            return ujson.loads(s)
+        except (ujson.JSONDecodeError, ValueError) as e:
             raise JSONDecodeError(str(e)) from e
 
     @property
     def provider_name(self) -> str:
         """Return provider name."""
-        return "rapidjson"
+        return "ujson"
 
 
-__all__ = ["RAPIDJSON_AVAILABLE", "RapidjsonProvider"]
+__all__ = ["UJSON_AVAILABLE", "UjsonProvider"]

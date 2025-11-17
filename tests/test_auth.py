@@ -8,7 +8,7 @@ import httpx
 import pytest
 
 from audible.auth import Authenticator
-from audible.crypto import (
+from audible.crypto_provider import (
     CryptographyProvider,
     CryptoProvider,
     LegacyProvider,

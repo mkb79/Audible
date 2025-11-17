@@ -40,7 +40,7 @@ except ImportError:
     CRYPTOGRAPHY_AVAILABLE = False
 
 
-logger = logging.getLogger("audible.crypto.cryptography")
+logger = logging.getLogger("audible.crypto_provider.cryptography")
 
 
 def _load_rsa_private_key_cryptography(pem_data: str) -> Any:
@@ -329,7 +329,7 @@ class CryptographyProvider:
         ImportError: If cryptography library is not installed.
 
     Example:
-        >>> from audible.crypto import get_crypto_providers, CryptographyProvider  # doctest: +SKIP
+        >>> from audible.crypto_provider import get_crypto_providers, CryptographyProvider  # doctest: +SKIP
         >>> providers = get_crypto_providers(CryptographyProvider)  # doctest: +SKIP
         >>> providers.provider_name  # doctest: +SKIP
         'cryptography'
