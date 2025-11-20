@@ -78,7 +78,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
   - `pycryptodome` (C-based) - install with `pip install audible[pycryptodome]`
   - Automatic provider selection: cryptography → pycryptodome → legacy (pure Python fallback)
   - Performance improvements: 5-10x faster AES operations, 10-20x faster RSA operations, 3-5x faster PBKDF2, 5-10x faster hashing
-- New `audible.crypto` module with protocol-based provider abstraction layer:
+- New `audible.crypto_provider` module with protocol-based provider abstraction layer:
   - `protocols.py` - Type-safe Protocol definitions for crypto operations
   - `cryptography_provider.py` - High-performance implementation using cryptography library
   - `pycryptodome_provider.py` - High-performance implementation using pycryptodome library
@@ -96,7 +96,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
   - Automatic provider selection: orjson → ujson → rapidjson → stdlib (pure Python fallback)
   - Performance improvements: 4-5x faster compact JSON (orjson), 2-3x faster pretty-printed JSON (ujson/rapidjson)
   - Smart fallback logic: orjson automatically uses ujson/rapidjson for indent=4
-- New `audible.json` module with protocol-based provider abstraction layer:
+- New `audible.json_provider` module with protocol-based provider abstraction layer:
   - `protocols.py` - Type-safe Protocol definition for JSON operations
   - `orjson_provider.py` - High-performance implementation using orjson library with smart fallback logic
   - `ujson_provider.py` - High-performance implementation using ujson library
@@ -107,6 +107,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ### Changed
 
+- **BREAKING (unreleased modules only)**: Renamed `audible.json` module to `audible.json_provider` to avoid naming conflicts with Python's built-in json module
+- **BREAKING (unreleased modules only)**: Renamed `audible.crypto` module to `audible.crypto_provider` for consistency and clarity
+  - Note: These modules have not been released yet, so this affects only users testing from the main branch
+  - All imports must be updated: `from audible.json import` → `from audible.json_provider import`
+  - All imports must be updated: `from audible.crypto import` → `from audible.crypto_provider import`
 - **Replaced `darglint` with `pydoclint` for docstring validation** - modern, actively maintained alternative with better Protocol support
 - **Refactored login module structure**: External login functionality moved to `audible.login.external` submodule
   - New utility functions: `extract_authorization_code_from_url()` and `extract_authorization_code_from_response()` for OAuth code extraction

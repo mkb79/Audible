@@ -22,14 +22,14 @@ class JSONProvider(Protocol):
     - ASCII vs Unicode output control
 
     Exception Handling:
-        All implementations MUST raise :exc:`audible.json.JSONDecodeError` when
-        JSON parsing fails, and :exc:`audible.json.JSONEncodeError` when
+        All implementations MUST raise :exc:`audible.json_provider.JSONDecodeError` when
+        JSON parsing fails, and :exc:`audible.json_provider.JSONEncodeError` when
         serialization fails. This ensures consistent error handling across
         all providers and calling code.
 
         Custom providers should wrap library-specific exceptions::
 
-            from audible.json import JSONDecodeError, JSONEncodeError
+            from audible.json_provider import JSONDecodeError, JSONEncodeError
             import some_json_lib
 
             def loads(self, s: str | bytes) -> Any:

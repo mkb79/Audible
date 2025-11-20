@@ -11,7 +11,7 @@ import pytest
 
 from audible.aescipher import AESCipher, decrypt_voucher_from_licenserequest
 from audible.auth import Authenticator, sign_request
-from audible.crypto import (
+from audible.crypto_provider import (
     CryptographyProvider,
     LegacyProvider,
     PycryptodomeProvider,

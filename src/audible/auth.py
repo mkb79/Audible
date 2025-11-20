@@ -19,10 +19,10 @@ from httpx import Cookies
 
 from .activation_bytes import get_activation_bytes as get_ab
 from .aescipher import AESCipher, detect_file_encryption
-from .crypto import get_crypto_providers
+from .crypto_provider import get_crypto_providers
 from .device import IPHONE, BaseDevice
 from .exceptions import AuthFlowError, FileEncryptionError, NoRefreshToken
-from .json import get_json_provider
+from .json_provider import get_json_provider
 from .login import BaseChallengeCallback, LoginService, external_login
 from .register import RegistrationService
 from .utils import test_convert
@@ -32,7 +32,7 @@ if TYPE_CHECKING:
     import pathlib
 
     from ._types import TrueFalseT
-    from .crypto.protocols import CryptoProvider
+    from .crypto_provider.protocols import CryptoProvider
     from .localization import Locale
 
 

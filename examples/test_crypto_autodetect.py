@@ -9,7 +9,7 @@ Run with different extras to observe provider selection:
 
 from __future__ import annotations
 
-from audible.crypto import get_crypto_providers
+from audible.crypto_provider import get_crypto_providers
 
 
 def main() -> None:

@@ -40,7 +40,7 @@ except ImportError:
     PYCRYPTODOME_AVAILABLE = False
 
 
-logger = logging.getLogger("audible.crypto.pycryptodome")
+logger = logging.getLogger("audible.crypto_provider.pycryptodome")
 
 
 def _load_rsa_private_key_pycryptodome(pem_data: str) -> Any:
@@ -327,7 +327,7 @@ class PycryptodomeProvider:
         ImportError: If pycryptodome is not installed.
 
     Example:
-        >>> from audible.crypto import get_crypto_providers, PycryptodomeProvider  # doctest: +SKIP
+        >>> from audible.crypto_provider import get_crypto_providers, PycryptodomeProvider  # doctest: +SKIP
         >>> providers = get_crypto_providers(PycryptodomeProvider)  # doctest: +SKIP
         >>> providers.provider_name  # doctest: +SKIP
         'pycryptodome'

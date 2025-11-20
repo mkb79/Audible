@@ -18,14 +18,14 @@ The provider is automatically selected at runtime based on availability:
 Users can explicitly select a provider using the class-based API.
 
 Example:
-    >>> from audible.json import get_json_provider
+    >>> from audible.json_provider import get_json_provider
     >>> provider = get_json_provider()  # Auto-detect
     >>> data = {"name": "Audible", "version": "1.0"}
     >>> json_str = provider.dumps(data, indent=4)
     >>> provider.loads(json_str)
     {'name': 'Audible', 'version': '1.0'}
 
-    >>> from audible.json import OrjsonProvider  # doctest: +SKIP
+    >>> from audible.json_provider import OrjsonProvider  # doctest: +SKIP
     >>> provider = get_json_provider(OrjsonProvider)  # doctest: +SKIP
     >>> provider.provider_name  # doctest: +SKIP
     'orjson'

@@ -8,7 +8,11 @@ aescipher.py, and login.py.
 import json
 from typing import Any
 
-from audible.json import StdlibProvider, get_json_provider, set_default_json_provider
+from audible.json_provider import (
+    StdlibProvider,
+    get_json_provider,
+    set_default_json_provider,
+)
 
 
 class TestProviderSwitching:

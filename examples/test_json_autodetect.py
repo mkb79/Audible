@@ -13,7 +13,7 @@ The library automatically uses the fastest available provider while maintaining
 full backward compatibility with stdlib json.
 """
 
-from audible.json import get_json_provider
+from audible.json_provider import get_json_provider
 
 
 # Get the auto-detected provider

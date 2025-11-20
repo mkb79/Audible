@@ -11,14 +11,14 @@ from collections.abc import Callable
 from hashlib import sha256
 from typing import TYPE_CHECKING, Any, Literal, cast
 
-from .crypto import get_crypto_providers
-from .json import JSONDecodeError, get_json_provider
+from .crypto_provider import get_crypto_providers
+from .json_provider import JSONDecodeError, get_json_provider
 
 
 if TYPE_CHECKING:
     import audible
 
-    from .crypto.protocols import CryptoProvider, HashAlgorithm
+    from .crypto_provider.protocols import CryptoProvider, HashAlgorithm
 
 
 logger = logging.getLogger("audible.aescipher")
