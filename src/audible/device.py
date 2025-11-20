@@ -289,7 +289,7 @@ class BaseDevice(ABC):
         Returns:
             Dictionary with login cookies to prevent CAPTCHA.
         """
-        from .json import get_json_provider
+        from .json_provider import get_json_provider
 
         # FRC token (random bytes)
         token_bytes = secrets.token_bytes(313)
