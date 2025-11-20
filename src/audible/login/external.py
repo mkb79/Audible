@@ -3,6 +3,7 @@
 This module provides functions for logging in to Audible using an external
 browser (manual or automated with Playwright).
 """
+
 from __future__ import annotations
 
 import logging
@@ -76,9 +77,7 @@ def extract_authorization_code_from_url(url: httpx.URL) -> str:
         parsed_url = parse_qs(url.query.decode())
         return parsed_url["openid.oa2.authorization_code"][0]
     except (KeyError, IndexError) as e:
-        raise ValueError(
-            f"No authorization code found in URL: {url}"
-        ) from e
+        raise ValueError(f"No authorization code found in URL: {url}") from e
 
 
 def extract_authorization_code_from_response(resp: httpx.Response) -> str:
@@ -333,7 +332,9 @@ def external_login(
     # Create locale-like object for OAuthURLBuilder
     from audible.localization import Locale  # noqa: PLC0415
 
-    locale = Locale(country_code=country_code, domain=domain, market_place_id=market_place_id)
+    locale = Locale(
+        country_code=country_code, domain=domain, market_place_id=market_place_id
+    )
 
     # Generate PKCE
     pkce = PKCE.generate()

@@ -30,7 +30,6 @@ Example:
     >>> provider.provider_name  # doctest: +SKIP
     'orjson'
 """
-# ruff: noqa: A005 - Module name intentionally shadows stdlib for API consistency
 
 from .exceptions import JSONDecodeError, JSONEncodeError
 from .orjson_provider import OrjsonProvider

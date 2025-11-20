@@ -11,6 +11,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - **Login callback interface completely redesigned**: Authentication challenge callbacks are now class-based instead of simple functions
 
   **Old callback interface (v0.10.x and earlier):**
+
   ```python
   # Simple functions with direct parameters
   def default_captcha_callback(captcha_url: str) -> str:
@@ -34,6 +35,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
   ```
 
   **New callback interface (v0.11.0+):**
+
   ```python
   # Class-based callbacks inheriting from BaseChallengeCallback
   from audible.login import (
@@ -59,6 +61,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
   ```
 
   **Migration guide:**
+
   - Replace callback functions with callback class instances
   - Update custom callbacks to inherit from `BaseChallengeCallback`
   - Implement `_resolve_challenge(context: ChallengeContext)` instead of direct parameters
