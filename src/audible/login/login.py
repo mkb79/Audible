@@ -151,11 +151,6 @@ class _ResponseDumper:
     Files are named with timestamps and sequential counters:
     login_response_20250115_143022_001_captcha.html
 
-    Attributes:
-        _enabled: Whether dumping is enabled
-        _directory: Directory path for dump files
-        _counter: Sequential counter for file naming
-
     Example:
         .. code-block:: python
 
@@ -170,7 +165,6 @@ class _ResponseDumper:
     """
 
     def __init__(self) -> None:
-        """Initialize response dumper based on environment variables."""
         self._enabled = bool(os.environ.get("AUDIBLE_DUMP_LOGIN_HTML"))
         dir_override = os.environ.get("AUDIBLE_DUMP_LOGIN_DIR", "test_logs")
         self._directory = Path(dir_override)
@@ -236,11 +230,15 @@ class ChallengeOrchestrator:
     4. CVF (credential verification)
     5. Approval alert (notification-based approval)
 
-    Attributes:
-        _session: HTTP client session shared across all handlers
-        _username: User's Amazon username
-        _password: User's Amazon password
-        _callbacks: Dict mapping challenge types to callback instances
+    Args:
+        session: HTTP client session for making requests
+        username: Amazon username/email
+        password: Amazon password
+        captcha_callback: Custom CAPTCHA callback or None for default
+        mfa_choice_callback: Custom MFA choice callback or None for default
+        otp_callback: Custom OTP callback or None for default
+        cvf_callback: Custom CVF callback or None for default
+        approval_callback: Custom approval callback or None for default
 
     Example:
         .. code-block:: python
@@ -271,18 +269,6 @@ class ChallengeOrchestrator:
         cvf_callback: BaseChallengeCallback | None = None,
         approval_callback: BaseChallengeCallback | None = None,
     ):
-        """Initialize orchestrator with session, credentials, and callbacks.
-
-        Args:
-            session: HTTP client session for making requests
-            username: Amazon username/email
-            password: Amazon password
-            captcha_callback: Custom CAPTCHA callback or None for default
-            mfa_choice_callback: Custom MFA choice callback or None for default
-            otp_callback: Custom OTP callback or None for default
-            cvf_callback: Custom CVF callback or None for default
-            approval_callback: Custom approval callback or None for default
-        """
         self._session = session
         self._username = username
         self._password = password
@@ -445,9 +431,14 @@ class LoginService:
     The service uses the context manager protocol to ensure proper cleanup
     of the HTTP session.
 
-    Attributes:
-        device: Device configuration to emulate (e.g., IPHONE, ANDROID)
-        locale: Marketplace locale (country code, domain, marketplace ID)
+    Args:
+        device: Device configuration to emulate during login
+        locale: Marketplace locale for login
+        captcha_callback: Custom CAPTCHA callback or None for default
+        mfa_choice_callback: Custom MFA choice callback or None for default
+        otp_callback: Custom OTP callback or None for default
+        cvf_callback: Custom CVF callback or None for default
+        approval_callback: Custom approval callback or None for default
 
     Example:
         .. code-block:: python
@@ -479,17 +470,6 @@ class LoginService:
         cvf_callback: BaseChallengeCallback | None = None,
         approval_callback: BaseChallengeCallback | None = None,
     ):
-        """Initialize login service with device and locale configuration.
-
-        Args:
-            device: Device configuration to emulate during login
-            locale: Marketplace locale for login
-            captcha_callback: Custom CAPTCHA callback or None for default
-            mfa_choice_callback: Custom MFA choice callback or None for default
-            otp_callback: Custom OTP callback or None for default
-            cvf_callback: Custom CVF callback or None for default
-            approval_callback: Custom approval callback or None for default
-        """
         self.device = device
         self.locale = locale
         self._captcha_callback = captcha_callback
@@ -543,7 +523,7 @@ class LoginService:
             LoginResult: Contains authorization code, PKCE verifier, locale,
                 and device information needed for registration
 
-        Raises:
+        Raises:  # noqa: DOC502
             ValueError: If with_username is True for unsupported marketplace
             RuntimeError: If authorization code cannot be extracted or if
                 too many challenge iterations occur
@@ -659,6 +639,9 @@ class LoginService:
 
         Returns:
             tuple[SoupPage, httpx.Response]: Initial response page and HTTP response
+
+        Raises:
+            RuntimeError: If session is not initialized.
         """
         if self._session is None:
             msg = "Session not initialized. Call login() first."
@@ -710,6 +693,9 @@ class LoginService:
 
         Returns:
             tuple[SoupPage, httpx.Response]: Login response page and HTTP response
+
+        Raises:
+            RuntimeError: If session is not initialized.
         """
         if self._session is None:
             msg = "Session not initialized. Call login() first."

@@ -291,9 +291,6 @@ def external_login(
             - serial: The device serial
             - device: The BaseDevice instance used
 
-    Raises:
-        ValueError: If authorization code not found in redirect URL.
-
     Example:
         >>> from audible.login import external_login  # doctest: +SKIP
         >>> result = external_login(  # doctest: +SKIP

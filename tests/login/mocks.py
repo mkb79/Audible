@@ -60,11 +60,12 @@ class MockCaptchaCallback(BaseChallengeCallback):
     This callback returns a predetermined response without user interaction,
     making it suitable for automated testing and CI/CD pipelines.
 
+    Args:
+        response: The response to return when called. Default is
+            "mock_captcha_solution".
+
     Attributes:
         challenge_type: Set to ChallengeType.CAPTCHA
-        response: The response to return when called
-        call_count: Number of times this callback has been called
-        last_context: The last ChallengeContext passed to this callback
 
     Example:
         >>> callback = MockCaptchaCallback("test_solution")
@@ -85,12 +86,6 @@ class MockCaptchaCallback(BaseChallengeCallback):
     challenge_type = ChallengeType.CAPTCHA
 
     def __init__(self, response: str = "mock_captcha_solution") -> None:
-        """Initialize the mock callback.
-
-        Args:
-            response: The response to return when called. Default is
-                "mock_captcha_solution".
-        """
         self.response = response
         self.call_count = 0
         self.last_context: ChallengeContext | None = None
@@ -124,11 +119,12 @@ class MockMFAChoiceCallback(BaseChallengeCallback):
     This callback returns a predetermined device selection without user
     interaction. Useful for testing MFA device selection flows.
 
+    Args:
+        selected_value: The device input_value to return when called.
+            Default is "mock_device".
+
     Attributes:
         challenge_type: Set to ChallengeType.MFA_CHOICE
-        selected_value: The device input_value to return
-        call_count: Number of times this callback has been called
-        last_context: The last ChallengeContext passed to this callback
 
     Example:
         >>> callback = MockMFAChoiceCallback("device123")
@@ -147,12 +143,6 @@ class MockMFAChoiceCallback(BaseChallengeCallback):
     challenge_type = ChallengeType.MFA_CHOICE
 
     def __init__(self, selected_value: str = "mock_device") -> None:
-        """Initialize the mock callback.
-
-        Args:
-            selected_value: The device input_value to return when called.
-                Default is "mock_device".
-        """
         self.selected_value = selected_value
         self.call_count = 0
         self.last_context: ChallengeContext | None = None
@@ -186,11 +176,11 @@ class MockOTPCallback(BaseChallengeCallback):
     This callback returns a predetermined OTP code without user interaction.
     Useful for testing OTP entry flows.
 
+    Args:
+        code: The OTP code to return when called. Default is "123456".
+
     Attributes:
         challenge_type: Set to ChallengeType.OTP
-        code: The OTP code to return
-        call_count: Number of times this callback has been called
-        last_context: The last ChallengeContext passed to this callback
 
     Example:
         >>> callback = MockOTPCallback("123456")
@@ -209,11 +199,6 @@ class MockOTPCallback(BaseChallengeCallback):
     challenge_type = ChallengeType.OTP
 
     def __init__(self, code: str = "123456") -> None:
-        """Initialize the mock callback.
-
-        Args:
-            code: The OTP code to return when called. Default is "123456".
-        """
         self.code = code
         self.call_count = 0
         self.last_context: ChallengeContext | None = None
@@ -247,11 +232,11 @@ class MockCVFCallback(BaseChallengeCallback):
     This callback returns a predetermined CVF verification code without user
     interaction. Useful for testing CVF flows.
 
+    Args:
+        code: The CVF code to return when called. Default is "123456".
+
     Attributes:
         challenge_type: Set to ChallengeType.CVF
-        code: The CVF code to return
-        call_count: Number of times this callback has been called
-        last_context: The last ChallengeContext passed to this callback
 
     Example:
         >>> callback = MockCVFCallback("654321")
@@ -270,11 +255,6 @@ class MockCVFCallback(BaseChallengeCallback):
     challenge_type = ChallengeType.CVF
 
     def __init__(self, code: str = "123456") -> None:
-        """Initialize the mock callback.
-
-        Args:
-            code: The CVF code to return when called. Default is "123456".
-        """
         self.code = code
         self.call_count = 0
         self.last_context: ChallengeContext | None = None
@@ -308,11 +288,12 @@ class MockApprovalAlertCallback(BaseChallengeCallback):
     This callback returns immediately without waiting for user approval.
     Useful for testing approval alert flows without delays.
 
+    Args:
+        auto_approve: Whether to auto-approve. Always True for mock,
+            parameter exists for compatibility. Default is True.
+
     Attributes:
         challenge_type: Set to ChallengeType.APPROVAL_ALERT
-        auto_approve: Whether to auto-approve (always True for mock)
-        call_count: Number of times this callback has been called
-        last_context: The last ChallengeContext passed to this callback
 
     Example:
         >>> callback = MockApprovalAlertCallback()
@@ -331,12 +312,6 @@ class MockApprovalAlertCallback(BaseChallengeCallback):
     challenge_type = ChallengeType.APPROVAL_ALERT
 
     def __init__(self, auto_approve: bool = True) -> None:
-        """Initialize the mock callback.
-
-        Args:
-            auto_approve: Whether to auto-approve. Always True for mock,
-                parameter exists for compatibility. Default is True.
-        """
         self.auto_approve = auto_approve
         self.call_count = 0
         self.last_context: ChallengeContext | None = None
