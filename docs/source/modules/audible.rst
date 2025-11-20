@@ -42,6 +42,14 @@ audible.client module
    :undoc-members:
    :show-inheritance:
 
+audible.device module
+---------------------
+
+.. automodule:: audible.device
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 audible.crypto\_provider package
 ---------------------------------
 
@@ -174,14 +182,6 @@ audible.login module
 --------------------
 
 .. automodule:: audible.login
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
-audible.metadata module
------------------------
-
-.. automodule:: audible.metadata
    :members:
    :undoc-members:
    :show-inheritance:
