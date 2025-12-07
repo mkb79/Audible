@@ -422,22 +422,22 @@ class Authenticator(httpx.Auth):
                 # Try to determine device type from os_family to use correct subclass
                 os_family = device_data.get("os_family", "")
                 if os_family == "ios":
-                    from .device import iPhoneDevice
+                    from .device import _iPhoneDevice
 
-                    auth.device = iPhoneDevice.from_dict(device_data)
+                    auth.device = _iPhoneDevice.from_dict(device_data)
                 elif os_family == "android":
-                    from .device import AndroidDevice
+                    from .device import _AndroidDevice
 
-                    auth.device = AndroidDevice.from_dict(device_data)
+                    auth.device = _AndroidDevice.from_dict(device_data)
                 else:
-                    # Fallback to base class (will use iPhoneDevice as default)
-                    from .device import iPhoneDevice
+                    # Fallback to base class (will use _iPhoneDevice as default)
+                    from .device import _iPhoneDevice
 
                     logger.warning(
-                        "Unknown device os_family: %s. Falling back to iPhoneDevice.",
+                        "Unknown device os_family: %s. Falling back to _iPhoneDevice.",
                         os_family,
                     )
-                    auth.device = iPhoneDevice.from_dict(device_data)
+                    auth.device = _iPhoneDevice.from_dict(device_data)
                 logger.debug("Loaded device from dict: %s", auth.device.device_model)
             elif file_version:
                 # File has version but no device - create default from device_info
@@ -677,27 +677,34 @@ class Authenticator(httpx.Auth):
         auth = cls(crypto_provider=crypto_provider)
         auth.locale = cast("Locale", locale)
 
+        if device is None:
+            from .device import IPHONE
+
+            device = IPHONE.copy()
+
+        if serial is not None:
+            warnings.warn(
+                "The 'serial' parameter is deprecated and will be removed in v0.12.0. "
+                "Use 'device' parameter instead.",
+                DeprecationWarning,
+                stacklevel=2,
+            )
+            # Create a copy of device with the provided serial
+            device = device.copy(device_serial=serial)
+
         login_device = external_login(
-            country_code=auth.locale.country_code,
-            domain=auth.locale.domain,
-            market_place_id=auth.locale.market_place_id,
-            serial=serial,
+            locale=auth.locale,
             with_username=with_username,
             login_url_callback=login_url_callback,
             device=device,
         )
         logger.info("logged in to Audible.")
 
-        if device is None:
-            from .device import IPHONE
-
-            device = IPHONE.copy()
-
         registration_service = RegistrationService(device=device)
         register_device = registration_service.register(
             with_username=with_username,
-            authorization_code=login_device["authorization_code"],
-            code_verifier=login_device["code_verifier"],
+            authorization_code=login_device.authorization_code,
+            code_verifier=login_device.code_verifier,
             domain=auth.locale.domain,
         )
 
@@ -1090,9 +1097,9 @@ class Authenticator(httpx.Auth):
         if self.device is None:
             # Create default device from existing device_info if available
             if self.device_info:
-                from .device import iPhoneDevice
+                from .device import _iPhoneDevice
 
-                self.device = iPhoneDevice(
+                self.device = _iPhoneDevice(
                     device_type=self.device_info.get("device_type", "A2CZJZGLK2JJVM"),
                     device_serial=self.device_info.get(
                         "device_serial_number", uuid.uuid4().hex.upper()

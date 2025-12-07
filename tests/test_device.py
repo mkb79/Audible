@@ -8,12 +8,12 @@ import pytest
 
 from audible.device import (
     ANDROID,
-    ANDROID_PIXEL_7,
     IPHONE,
-    IPHONE_OS26,
-    AndroidDevice,
     BaseDevice,
-    iPhoneDevice,
+    _AndroidDevice,
+    _iPhoneDevice,
+    create_android_device,
+    create_iphone_device,
 )
 
 
@@ -52,9 +52,9 @@ def base_device() -> BaseDevice:
 
 
 @pytest.fixture
-def iphone_device() -> iPhoneDevice:
+def iphone_device() -> _iPhoneDevice:
     """Create an iPhone device instance for testing."""
-    return iPhoneDevice(
+    return _iPhoneDevice(
         device_type="A2CZJZGLK2JJVM",
         device_model="iPhone",
         app_version="3.56.2",
@@ -64,9 +64,9 @@ def iphone_device() -> iPhoneDevice:
 
 
 @pytest.fixture
-def android_device() -> AndroidDevice:
+def android_device() -> _AndroidDevice:
     """Create an Android device instance for testing."""
-    return AndroidDevice(
+    return _AndroidDevice(
         device_type="A10KISP2GWF0E4",
         device_model="Pixel 7",
         device_product="pixel7_x86_64",
@@ -277,10 +277,10 @@ def test_base_device_frc_randomness() -> None:
     assert cookies1["frc"] != cookies2["frc"]
 
 
-# iPhoneDevice Tests
+# iPhone Device Tests
 
 
-def test_iphone_device_user_agent(iphone_device: iPhoneDevice) -> None:
+def test_iphone_device_user_agent(iphone_device: _iPhoneDevice) -> None:
     """Test iPhone User-Agent generation."""
     ua = iphone_device.user_agent
 
@@ -291,22 +291,22 @@ def test_iphone_device_user_agent(iphone_device: iPhoneDevice) -> None:
     assert "Mobile/15E148" in ua
 
 
-def test_iphone_device_bundle_id(iphone_device: iPhoneDevice) -> None:
+def test_iphone_device_bundle_id(iphone_device: _iPhoneDevice) -> None:
     """Test iPhone bundle ID generation."""
     assert iphone_device.bundle_id == "com.audible.iphone"
 
 
-def test_iphone_device_amzn_app_id(iphone_device: iPhoneDevice) -> None:
+def test_iphone_device_amzn_app_id(iphone_device: _iPhoneDevice) -> None:
     """Test iPhone Amazon app ID."""
     assert iphone_device.amzn_app_id == "MAPiOSLib/6.0/ToHideRetailLink"
 
 
-def test_iphone_device_os_family(iphone_device: iPhoneDevice) -> None:
+def test_iphone_device_os_family(iphone_device: _iPhoneDevice) -> None:
     """Test iPhone OS family detection."""
     assert iphone_device.os_family == "ios"
 
 
-def test_iphone_device_os_version_extraction(iphone_device: iPhoneDevice) -> None:
+def test_iphone_device_os_version_extraction(iphone_device: _iPhoneDevice) -> None:
     """Test iOS version number extraction."""
     assert iphone_device.os_version_number == "15"
 
@@ -314,7 +314,7 @@ def test_iphone_device_os_version_extraction(iphone_device: iPhoneDevice) -> Non
 def test_iphone_device_os_version_extraction_various_formats() -> None:
     """Test OS version extraction with different formats."""
     # Standard format (x.y.z)
-    device1 = iPhoneDevice(
+    device1 = _iPhoneDevice(
         device_type="A2CZJZGLK2JJVM",
         device_model="iPhone",
         app_version="3.56.2",
@@ -324,7 +324,7 @@ def test_iphone_device_os_version_extraction_various_formats() -> None:
     assert device1.os_version_number == "16"
 
     # Simple format (x.y)
-    device2 = iPhoneDevice(
+    device2 = _iPhoneDevice(
         device_type="A2CZJZGLK2JJVM",
         device_model="iPhone",
         app_version="3.56.2",
@@ -334,7 +334,7 @@ def test_iphone_device_os_version_extraction_various_formats() -> None:
     assert device2.os_version_number == "17"
 
     # Single digit (should work)
-    device3 = iPhoneDevice(
+    device3 = _iPhoneDevice(
         device_type="A2CZJZGLK2JJVM",
         device_model="iPhone",
         app_version="3.56.2",
@@ -345,32 +345,22 @@ def test_iphone_device_os_version_extraction_various_formats() -> None:
 
 
 def test_iphone_predefined_instance() -> None:
-    """Test IPHONE predefined instance."""
+    """Test IPHONE predefined instance (iOS 26.1)."""
     assert IPHONE.device_type == "A2CZJZGLK2JJVM"
     assert IPHONE.device_model == "iPhone"
-    assert IPHONE.app_version == "3.56.2"
-    assert IPHONE.os_version == "15.0.0"
-    assert IPHONE.os_version_number == "15"
-    assert IPHONE.software_version == "35602678"
+    assert IPHONE.app_version == "4.56.2"
+    assert IPHONE.os_version == "26.1"
+    assert IPHONE.os_version_number == "26"
+    assert IPHONE.software_version == "45602826"
     assert IPHONE.os_family == "ios"
     assert "Audible for iPhone" in IPHONE.device_name
-
-
-def test_iphone_os26_predefined_instance() -> None:
-    """Test IPHONE_OS26 predefined instance."""
-    assert IPHONE_OS26.device_type == "A2CZJZGLK2JJVM"
-    assert IPHONE_OS26.device_model == "iPhone"
-    assert IPHONE_OS26.app_version == "4.56.2"
-    assert IPHONE_OS26.os_version == "26.1"
-    assert IPHONE_OS26.os_version_number == "26"
-    assert IPHONE_OS26.software_version == "45602826"
 
 
 def test_iphone_serialization_round_trip() -> None:
     """Test iPhone serialization and deserialization."""
     original = IPHONE.copy()
     device_dict = original.to_dict()
-    restored = iPhoneDevice.from_dict(device_dict)
+    restored = _iPhoneDevice.from_dict(device_dict)
 
     assert restored.device_type == original.device_type
     assert restored.device_model == original.device_model
@@ -380,10 +370,10 @@ def test_iphone_serialization_round_trip() -> None:
     assert restored.user_agent == original.user_agent
 
 
-# AndroidDevice Tests
+# Android Device Tests
 
 
-def test_android_device_user_agent_full_format(android_device: AndroidDevice) -> None:
+def test_android_device_user_agent_full_format(android_device: _AndroidDevice) -> None:
     """Test Android User-Agent generation with full version string."""
     ua = android_device.user_agent
 
@@ -395,7 +385,7 @@ def test_android_device_user_agent_full_format(android_device: AndroidDevice) ->
 
 def test_android_device_user_agent_simple_format() -> None:
     """Test Android User-Agent generation with simple version string."""
-    device = AndroidDevice(
+    device = _AndroidDevice(
         device_type="A10KISP2GWF0E4",
         device_model="Test Android",
         app_version="177102",
@@ -409,7 +399,7 @@ def test_android_device_user_agent_simple_format() -> None:
     assert "Test Android" in ua
 
 
-def test_android_device_download_user_agent(android_device: AndroidDevice) -> None:
+def test_android_device_download_user_agent(android_device: _AndroidDevice) -> None:
     """Test Android download User-Agent generation."""
     download_ua = android_device.download_user_agent
 
@@ -418,22 +408,22 @@ def test_android_device_download_user_agent(android_device: AndroidDevice) -> No
     assert "AndroidXMedia3" in download_ua
 
 
-def test_android_device_bundle_id(android_device: AndroidDevice) -> None:
+def test_android_device_bundle_id(android_device: _AndroidDevice) -> None:
     """Test Android package name generation."""
     assert android_device.bundle_id == "com.audible.application"
 
 
-def test_android_device_amzn_app_id(android_device: AndroidDevice) -> None:
+def test_android_device_amzn_app_id(android_device: _AndroidDevice) -> None:
     """Test Android Amazon app ID."""
     assert android_device.amzn_app_id == "MAPAndroidLib/6.0/ToHideRetailLink"
 
 
-def test_android_device_os_family(android_device: AndroidDevice) -> None:
+def test_android_device_os_family(android_device: _AndroidDevice) -> None:
     """Test Android OS family detection."""
     assert android_device.os_family == "android"
 
 
-def test_android_device_app_name(android_device: AndroidDevice) -> None:
+def test_android_device_app_name(android_device: _AndroidDevice) -> None:
     """Test Android app name (package name)."""
     assert android_device.app_name == "com.audible.application"
 
@@ -442,7 +432,7 @@ def test_android_device_os_version_extraction() -> None:
     """Test Android OS version extraction from full format."""
     # Full format: "Android/device:13/build/..."
     # Create device without explicit os_version_number to test auto-extraction
-    device = AndroidDevice(
+    device = _AndroidDevice(
         device_type="A10KISP2GWF0E4",
         device_model="Pixel 7",
         app_version="177102",
@@ -455,7 +445,7 @@ def test_android_device_os_version_extraction() -> None:
 def test_android_device_os_version_extraction_various_formats() -> None:
     """Test OS version extraction with different Android formats."""
     # SDK format
-    device1 = AndroidDevice(
+    device1 = _AndroidDevice(
         device_type="A10KISP2GWF0E4",
         device_model="Android",
         app_version="177102",
@@ -465,7 +455,7 @@ def test_android_device_os_version_extraction_various_formats() -> None:
     assert device1.os_version_number == "14"
 
     # Simple format fallback
-    device2 = AndroidDevice(
+    device2 = _AndroidDevice(
         device_type="A10KISP2GWF0E4",
         device_model="Android",
         app_version="177102",
@@ -477,33 +467,23 @@ def test_android_device_os_version_extraction_various_formats() -> None:
 
 
 def test_android_predefined_instance() -> None:
-    """Test ANDROID predefined instance."""
+    """Test ANDROID predefined instance (OnePlus 8, Android 11)."""
     assert ANDROID.device_type == "A10KISP2GWF0E4"
-    assert ANDROID.device_model == "Android SDK built for x86_64"
-    assert ANDROID.device_product == "sdk_phone64_x86_64"
-    assert ANDROID.app_version == "177102"
-    assert "Android/sdk_phone64_x86_64:14" in ANDROID.os_version
-    assert ANDROID.os_version_number == "34"
+    assert ANDROID.device_model == "IN2013"
+    assert ANDROID.device_product == "OnePlus8"
+    assert ANDROID.app_version == "160008"
+    assert "OnePlus/OnePlus8/OnePlus8:11" in ANDROID.os_version
+    assert ANDROID.os_version_number == "30"
     assert ANDROID.software_version == "130050002"
     assert ANDROID.os_family == "android"
     assert "Audible for Android" in ANDROID.device_name
-
-
-def test_android_pixel7_predefined_instance() -> None:
-    """Test ANDROID_PIXEL_7 predefined instance."""
-    assert ANDROID_PIXEL_7.device_type == "A10KISP2GWF0E4"
-    assert ANDROID_PIXEL_7.device_model == "Pixel 7"
-    assert ANDROID_PIXEL_7.device_product == "pixel7_x86_64"
-    assert ANDROID_PIXEL_7.app_version == "177102"
-    assert "Android/pixel7_x86_64:13" in ANDROID_PIXEL_7.os_version
-    assert ANDROID_PIXEL_7.os_version_number == "33"
 
 
 def test_android_serialization_round_trip() -> None:
     """Test Android serialization and deserialization."""
     original = ANDROID.copy()
     device_dict = original.to_dict()
-    restored = AndroidDevice.from_dict(device_dict)
+    restored = _AndroidDevice.from_dict(device_dict)
 
     assert restored.device_type == original.device_type
     assert restored.device_model == original.device_model
@@ -625,3 +605,148 @@ def test_device_dict_can_be_used_for_serialization() -> None:
             assert recovered == device_dict
         except (TypeError, ValueError) as e:
             pytest.fail(f"Device dict not JSON-serializable: {e}")
+
+
+# Factory Function Tests
+
+
+def test_create_iphone_device_default() -> None:
+    """Test creating iPhone device with default parameters."""
+    device = create_iphone_device()
+
+    # Should return IPHONE with same attributes
+    assert device.device_model == "iPhone"
+    assert device.os_family == "ios"
+    assert device.device_type == IPHONE.device_type
+    assert device.app_version == IPHONE.app_version
+    assert device.os_version == IPHONE.os_version
+    # Serial should be different (copy generates new serial)
+    assert device.device_serial != IPHONE.device_serial
+
+
+def test_create_iphone_device_custom_app_version() -> None:
+    """Test creating iPhone device with custom app version."""
+    device = create_iphone_device(app_version="4.60.0")
+
+    assert device.app_version == "4.60.0"
+    assert device.os_version == IPHONE.os_version  # Should keep default
+    assert device.device_model == "iPhone"
+
+
+def test_create_iphone_device_custom_os_version() -> None:
+    """Test creating iPhone device with custom OS version."""
+    device = create_iphone_device(os_version="27.0")
+
+    assert device.os_version == "27.0"
+    assert device.os_version_number == "27"  # Should be extracted
+    assert device.app_version == IPHONE.app_version  # Should keep default
+
+
+def test_create_iphone_device_custom_versions() -> None:
+    """Test creating iPhone device with both custom versions."""
+    device = create_iphone_device(app_version="4.60.0", os_version="27.0")
+
+    assert device.app_version == "4.60.0"
+    assert device.os_version == "27.0"
+    assert device.os_version_number == "27"
+    assert device.device_model == "iPhone"
+    assert device.os_family == "ios"
+
+
+def test_create_iphone_device_custom_serial() -> None:
+    """Test creating iPhone device with custom serial."""
+    device = create_iphone_device(device_serial="CUSTOM123")
+
+    assert device.device_serial == "CUSTOM123"
+    assert device.app_version == IPHONE.app_version
+    assert device.os_version == IPHONE.os_version
+
+
+def test_create_android_device_default() -> None:
+    """Test creating Android device with default parameters."""
+    device = create_android_device()
+
+    # Should return ANDROID with same attributes
+    assert device.device_model == "IN2013"
+    assert device.os_family == "android"
+    assert device.device_type == ANDROID.device_type
+    assert device.app_version == ANDROID.app_version
+    assert device.os_version == ANDROID.os_version
+    # Serial should be different (copy generates new serial)
+    assert device.device_serial != ANDROID.device_serial
+
+
+def test_create_android_device_custom_app_version() -> None:
+    """Test creating Android device with custom app version."""
+    device = create_android_device(app_version="170000")
+
+    assert device.app_version == "170000"
+    assert device.os_version == ANDROID.os_version  # Should keep default
+    assert device.device_model == "IN2013"
+
+
+def test_create_android_device_custom_os_version() -> None:
+    """Test creating Android device with custom OS version (build fingerprint)."""
+    custom_os = (
+        "OnePlus/OnePlus8/OnePlus8:12/SP1A.210812.016/2112142300:user/release-keys"
+    )
+    device = create_android_device(os_version=custom_os)
+
+    assert device.os_version == custom_os
+    assert device.os_version_number == "12"  # Should be extracted from ":12/"
+    assert device.app_version == ANDROID.app_version  # Should keep default
+
+
+def test_create_android_device_custom_versions() -> None:
+    """Test creating Android device with both custom versions."""
+    custom_os = (
+        "OnePlus/OnePlus8/OnePlus8:12/SP1A.210812.016/2112142300:user/release-keys"
+    )
+    device = create_android_device(app_version="170000", os_version=custom_os)
+
+    assert device.app_version == "170000"
+    assert device.os_version == custom_os
+    assert device.os_version_number == "12"
+    assert device.device_model == "IN2013"
+    assert device.os_family == "android"
+
+
+def test_create_android_device_custom_serial() -> None:
+    """Test creating Android device with custom serial."""
+    device = create_android_device(device_serial="ANDROID123")
+
+    assert device.device_serial == "ANDROID123"
+    assert device.app_version == ANDROID.app_version
+    assert device.os_version == ANDROID.os_version
+
+
+def test_factory_functions_return_basedevice_type() -> None:
+    """Test that factory functions return BaseDevice type."""
+    iphone = create_iphone_device()
+    android = create_android_device()
+
+    assert isinstance(iphone, BaseDevice)
+    assert isinstance(android, BaseDevice)
+    # They should also be private class instances
+    assert isinstance(iphone, _iPhoneDevice)
+    assert isinstance(android, _AndroidDevice)
+
+
+def test_private_classes_not_exported() -> None:
+    """Test that private classes cannot be imported from public API."""
+    # This test verifies the classes are marked private
+    # The actual import blocking is tested by attempting imports
+    from audible import device
+
+    # Private classes should exist in module but not be in __all__
+    assert hasattr(device, "_iPhoneDevice")
+    assert hasattr(device, "_AndroidDevice")
+    assert "_iPhoneDevice" not in device.__all__
+    assert "_AndroidDevice" not in device.__all__
+
+    # Public items should be in __all__
+    assert "IPHONE" in device.__all__
+    assert "ANDROID" in device.__all__
+    assert "create_iphone_device" in device.__all__
+    assert "create_android_device" in device.__all__
+    assert "BaseDevice" in device.__all__

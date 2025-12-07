@@ -1,14 +1,21 @@
 """Device emulation for Audible authentication and API access.
 
-This module provides device classes for emulating different Audible-capable
-devices (iPhone, Android, Fire Tablet, etc.) with complete device metadata
-including OS versions, app versions, DRM capabilities, and codec support.
+This module provides device emulation for Audible-capable devices with
+complete device metadata including OS versions, app versions, User-Agent
+strings, and registration data.
+
+Two predefined device configurations are available:
+- **IPHONE**: iPhone running iOS 26.1 with Audible 4.56.2
+- **ANDROID**: OnePlus 8 running Android 11 with Audible 160008
+
+Version customization is supported through factory functions that allow
+updating OS and app versions to mimic real-world software updates.
 
 Device emulation enables:
-- Access to device-specific features (e.g., Dolby Atmos on compatible devices)
-- Proper User-Agent spoofing for API compatibility
+- Proper authentication and device registration
+- User-Agent spoofing for API compatibility
 - DRM type selection (FairPlay for iOS, Widevine for Android)
-- Codec support negotiation
+- Device-specific API features
 
 Example:
     Use predefined devices::
@@ -21,22 +28,26 @@ Example:
         # Use Android device
         auth = Authenticator.from_login("user", "pass", "us", device=ANDROID)
 
-    Create custom device::
+    Customize device versions::
 
-        from audible.device import iPhoneDevice
+        from audible.device import create_iphone_device, create_android_device
 
-        # Customize existing device
-        my_iphone = iPhoneDevice(
-            app_version="3.60.0",
-            os_version="16.0.0"
+        # Create iPhone with custom version
+        iphone = create_iphone_device(
+            app_version="4.60.0",
+            os_version="26.1"
         )
 
-        # Create completely custom device
-        from audible.device import BaseDevice
+        # Create Android with custom app version
+        android = create_android_device(app_version="170000")
 
-        class MyCustomDevice(BaseDevice):
-            def _generate_user_agent(self) -> str:
-                return f"MyApp/{self.app_version}"
+        # Use customized device
+        auth = Authenticator.from_login("user", "pass", "us", device=iphone)
+
+Note:
+    Direct instantiation of device classes is not supported. Use the
+    predefined IPHONE/ANDROID constants or the factory functions
+    create_iphone_device() and create_android_device() instead.
 """
 
 from __future__ import annotations
@@ -315,36 +326,18 @@ class BaseDevice(ABC):
 
 
 @dataclass
-class iPhoneDevice(BaseDevice):
-    """iPhone/iOS device emulation.
+class _iPhoneDevice(BaseDevice):
+    """iPhone/iOS device emulation (internal implementation).
+
+    This is an internal implementation class. Users should use the IPHONE
+    constant or create_iphone_device() factory function instead.
 
     Implements iPhone-specific User-Agent generation, bundle IDs,
     and default configurations for iOS devices.
 
     Attributes:
-        os_family: The OS family identifier (always "ios" for iPhoneDevice).
-        app_name: The application name (always "Audible" for iPhoneDevice).
-
-    Example:
-        Use default iPhone configuration::
-
-            from audible.device import IPHONE
-            device = IPHONE
-
-        Customize iPhone::
-
-            from audible.device import iPhoneDevice
-
-            my_iphone = iPhoneDevice(
-                device_type="A2CZJZGLK2JJVM",
-                device_model="iPhone",
-                app_version="3.60.0",
-                os_version="16.0.0",
-                software_version="36000078"
-            )
-
-    See Also:
-        - Predefined instances: :data:`IPHONE`, :data:`IPHONE_16`
+        os_family: The OS family identifier (always "ios").
+        app_name: The application name (always "Audible").
     """
 
     os_family: str = "ios"
@@ -378,42 +371,22 @@ class iPhoneDevice(BaseDevice):
 
 
 @dataclass
-class AndroidDevice(BaseDevice):
-    """Android device emulation.
+class _AndroidDevice(BaseDevice):
+    """Android device emulation (internal implementation).
+
+    This is an internal implementation class. Users should use the ANDROID
+    constant or create_android_device() factory function instead.
 
     Implements Android-specific User-Agent generation, package names,
     and default configurations for Android devices.
 
     Attributes:
-        os_family: The OS family identifier (always "android" for AndroidDevice).
-        app_name: The application package name (always "com.audible.application" for AndroidDevice).
-
-    Example:
-        Use default Android configuration::
-
-            from audible.device import ANDROID
-            device = ANDROID
-
-        Customize Android device::
-
-            from audible.device import AndroidDevice
-
-            my_android = AndroidDevice(
-                device_type="A10KISP2GWF0E4",
-                device_model="Pixel 7",
-                device_product="pixel7_x86_64",
-                app_version="177102",
-                os_version="Android/pixel7_x86_64:13/TP1A.220624.021/12345678:user/release-keys",
-                os_version_number="33",
-                software_version="130050002"
-            )
+        os_family: The OS family identifier (always "android").
+        app_name: The application package name (always "com.audible.application").
 
     Note:
         Based on real Android Audible app configuration from
         https://github.com/rmcrackan/AudibleApi/pull/55
-
-    See Also:
-        - Predefined instances: :data:`ANDROID`, :data:`ANDROID_PIXEL_7`
     """
 
     os_family: str = "android"
@@ -474,26 +447,7 @@ class AndroidDevice(BaseDevice):
 
 # Predefined device instances
 
-IPHONE = iPhoneDevice(
-    device_type="A2CZJZGLK2JJVM",
-    device_model="iPhone",
-    app_version="3.56.2",
-    os_version="15.0.0",
-    os_version_number="15",
-    software_version="35602678",
-    device_name=(
-        "%FIRST_NAME%%FIRST_NAME_POSSESSIVE_STRING%%DUPE_STRATEGY_1ST%"
-        "Audible for iPhone"
-    ),
-)
-"""iPhone 15 running iOS 15.0 with Audible 3.56.2.
-
-Example:
-    >>> from audible.device import IPHONE
-    >>> auth = Authenticator.from_login("user", "pass", "us", device=IPHONE)
-"""
-
-IPHONE_OS26 = iPhoneDevice(
+IPHONE = _iPhoneDevice(
     device_type="A2CZJZGLK2JJVM",
     device_model="iPhone",
     app_version="4.56.2",
@@ -507,45 +461,174 @@ IPHONE_OS26 = iPhoneDevice(
 )
 """iPhone running iOS 26.1 with Audible 4.56.2.
 
-Latest iOS version with updated Audible app.
+This is the primary iPhone device configuration for Audible authentication.
+
+Example:
+    >>> from audible.device import IPHONE
+    >>> auth = Authenticator.from_login("user", "pass", "us", device=IPHONE)
+    >>>
+    >>> # Customize version
+    >>> from audible.device import create_iphone_device
+    >>> custom_iphone = create_iphone_device(app_version="4.60.0", os_version="27.0")
 """
 
-ANDROID = AndroidDevice(
+ANDROID = _AndroidDevice(
     device_type="A10KISP2GWF0E4",
-    device_model="Android SDK built for x86_64",
-    device_product="sdk_phone64_x86_64",
-    app_version="177102",
-    os_version="Android/sdk_phone64_x86_64:14/UE1A.230829.036.A1/11228894:userdebug/test-keys",
-    os_version_number="34",
+    device_model="IN2013",
+    device_product="OnePlus8",
+    app_version="160008",
+    os_version="OnePlus/OnePlus8/OnePlus8:11/RP1A.201005.001/2110102308:user/release-keys",
+    os_version_number="30",
     software_version="130050002",
     device_name=(
         "%FIRST_NAME%%FIRST_NAME_POSSESSIVE_STRING%%DUPE_STRATEGY_1ST%"
         "Audible for Android"
     ),
 )
-"""Android device (SDK built for x86_64) with Audible app.
+"""OnePlus 8 running Android 11 with Audible 160008.
 
-Based on real Android Audible app configuration.
+This is the primary Android device configuration based on real device
+specifications from widevine.py DRM implementation.
 
 Example:
     >>> from audible.device import ANDROID
     >>> auth = Authenticator.from_login("user", "pass", "us", device=ANDROID)
+    >>>
+    >>> # Customize version
+    >>> from audible.device import create_android_device
+    >>> custom_android = create_android_device(app_version="170000")
 """
 
-ANDROID_PIXEL_7 = AndroidDevice(
-    device_type="A10KISP2GWF0E4",
-    device_model="Pixel 7",
-    device_product="pixel7_x86_64",
-    app_version="177102",
-    os_version="Android/pixel7_x86_64:13/TP1A.220624.021/12345678:user/release-keys",
-    os_version_number="33",
-    software_version="130050002",
-    device_name=(
-        "%FIRST_NAME%%FIRST_NAME_POSSESSIVE_STRING%%DUPE_STRATEGY_1ST%"
-        "Audible for Android"
-    ),
-)
-"""Google Pixel 7 running Android 13 with Audible app.
 
-Customized Android profile for a real device.
-"""
+# Factory functions for device customization
+
+
+def create_iphone_device(
+    app_version: str | None = None,
+    os_version: str | None = None,
+    device_serial: str | None = None,
+) -> BaseDevice:
+    """Create iPhone device with custom version parameters.
+
+    This function creates an iPhone device based on the IPHONE constant,
+    allowing customization of version parameters to mimic OS/app updates
+    on a real iPhone.
+
+    Args:
+        app_version: Audible app version (e.g., "4.60.0").
+            If None, uses default from IPHONE constant.
+        os_version: iOS version (e.g., "27.0").
+            If None, uses default from IPHONE constant.
+        device_serial: Unique device serial number.
+            If None, auto-generates a new UUID-based serial.
+
+    Returns:
+        BaseDevice: Configured iPhone device instance.
+
+    Example:
+        >>> from audible.device import create_iphone_device
+        >>>
+        >>> # Create device with custom app version
+        >>> device = create_iphone_device(app_version="4.60.0")
+        >>>
+        >>> # Create device with custom OS and app versions
+        >>> device = create_iphone_device(
+        ...     app_version="4.60.0",
+        ...     os_version="27.0"
+        ... )
+        >>>
+        >>> # Create device with custom serial (for multi-device support)
+        >>> device = create_iphone_device(device_serial="CUSTOM123")
+
+    Note:
+        Only version parameters can be customized. Hardware-specific
+        attributes (device_type, device_model) remain fixed to match
+        real iPhone behavior where only software updates are possible.
+    """
+    changes: dict[str, Any] = {}
+    if app_version:
+        changes["app_version"] = app_version
+        # Note: software_version could be derived from app_version
+        # but we keep it simple and let users handle it if needed
+    if os_version:
+        changes["os_version"] = os_version
+        # Extract os_version_number from os_version
+        os_version_number = (
+            os_version.split(".")[0] if "." in os_version else os_version
+        )
+        changes["os_version_number"] = os_version_number
+    if device_serial:
+        changes["device_serial"] = device_serial
+    # Always copy to generate new serial (unless explicitly provided)
+    return IPHONE.copy(**changes)
+
+
+def create_android_device(
+    app_version: str | None = None,
+    os_version: str | None = None,
+    device_serial: str | None = None,
+) -> BaseDevice:
+    """Create Android device with custom version parameters.
+
+    This function creates an Android device based on the ANDROID constant
+    (OnePlus 8), allowing customization of version parameters to mimic
+    OS/app updates on a real Android device.
+
+    Args:
+        app_version: Audible app version code (e.g., "170000").
+            If None, uses default from ANDROID constant.
+        os_version: Android build fingerprint string.
+            If None, uses default from ANDROID constant.
+            Format: "Manufacturer/Product/Device:Version/BuildID/..."
+        device_serial: Unique device serial number.
+            If None, auto-generates a new UUID-based serial.
+
+    Returns:
+        BaseDevice: Configured Android device instance.
+
+    Example:
+        >>> from audible.device import create_android_device
+        >>>
+        >>> # Create device with custom app version
+        >>> device = create_android_device(app_version="170000")
+        >>>
+        >>> # Create device with custom build fingerprint
+        >>> device = create_android_device(
+        ...     os_version="OnePlus/OnePlus8/OnePlus8:12/SP1A.210812.016/2112142300:user/release-keys"
+        ... )
+        >>>
+        >>> # Create device with custom serial
+        >>> device = create_android_device(device_serial="ANDROID123")
+
+    Note:
+        Only version parameters can be customized. Hardware-specific
+        attributes (device_type, device_model, device_product) remain
+        fixed to match real Android behavior.
+    """
+    changes: dict[str, Any] = {}
+    if app_version:
+        changes["app_version"] = app_version
+    if os_version:
+        changes["os_version"] = os_version
+        # Extract os_version_number (SDK level) from build fingerprint
+        if ":" in os_version and "/" in os_version:
+            try:
+                parts = os_version.split(":")
+                if len(parts) > 1:
+                    sdk_level = parts[1].split("/")[0]
+                    changes["os_version_number"] = sdk_level
+            except (IndexError, ValueError):
+                pass  # Keep default if parsing fails
+    if device_serial:
+        changes["device_serial"] = device_serial
+    # Always copy to generate new serial (unless explicitly provided)
+    return ANDROID.copy(**changes)
+
+
+__all__ = [
+    "ANDROID",
+    "IPHONE",
+    "BaseDevice",
+    "create_android_device",
+    "create_iphone_device",
+]

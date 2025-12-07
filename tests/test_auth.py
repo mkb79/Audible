@@ -164,7 +164,7 @@ def test_authenticator_to_dict_excludes_device_when_none(
 
 def test_authenticator_from_dict_with_device_field() -> None:
     """Test that from_dict() restores device from dictionary."""
-    from audible.device import IPHONE_OS26
+    from audible.device import IPHONE
 
     auth_data = {
         "access_token": "Atna|test_access_token_1234567890",
@@ -174,16 +174,16 @@ def test_authenticator_from_dict_with_device_field() -> None:
             "MIIEpAIBAAKCAQEA1234567890abcdefghijklmnopqrstuvwxyzABCDEFGHIJ\n"
             "-----END RSA PRIVATE KEY-----\n"
         ),
-        "device": IPHONE_OS26.to_dict(),
+        "device": IPHONE.to_dict(),
     }
 
     auth = Authenticator.from_dict(auth_data)
 
     assert auth.device is not None
-    assert auth.device.device_type == IPHONE_OS26.device_type
-    assert auth.device.device_model == IPHONE_OS26.device_model
-    assert auth.device.app_version == IPHONE_OS26.app_version
-    assert auth.device.os_version == IPHONE_OS26.os_version
+    assert auth.device.device_type == IPHONE.device_type
+    assert auth.device.device_model == IPHONE.device_model
+    assert auth.device.app_version == IPHONE.app_version
+    assert auth.device.os_version == IPHONE.os_version
 
 
 def test_authenticator_from_dict_backward_compatibility() -> None:
@@ -210,10 +210,10 @@ def test_authenticator_device_round_trip_serialization(
     auth_fixture_data: dict[str, str],
 ) -> None:
     """Test that device survives to_dict() -> from_dict() round-trip."""
-    from audible.device import ANDROID_PIXEL_7
+    from audible.device import ANDROID
 
     # Create auth with device
-    original = Authenticator.from_dict(auth_fixture_data, device=ANDROID_PIXEL_7)
+    original = Authenticator.from_dict(auth_fixture_data, device=ANDROID)
 
     # Serialize and deserialize
     auth_dict = original.to_dict()
@@ -222,11 +222,11 @@ def test_authenticator_device_round_trip_serialization(
     # Verify device was preserved
     assert restored.device is not None
     assert original.device is not None
-    assert restored.device.device_type == ANDROID_PIXEL_7.device_type
-    assert restored.device.device_model == ANDROID_PIXEL_7.device_model
-    assert restored.device.device_product == ANDROID_PIXEL_7.device_product
-    assert restored.device.app_version == ANDROID_PIXEL_7.app_version
-    assert restored.device.os_version == ANDROID_PIXEL_7.os_version
+    assert restored.device.device_type == ANDROID.device_type
+    assert restored.device.device_model == ANDROID.device_model
+    assert restored.device.device_product == ANDROID.device_product
+    assert restored.device.app_version == ANDROID.app_version
+    assert restored.device.os_version == ANDROID.os_version
     assert restored.device.os_family == "android"
     # Serial should be the same (not regenerated)
     assert restored.device.device_serial == original.device.device_serial

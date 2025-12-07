@@ -51,7 +51,7 @@ Example:
 
 Note:
     This module is part of the audible package's public API. The old
-    login_service.py is deprecated and will be removed in v0.12.0.
+    login.py is removed in v0.11.0.
 
 .. versionadded:: v0.11.0
    Complete rewrite with modular challenge handlers and abstract base classes.
@@ -95,16 +95,18 @@ from .exceptions import (
 
 # External login functionality
 from .external import (
-    build_init_cookies,
     default_login_url_callback,
     external_login,
-    extract_authorization_code_from_response,
-    extract_authorization_code_from_url,
     playwright_external_login_url_callback,
 )
 
 # Core login functionality
-from .login import LoginResult, LoginService
+from .login import (
+    LoginResult,
+    LoginService,
+    extract_authorization_code_from_response,
+    extract_authorization_code_from_url,
+)
 
 # Utility modules (typically used internally)
 from .metadata1 import decrypt_metadata, encrypt_metadata, meta_audible_app
@@ -140,7 +142,6 @@ __all__ = [
     "OTPHandler",
     "OtpContext",
     "SoupPage",
-    "build_init_cookies",
     "decrypt_metadata",
     "default_login_url_callback",
     "encrypt_metadata",

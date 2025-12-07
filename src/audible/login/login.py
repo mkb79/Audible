@@ -36,9 +36,10 @@ from __future__ import annotations
 import logging
 import os
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
+from urllib.parse import parse_qs
 
 import httpx
 
@@ -58,7 +59,6 @@ from audible.login.challenges import (
     MFAChoiceHandler,
     OTPHandler,
 )
-from audible.login.external import extract_authorization_code_from_response
 from audible.login.metadata1 import encrypt_metadata, meta_audible_app
 from audible.login.pkce import PKCE
 from audible.login.soup_page import SoupPage
@@ -71,6 +71,74 @@ if TYPE_CHECKING:
 
 
 logger = logging.getLogger(__name__)
+
+
+# ============================================================================
+# Authorization Code Extraction
+# ============================================================================
+
+
+def extract_authorization_code_from_url(url: httpx.URL) -> str:
+    """Extract authorization code from URL query parameters.
+
+    Parses the URL query string and extracts the OAuth2 authorization code
+    parameter. This is the core utility for extracting codes from redirect URLs.
+
+    Args:
+        url: URL containing the authorization code in query params.
+
+    Returns:
+        str: The extracted authorization code.
+
+    Raises:
+        ValueError: If no authorization code found in URL.
+
+    Example:
+        >>> url = httpx.URL("https://amazon.com?openid.oa2.authorization_code=ABC123")
+        >>> extract_authorization_code_from_url(url)
+        'ABC123'
+    """
+    try:
+        parsed_url = parse_qs(url.query.decode())
+        return parsed_url["openid.oa2.authorization_code"][0]
+    except (KeyError, IndexError) as e:
+        raise ValueError(f"No authorization code found in URL: {url}") from e
+
+
+def extract_authorization_code_from_response(resp: httpx.Response) -> str:
+    """Extract authorization code from HTTP response.
+
+    Checks both the final response URL and all redirect history for the
+    authorization code. This is necessary because Amazon may redirect
+    multiple times during the login flow.
+
+    Args:
+        resp: HTTP response from login flow.
+
+    Returns:
+        str: The extracted authorization code.
+
+    Raises:
+        ValueError: If no authorization code found in response or history.
+
+    Example:
+        >>> resp = httpx.get("https://amazon.com/ap/signin")  # doctest: +SKIP
+        >>> code = extract_authorization_code_from_response(resp)  # doctest: +SKIP
+    """
+    # Check final URL
+    if b"openid.oa2.authorization_code" in resp.url.query:
+        return extract_authorization_code_from_url(resp.url)
+
+    # Check redirect history
+    if resp.history:
+        for history_resp in resp.history:
+            if b"openid.oa2.authorization_code" in history_resp.url.query:
+                return extract_authorization_code_from_url(history_resp.url)
+
+    raise ValueError(
+        "Login failed - no authorization code in response. "
+        "Check logs for authentication errors."
+    )
 
 
 # ============================================================================
@@ -187,7 +255,7 @@ class _ResponseDumper:
             return
 
         self._counter += 1
-        timestamp = datetime.utcnow().strftime("%Y%m%d_%H%M%S")
+        timestamp = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
         safe_label = label.replace(" ", "_")
         filename = (
             self._directory

@@ -119,8 +119,8 @@ class RegistrationService:
         device: Device to register
 
     Example:
-        >>> from audible.device import ANDROID  # doctest: +SKIP
-        >>> service = RegistrationService(device=ANDROID)  # doctest: +SKIP
+        >>> from audible.device import IPHONE, ANDROID  # doctest: +SKIP
+        >>> service = RegistrationService(device=IPHONE)  # doctest: +SKIP
         >>> result = service.register(  # doctest: +SKIP
         ...     authorization_code="code_from_login",
         ...     code_verifier=b"verifier_from_login",
