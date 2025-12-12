@@ -17,7 +17,7 @@ jobs:
       tag: ${{ steps.check-version.outputs.tag }}
     steps:
       - name: Check out the repository
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
         with:
           fetch-depth: 2
 
@@ -54,7 +54,7 @@ jobs:
           uv build
 
       - name: Upload build package artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: dist
           path: dist
@@ -79,7 +79,7 @@ jobs:
       id-token: write
     steps:
       - name: Download build package artifact
-        uses: actions/download-artifact@v5
+        uses: actions/download-artifact@v7
         with:
           name: dist
           path: dist
