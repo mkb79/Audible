@@ -4,7 +4,7 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
-## Unreleased
+## [0.11.0] - 2026-07-20
 
 ### Added
 
@@ -67,6 +67,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
   - Added explicit type hints for `hashmod` and `mac` parameters
   - Fixed argument order mismatches between signatures and docstrings
   - Added missing exception documentation
+- Raise minimum supported dependency versions:
+  - `httpx` to `>=0.27.2,<0.29`
+  - `Pillow` to `>=12.3.0`, `beautifulsoup4` to `>=4.14.3`, `rsa` to `>=4.9.1`
+  - Optional backends: `cryptography` to `>=46.0.3`, `pycryptodome` to `>=3.23.0`, `orjson` to `>=3.11.5`, `ujson` to `>=5.11.0`, `python-rapidjson` to `>=1.23`
+- Use the Python 3.11 `datetime.UTC` alias internally, replacing `datetime.timezone.utc`
 
 ### Fixed
 
@@ -90,6 +95,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Make register() resilient to missing fields in the registration response:
   - Use tokens.get("store_authentication_cookie") instead of direct indexing to avoid KeyError when the server does not return this cookie.
   - Only populate website_cookies when the API includes them; previously code assumed presence and could raise errors.
+
+### Misc
+
+- Drop support for Python 3.10
+- Add support for Python 3.14 (now requires Python `>=3.11,<3.15`)
 
 ## [0.10.0] - 2024-09-26
 

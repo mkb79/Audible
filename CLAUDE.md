@@ -33,7 +33,7 @@ uv run nox --session=tests
 Run tests for specific Python version:
 
 ```bash
-uv run nox --session=tests-3.13
+uv run nox --session=tests-3.14
 ```
 
 Run single test file or test:
@@ -193,7 +193,7 @@ uv run nox
 This ensures all quality gates pass before code reaches the remote repository:
 
 - ✅ **pre-commit**: Code formatting (ruff), linting, docstring validation (pydoclint)
-- ✅ **mypy**: Type checking across Python 3.10-3.13
+- ✅ **mypy**: Type checking across Python 3.11-3.14
 - ✅ **tests**: Unit tests with coverage across all supported Python versions
 - ✅ **typeguard**: Runtime type validation
 - ✅ **xdoctest**: Documentation example validation
@@ -221,7 +221,7 @@ This ensures all quality gates pass before code reaches the remote repository:
 
 ## Python Version Support
 
-Requires Python 3.10-3.13 (3.14 not yet supported per pyproject.toml)
+Requires Python 3.11-3.14 (per pyproject.toml: `>=3.11,<3.15`)
 
 ## Key Dependencies
 
