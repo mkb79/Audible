@@ -36,6 +36,13 @@ jobs:
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
 
+          # Allow specific bots (e.g. Dependabot) to trigger Claude.
+          # Comma-separated list of bot usernames, or '*' to allow all bots.
+          # Note: on Dependabot-initiated events, secrets come from the
+          # repository's Dependabot secrets, so CLAUDE_CODE_OAUTH_TOKEN must
+          # also be added under Settings > Secrets and variables > Dependabot.
+          allowed_bots: "dependabot[bot]"
+
           # This is an optional setting that allows Claude to read CI results on PRs
           additional_permissions: |
             actions: read
