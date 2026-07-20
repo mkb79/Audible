@@ -69,7 +69,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
   - Added missing exception documentation
 - Raise minimum supported dependency versions:
   - `httpx` to `>=0.27.2,<0.29`
-  - `Pillow` to `>=12.1.0`, `beautifulsoup4` to `>=4.14.3`, `rsa` to `>=4.9.1`
+  - `Pillow` to `>=12.3.0`, `beautifulsoup4` to `>=4.14.3`, `rsa` to `>=4.9.1`
   - Optional backends: `cryptography` to `>=46.0.3`, `pycryptodome` to `>=3.23.0`, `orjson` to `>=3.11.5`, `ujson` to `>=5.11.0`, `python-rapidjson` to `>=1.23`
 - Use the Python 3.11 `datetime.UTC` alias internally, replacing `datetime.timezone.utc`
 
