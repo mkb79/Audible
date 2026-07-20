@@ -14,7 +14,7 @@
     'before 4am on monday',
   ],
   constraints: {
-    python: '>=3.10',
+    python: '>=3.11',
   },
   semanticCommits: 'enabled',
   lockFileMaintenance: {

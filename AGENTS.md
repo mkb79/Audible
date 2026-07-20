@@ -44,7 +44,7 @@
 - **CRITICAL: Before every `git push`, run `uv run nox` to execute the full test suite.** This includes:
   - pre-commit (formatting, linting)
   - mypy (type checking)
-  - tests (unit tests across Python 3.10-3.13)
+  - tests (unit tests across Python 3.11-3.14)
   - typeguard (runtime type validation)
   - xdoctest (documentation examples)
   - docs-build (Sphinx documentation)
