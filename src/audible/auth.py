@@ -1,8 +1,10 @@
 from __future__ import annotations
 
+import asyncio
 import base64
 import logging
-from collections.abc import Callable, Generator, Iterator
+import threading
+from collections.abc import AsyncGenerator, Callable, Generator, Iterator
 from datetime import UTC, datetime, timedelta
 from typing import (
     TYPE_CHECKING,
@@ -23,7 +25,7 @@ from .json_provider import get_json_provider
 from .login import external_login, login
 from .register import deregister as deregister_
 from .register import register as register_
-from .utils import test_convert
+from .utils import build_access_token_header, test_convert
 
 
 if TYPE_CHECKING:
@@ -35,6 +37,28 @@ if TYPE_CHECKING:
 
 
 logger = logging.getLogger("audible.auth")
+
+
+def _refresh_token_request_body(refresh_token: str) -> dict[str, str]:
+    """Build the request body for an access token refresh."""
+    return {
+        "app_name": "Audible",
+        "app_version": "3.56.2",
+        "source_token": refresh_token,
+        "requested_token_type": "access_token",
+        "source_token_type": "refresh_token",
+    }
+
+
+def _parse_refresh_token_response(resp: httpx.Response) -> dict[str, Any]:
+    """Parse an ``/auth/token`` response into access token and expiry."""
+    resp.raise_for_status()
+    resp_dict = resp.json()
+
+    expires_in_sec = int(resp_dict["expires_in"])
+    expires = (datetime.now(UTC) + timedelta(seconds=expires_in_sec)).timestamp()
+
+    return {"access_token": resp_dict["access_token"], "expires": expires}
 
 
 def refresh_access_token(
@@ -58,24 +82,43 @@ def refresh_access_token(
     .. versionadded:: v0.8
         The with_username argument
     """
-    body = {
-        "app_name": "Audible",
-        "app_version": "3.56.2",
-        "source_token": refresh_token,
-        "requested_token_type": "access_token",
-        "source_token_type": "refresh_token",
-    }
-
     target_domain = "audible" if with_username else "amazon"
+    url = f"https://api.{target_domain}.{domain}/auth/token"
 
-    resp = httpx.post(f"https://api.{target_domain}.{domain}/auth/token", data=body)
-    resp.raise_for_status()
-    resp_dict = resp.json()
+    resp = httpx.post(url, data=_refresh_token_request_body(refresh_token))
 
-    expires_in_sec = int(resp_dict["expires_in"])
-    expires = (datetime.now(UTC) + timedelta(seconds=expires_in_sec)).timestamp()
+    return _parse_refresh_token_response(resp)
 
-    return {"access_token": resp_dict["access_token"], "expires": expires}
+
+async def async_refresh_access_token(
+    refresh_token: str, domain: str, with_username: bool = False
+) -> dict[str, Any]:
+    """Refreshes an access token asynchronously.
+
+    Async counterpart of :func:`refresh_access_token`. Performs the token
+    request without blocking the event loop, so it can be awaited from an
+    :class:`~audible.client.AsyncClient` request.
+
+    Args:
+        refresh_token: The refresh token obtained after a device
+            registration.
+        domain: The top level domain of the requested Amazon server
+            (e.g. com).
+        with_username: If ``True`` uses `audible` domain instead of `amazon`.
+
+    Returns:
+        A dict with the new access token and expiration timestamp.
+
+    Note:
+        The new access token is valid for 60 minutes.
+    """
+    target_domain = "audible" if with_username else "amazon"
+    url = f"https://api.{target_domain}.{domain}/auth/token"
+
+    async with httpx.AsyncClient() as client:
+        resp = await client.post(url, data=_refresh_token_request_body(refresh_token))
+
+    return _parse_refresh_token_response(resp)
 
 
 def refresh_website_cookies(
@@ -139,7 +182,7 @@ def user_profile(access_token: str, domain: str) -> dict[str, Any]:
     Raises:
         Exception: If the user profile is malformed
     """
-    headers = {"Authorization": f"Bearer {access_token}"}
+    headers = build_access_token_header(access_token)
 
     resp = httpx.get(f"https://api.amazon.{domain}/user/profile", headers=headers)
     resp.raise_for_status()
@@ -165,7 +208,7 @@ def user_profile_audible(access_token: str, domain: str) -> dict[str, Any]:
     Raises:
         Exception: If the user profile is malformed
     """
-    headers = {"Authorization": f"Bearer {access_token}"}
+    headers = build_access_token_header(access_token)
 
     resp = httpx.get(f"https://api.audible.{domain}/user/profile", headers=headers)
     resp.raise_for_status()
@@ -282,6 +325,9 @@ class Authenticator(httpx.Auth):
     _apply_test_convert: bool = True
     _cached_rsa_key: Any = None
     _crypto_provider: CryptoProvider | None = None
+    _refresh_lock: Any = None
+    _async_refresh_lock: asyncio.Lock | None = None
+    _async_refresh_lock_loop: Any = None
 
     def __init__(
         self,
@@ -289,6 +335,12 @@ class Authenticator(httpx.Auth):
         crypto_provider: CryptoProvider | type[CryptoProvider] | None = None,
     ) -> None:
         super().__init__()
+
+        # Serialize token refreshes so concurrent requests don't each trigger a
+        # refresh. The threading lock guards the blocking (sync) refresh; the
+        # asyncio lock is created lazily per running event loop, see
+        # ``_get_async_refresh_lock``.
+        self._refresh_lock = threading.Lock()
 
         if crypto_provider is not None:
             self._crypto_provider = get_crypto_providers(crypto_provider)
@@ -559,6 +611,26 @@ class Authenticator(httpx.Auth):
 
         return auth
 
+    def _select_auth_mode(self) -> str:
+        """Return the auth mode to apply, preferring signing over bearer.
+
+        Returns:
+            The name of the auth mode to apply (``"signing"`` or ``"bearer"``).
+
+        Raises:
+            AuthFlowError: If neither signing nor bearer auth is available.
+        """
+        available_modes = self.available_auth_modes
+
+        if "signing" in available_modes:
+            return "signing"
+        if "bearer" in available_modes:
+            return "bearer"
+
+        message = "signing or bearer auth flow are not available."
+        logger.critical(message)
+        raise AuthFlowError(message)
+
     def auth_flow(
         self, request: httpx.Request
     ) -> Generator[httpx.Request, httpx.Response, None]:
@@ -569,20 +641,40 @@ class Authenticator(httpx.Auth):
 
         Yields:
             httpx.Request: The authenticated request with signed headers.
-
-        Raises:
-            AuthFlowError: If no auth flow is available.
         """
-        available_modes = self.available_auth_modes
-
-        if "signing" in available_modes:
+        if self._select_auth_mode() == "signing":
             self._apply_signing_auth_flow(request)
-        elif "bearer" in available_modes:
-            self._apply_bearer_auth_flow(request)
         else:
-            message = "signing or bearer auth flow are not available."
-            logger.critical(message)
-            raise AuthFlowError(message)
+            self._apply_bearer_auth_flow(request)
+
+        yield request
+
+    async def async_auth_flow(
+        self, request: httpx.Request
+    ) -> AsyncGenerator[httpx.Request, httpx.Response]:
+        """Async auth flow executed on every request by :mod:`httpx`.
+
+        Async counterpart of :meth:`auth_flow` used by
+        :class:`~audible.client.AsyncClient`. It mirrors the sync flow but
+        refreshes the access token asynchronously and guards the refresh with
+        an :class:`asyncio.Lock`, so multiple concurrent requests never trigger
+        more than one refresh (see :meth:`async_refresh_access_token`).
+
+        Args:
+            request: The request made by ``httpx``.
+
+        Yields:
+            httpx.Request: The authenticated request with signed headers.
+        """
+        # ``requires_request_body`` is True, so make the body available for the
+        # signing flow (httpx' default async flow does the same before signing).
+        if self.requires_request_body:
+            await request.aread()
+
+        if self._select_auth_mode() == "signing":
+            self._apply_signing_auth_flow(request)
+        else:
+            await self._async_apply_bearer_auth_flow(request)
 
         yield request
 
@@ -619,8 +711,17 @@ class Authenticator(httpx.Auth):
         if self.access_token is None:
             raise Exception("No access token found.")
 
-        headers = {"Authorization": "Bearer " + self.access_token, "client-id": "0"}
-        request.headers.update(headers)
+        request.headers.update(build_access_token_header(self.access_token))
+        logger.info("bearer auth flow applied to request")
+
+    async def _async_apply_bearer_auth_flow(self, request: httpx.Request) -> None:
+        if self.access_token_expired:
+            await self.async_refresh_access_token()
+
+        if self.access_token is None:
+            raise Exception("No access token found.")
+
+        request.headers.update(build_access_token_header(self.access_token))
         logger.info("bearer auth flow applied to request")
 
     def _apply_cookies_auth_flow(self, request: httpx.Request) -> None:
@@ -761,27 +862,83 @@ class Authenticator(httpx.Auth):
             with_username=self.with_username or False,
         )
 
+    def _get_async_refresh_lock(self) -> asyncio.Lock:
+        """Return an asyncio lock bound to the current running event loop.
+
+        The lock is created lazily and re-created when the running loop
+        changes, so a single Authenticator can be safely reused across
+        multiple event loops (e.g. successive ``asyncio.run`` calls). This
+        runs inside the event loop with no ``await`` between the check and the
+        assignment, so concurrent tasks cannot create competing locks.
+        """
+        loop = asyncio.get_running_loop()
+        lock = self._async_refresh_lock
+        if lock is None or self._async_refresh_lock_loop is not loop:
+            lock = asyncio.Lock()
+            self._async_refresh_lock = lock
+            self._async_refresh_lock_loop = loop
+        return lock
+
+    def _refresh_request_params(self) -> dict[str, Any]:
+        """Validate prerequisites and build the refresh request parameters."""
+        if self.refresh_token is None:
+            message = "No refresh token found. Can't refresh access token."
+            logger.critical(message)
+            raise NoRefreshToken(message)
+        if self.locale is None:
+            raise Exception("No locale found.")
+
+        return {
+            "refresh_token": self.refresh_token,
+            "domain": self.locale.domain,
+            "with_username": self.with_username or False,
+        }
+
     def refresh_access_token(self, force: bool = False) -> None:
-        if force or self.access_token_expired:
-            if self.refresh_token is None:
-                message = "No refresh token found. Can't refresh access token."
-                logger.critical(message)
-                raise NoRefreshToken(message)
-            if self.locale is None:
-                raise Exception("No locale found.")
-
-            refresh_data = refresh_access_token(
-                refresh_token=self.refresh_token,
-                domain=self.locale.domain,
-                with_username=self.with_username or False,
-            )
-
-            self._update_attrs(**refresh_data)
-        else:
+        if not force and not self.access_token_expired:
             logger.info(
                 "Access Token not expired. No refresh necessary. "
                 "To force refresh please use force=True"
             )
+            return
+
+        with self._refresh_lock:
+            # Re-check inside the lock: another thread may have refreshed the
+            # token while we were waiting to acquire the lock.
+            if not force and not self.access_token_expired:
+                return
+
+            refresh_data = refresh_access_token(**self._refresh_request_params())
+            self._update_attrs(**refresh_data)
+
+    async def async_refresh_access_token(self, force: bool = False) -> None:
+        """Refresh the access token asynchronously without blocking the loop.
+
+        Concurrent requests share a single refresh: the first task to find the
+        token expired performs the refresh while the others wait on the
+        :class:`asyncio.Lock` and then observe the freshly updated token,
+        instead of each firing its own refresh request.
+
+        Args:
+            force: If ``True`` refresh even if the current token is not expired.
+        """
+        if not force and not self.access_token_expired:
+            logger.info(
+                "Access Token not expired. No refresh necessary. "
+                "To force refresh please use force=True"
+            )
+            return
+
+        async with self._get_async_refresh_lock():
+            # Re-check inside the lock: another task may have refreshed the
+            # token while we were waiting to acquire the lock.
+            if not force and not self.access_token_expired:
+                return
+
+            refresh_data = await async_refresh_access_token(
+                **self._refresh_request_params()
+            )
+            self._update_attrs(**refresh_data)
 
     def set_website_cookies_for_country(self, country_code: str) -> None:
         cookies_domain = test_convert("locale", country_code).domain

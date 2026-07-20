@@ -4,6 +4,7 @@ from typing import Any
 import httpx
 
 from .login import build_client_id
+from .utils import build_access_token_header
 
 
 def register(
@@ -134,7 +135,7 @@ def deregister(
            The with_username argument
     """
     body = {"deregister_all_existing_accounts": deregister_all}
-    headers = {"Authorization": f"Bearer {access_token}"}
+    headers = build_access_token_header(access_token)
 
     target_domain = "audible" if with_username else "amazon"
 

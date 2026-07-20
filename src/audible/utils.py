@@ -12,6 +12,24 @@ from .localization import Locale
 logger = logging.getLogger("audible.utils")
 
 
+def build_access_token_header(access_token: str) -> dict[str, str]:
+    """Build the auth header used to authenticate with an access token.
+
+    Audible/Amazon expect the access token in the ``x-amz-access-token``
+    header (replacing the legacy ``Authorization: Bearer`` scheme).
+    Centralizing the header construction keeps every call site in sync when
+    the authentication scheme changes.
+
+    Args:
+        access_token: A valid access token obtained from a device
+            registration or a token refresh.
+
+    Returns:
+        A single-entry header mapping ready to merge into request headers.
+    """
+    return {"x-amz-access-token": access_token}
+
+
 def _check_website_cookies(value: dict[str, str]) -> None:
     if not isinstance(value, dict):
         raise TypeError(f"website_cookies: Expected dict, got {type(value).__name__}.")
