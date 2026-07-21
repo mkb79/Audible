@@ -14,6 +14,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 - API requests now authenticate with the `x-amz-access-token` header instead of the legacy `Authorization: Bearer` scheme, matching the current Audible API (see [#832](https://github.com/mkb79/Audible/issues/832)). Header construction is centralized in the new `audible.utils.build_access_token_header` helper. The obsolete `client-id: 0` header is no longer sent with bearer auth.
 
+### Fixed
+
+- `OrjsonProvider` now honors the `ensure_ascii` parameter. Non-ASCII characters were previously left unescaped, so the serialized output depended on which JSON library was installed.
+
 ## [0.11.0] - 2026-07-20
 
 ### Added

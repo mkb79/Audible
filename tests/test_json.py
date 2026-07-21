@@ -1,5 +1,7 @@
 """Tests for JSON provider implementations."""
 
+from datetime import datetime
+
 import pytest
 
 from audible.json_provider import (
@@ -313,6 +315,112 @@ class TestOrjsonProvider:
         serialized = provider.dumps(original, indent=4)
         deserialized = provider.loads(serialized)
         assert deserialized == original
+
+    def test_dumps_ensure_ascii_true_ascii_fast_path(self) -> None:
+        """ASCII-only output stays on the native orjson path (no fallback)."""
+        try:
+            provider = OrjsonProvider()
+        except ImportError:
+            pytest.skip("orjson not installed")
+
+        result = provider.dumps({"key": "value"}, ensure_ascii=True)
+        assert result == '{"key":"value"}'
+
+    def test_dumps_ensure_ascii_true_non_ascii(self) -> None:
+        """ensure_ascii=True escapes non-ASCII via the fallback provider."""
+        try:
+            provider = OrjsonProvider()
+        except ImportError:
+            pytest.skip("orjson not installed")
+
+        result = provider.dumps({"key": "über"}, ensure_ascii=True)
+        # Escaped to \uXXXX; lower() tolerates rapidjson's uppercase hex.
+        assert "\\u00fc" in result.lower()
+        assert "ü" not in result
+
+    def test_dumps_ensure_ascii_false_non_ascii(self) -> None:
+        """ensure_ascii=False keeps orjson's raw UTF-8 output."""
+        try:
+            provider = OrjsonProvider()
+        except ImportError:
+            pytest.skip("orjson not installed")
+
+        result = provider.dumps({"key": "über"}, ensure_ascii=False)
+        assert "über" in result
+
+    def test_dumps_indent_2_ensure_ascii_true_non_ascii(self) -> None:
+        """indent=2 with non-ASCII stays indented and gets escaped."""
+        try:
+            provider = OrjsonProvider()
+        except ImportError:
+            pytest.skip("orjson not installed")
+
+        result = provider.dumps({"key": "über"}, indent=2, ensure_ascii=True)
+        assert '  "key"' in result
+        assert "\\u00fc" in result.lower()
+        assert "ü" not in result
+
+    def test_dumps_ensure_ascii_true_keeps_compact_separators(self) -> None:
+        """Escaping happens in place, so orjson's compact separators survive."""
+        try:
+            provider = OrjsonProvider()
+        except ImportError:
+            pytest.skip("orjson not installed")
+
+        result = provider.dumps({"key": "über"}, ensure_ascii=True)
+        assert result == '{"key":"\\u00fcber"}'
+
+    def test_dumps_ensure_ascii_true_astral_surrogate_pair(self) -> None:
+        """Characters beyond the BMP are escaped as UTF-16 surrogate pairs."""
+        try:
+            provider = OrjsonProvider()
+        except ImportError:
+            pytest.skip("orjson not installed")
+
+        result = provider.dumps({"key": "😀"}, ensure_ascii=True)
+        assert result == '{"key":"\\ud83d\\ude00"}'
+        assert provider.loads(result) == {"key": "😀"}
+
+    def test_dumps_ensure_ascii_true_keeps_orjson_only_types(self) -> None:
+        """orjson-native types still serialize alongside non-ASCII text."""
+        try:
+            provider = OrjsonProvider()
+        except ImportError:
+            pytest.skip("orjson not installed")
+
+        # stdlib/ujson cannot encode datetime; escaping in place must not
+        # re-encode the object through a less capable backend.
+        result = provider.dumps(
+            {"when": datetime(2026, 7, 21, 8, 30), "label": "über"},
+            ensure_ascii=True,
+        )
+        assert "2026-07-21T08:30:00" in result
+        assert "\\u00fc" in result
+        assert "ü" not in result
+
+    def test_dumps_ensure_ascii_true_keeps_non_finite_float_semantics(self) -> None:
+        """Non-finite floats keep orjson's null semantics, not stdlib's NaN."""
+        try:
+            provider = OrjsonProvider()
+        except ImportError:
+            pytest.skip("orjson not installed")
+
+        result = provider.dumps(
+            {"value": float("nan"), "label": "über"}, ensure_ascii=True
+        )
+        assert '"value":null' in result
+        assert "NaN" not in result
+        assert "\\u00fc" in result
+
+    def test_roundtrip_non_ascii(self) -> None:
+        """Non-ASCII data round-trips through dumps/loads."""
+        try:
+            provider = OrjsonProvider()
+        except ImportError:
+            pytest.skip("orjson not installed")
+
+        original = {"key": "über", "number": 1}
+        assert provider.loads(provider.dumps(original)) == original
 
 
 class TestRegistry:
