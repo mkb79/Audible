@@ -14,12 +14,14 @@ This provider implements smart fallback logic:
 - indent=4 or other -> falls back to ujson/rapidjson/stdlib
 - separators specified -> falls back to stdlib
 - indent=2 or None -> uses native orjson (maximum performance)
+- ensure_ascii=True -> escapes orjson's output in place (no re-encode)
 """
 
 from __future__ import annotations
 
 import json
 import logging
+import re
 from typing import TYPE_CHECKING, Any
 
 from .exceptions import JSONDecodeError, JSONEncodeError
@@ -39,6 +41,47 @@ except ImportError:
 
 
 logger = logging.getLogger("audible.json_provider.orjson")
+
+
+_NON_ASCII_PATTERN = re.compile(r"[^\x00-\x7f]")
+
+
+def _escape_match(match: re.Match[str]) -> str:
+    r"""Render a single non-ASCII character as ``\uXXXX``.
+
+    Args:
+        match: Match holding exactly one non-ASCII character.
+
+    Returns:
+        The ``\uXXXX`` escape sequence, or a UTF-16 surrogate pair for
+        characters beyond the BMP.
+    """
+    code = ord(match.group())
+    if code <= 0xFFFF:
+        return f"\\u{code:04x}"
+    # Astral plane: emit a UTF-16 surrogate pair like stdlib json does.
+    code -= 0x10000
+    return f"\\u{0xD800 + (code >> 10):04x}\\u{0xDC00 + (code & 0x3FF):04x}"
+
+
+def _escape_non_ascii(text: str) -> str:
+    r"""Escape every non-ASCII character in a JSON document as ``\uXXXX``.
+
+    All structural characters of a JSON document are ASCII, so any non-ASCII
+    code point necessarily sits inside a string literal. Escaping them
+    individually therefore yields an equivalent, ASCII-only document.
+
+    Only the matched characters are substituted, so contiguous ASCII runs are
+    copied as-is instead of being buffered one object per character.
+
+    Args:
+        text: A valid JSON document.
+
+    Returns:
+        The same document with non-ASCII characters replaced by ``\uXXXX``
+        escape sequences, matching the stdlib json encoder.
+    """
+    return _NON_ASCII_PATTERN.sub(_escape_match, text)
 
 
 class OrjsonProvider:
@@ -155,6 +198,9 @@ class OrjsonProvider:
             - separators -> stdlib fallback (orjson doesn't support)
             - indent=4 or other -> ujson/rapidjson/stdlib fallback
             - indent=2 or None -> native orjson (maximum performance)
+            - ensure_ascii=True with non-ASCII output -> orjson's output is
+              escaped in place (orjson has no ensure_ascii option and always
+              emits raw UTF-8)
         """
         # Case 1: separators requested -> must use stdlib
         if separators is not None:
@@ -187,9 +233,22 @@ class OrjsonProvider:
         # orjson always returns bytes, decode to str
         try:
             result = orjson.dumps(obj, option=option)
-            return result.decode("utf-8")
         except (TypeError, ValueError) as e:
             raise JSONEncodeError(f"Object not JSON serializable: {e}") from e
+
+        text = result.decode("utf-8")
+
+        # orjson has no `ensure_ascii` option and always emits raw UTF-8. Escape
+        # the serialized output instead of re-encoding ``obj`` through another
+        # backend: that preserves orjson's formatting as well as its wider type
+        # support (dataclasses, datetime, non-finite floats), which a fallback
+        # provider would either reject or serialize with different semantics.
+        # Pure-ASCII output needs no escaping, so the fast path is untouched.
+        if ensure_ascii and not text.isascii():
+            logger.debug("orjson: escaping non-ASCII output for ensure_ascii=True")
+            return _escape_non_ascii(text)
+
+        return text
 
     def loads(self, s: str | bytes) -> Any:
         """Deserialize JSON string using orjson.
