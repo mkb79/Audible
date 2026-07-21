@@ -8,26 +8,33 @@ Audible |version| documentation!
 
 .. only:: html
 
+   .. Keep this list identical to the one in README.md, in the same order: both
+      render the same set of badges and drifting apart is what let a dead Travis
+      badge survive in one of them.
+
    .. image:: https://img.shields.io/pypi/v/audible.svg
       :target: https://pypi.org/project/audible/
 
    .. image:: https://img.shields.io/pypi/l/audible.svg
-      :target: https://pypi.org/project/audible
+      :target: https://pypi.org/project/audible/
 
    .. image:: https://img.shields.io/pypi/pyversions/audible.svg
-      :target: https://pypi.org/project/audible
+      :target: https://pypi.org/project/audible/
 
    .. image:: https://img.shields.io/pypi/status/audible.svg
-      :target: https://pypi.org/project/audible
+      :target: https://pypi.org/project/audible/
 
    .. image:: https://img.shields.io/pypi/wheel/audible.svg
-      :target: https://pypi.org/project/audible
+      :target: https://pypi.org/project/audible/
+
+   .. image:: https://github.com/mkb79/Audible/actions/workflows/ci.yml/badge.svg
+      :target: https://github.com/mkb79/Audible/actions/workflows/ci.yml
 
    .. image:: https://www.codefactor.io/repository/github/mkb79/audible/badge
       :target: https://www.codefactor.io/repository/github/mkb79/audible
 
-   .. image:: https://img.shields.io/pypi/dm/audible.svg
-      :target: https://pypi.org/project/audible
+   .. image:: https://static.pepy.tech/badge/audible/month
+      :target: https://pepy.tech/project/audible
 
 -------------------
 

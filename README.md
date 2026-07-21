@@ -5,9 +5,9 @@
 [![image](https://img.shields.io/pypi/pyversions/audible.svg)](https://pypi.org/project/audible/)
 [![image](https://img.shields.io/pypi/status/audible.svg)](https://pypi.org/project/audible/)
 [![image](https://img.shields.io/pypi/wheel/audible.svg)](https://pypi.org/project/audible/)
-[![Travis](https://img.shields.io/travis/mkb79/audible/master.svg?logo=travis)](https://travis-ci.org/mkb79/audible)
+[![CI](https://github.com/mkb79/Audible/actions/workflows/ci.yml/badge.svg)](https://github.com/mkb79/Audible/actions/workflows/ci.yml)
 [![CodeFactor](https://www.codefactor.io/repository/github/mkb79/audible/badge)](https://www.codefactor.io/repository/github/mkb79/audible)
-[![image](https://img.shields.io/pypi/dm/audible.svg)](https://pypi.org/project/audible/)
+[![Downloads](https://static.pepy.tech/badge/audible/month)](https://pepy.tech/project/audible)
 
 **Audible is a Python low-level interface to communicate with the non-publicly
 [Audible](<https://en.wikipedia.org/wiki/Audible_(service)>) API.**
