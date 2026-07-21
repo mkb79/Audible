@@ -9,5 +9,12 @@ formats:
   - pdf
 python:
   install:
-    - requirements: docs/requirements.txt
-    - path: .
+    # Runs `uv sync --group docs`, which installs the docs dependency group from
+    # pyproject.toml together with the project itself, replacing the previous pair
+    # of entries (docs/requirements.txt + path: .). Doc dependency versions are
+    # therefore maintained in pyproject.toml only. Note that `method: uv` allows
+    # exactly one entry here.
+    - method: uv
+      command: sync
+      groups:
+        - docs
