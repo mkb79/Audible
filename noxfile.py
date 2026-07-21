@@ -24,6 +24,13 @@ nox.options.sessions = (
     "docs-build",
 )
 
+# uv refuses to create a virtualenv where one already exists, so a plain
+# `nox` run fails for every session once `.nox/` has been populated by an
+# earlier run. Clearing on create keeps repeated local runs working, while
+# `nox -R` still reuses the existing environments. CI starts from an empty
+# `.nox/`, where this is a no-op.
+os.environ.setdefault("UV_VENV_CLEAR", "1")
+
 PACKAGE = "audible"
 PROJECT = nox.project.load_toml("pyproject.toml")
 PYTHON_VERSIONS = nox.project.python_versions(PROJECT)
