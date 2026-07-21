@@ -18,6 +18,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 - `OrjsonProvider` now honors the `ensure_ascii` parameter. Non-ASCII characters were previously left unescaped, so the serialized output depended on which JSON library was installed.
 
+### Security
+
+- Raised the minimum versions of the optional `cryptography` (>=48.0.1), `orjson` (>=3.11.6) and `ujson` (>=5.13.0) dependencies to exclude releases with known vulnerabilities.
+
 ## [0.11.0] - 2026-07-20
 
 ### Added
