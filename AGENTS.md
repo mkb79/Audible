@@ -49,5 +49,5 @@
   - xdoctest (documentation examples)
   - docs-build (Sphinx documentation)
 - **If `uv run nox` reports failures, you MUST NOT push without explicit confirmation from the repository maintainer.** Fix the failures first or seek approval.
-- The only acceptable exception is the `safety` session (dependency vulnerability checks), which may fail due to external API issues.
+- The only acceptable exception is the `audit` session (dependency vulnerability checks), which may fail if the advisory service is unavailable. A genuine finding must be fixed.
 - Pull requests should summarize intent, list validation steps, and call out testing gaps or follow-up tasks so reviewers can respond quickly.

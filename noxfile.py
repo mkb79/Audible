@@ -16,7 +16,7 @@ nox.options.default_venv_backend = "uv"
 nox.options.error_on_external_run = True
 nox.options.sessions = (
     "pre-commit",
-    "safety",
+    "audit",
     "mypy",
     "tests",
     "typeguard",
@@ -41,7 +41,7 @@ DEV_GROUP = "dev"
 DOCS_GROUP = "docs"
 MYPY_GROUP = "mypy"
 PRE_COMMIT_GROUP = "pre-commit"
-SAFETY_GROUP = "safety"
+AUDIT_GROUP = "audit"
 TESTS_GROUP = "tests"
 COVERAGE_GROUP = TESTS_GROUP
 TYPEGUARD_GROUP = "typeguard"
@@ -140,25 +140,54 @@ def precommit(s: nox.Session) -> None:
         activate_virtualenv_in_precommit_hooks(s)
 
 
-@session(python=DEFAULT_PYTHON_VERSION, uv_groups=[SAFETY_GROUP])
-def safety(s: nox.Session) -> None:
-    """Scan dependencies for insecure packages."""
-    # Use uv to generate requirements.txt
-    requirement_path = f"{s.virtualenv.location}/requirements.txt"
+@session(python=DEFAULT_PYTHON_VERSION, uv_groups=[AUDIT_GROUP])
+def audit(s: nox.Session) -> None:
+    """Scan the locked dependencies for known vulnerabilities.
+
+    Args:
+        s: The Session object.
+    """
+    lock_dir = Path(s.virtualenv.location) / "audit"
+    lock_dir.mkdir(exist_ok=True)
+
+    # Export as pylock.toml rather than requirements.txt. A requirements export
+    # keeps environment markers, and pip-audit evaluates those against the
+    # running interpreter -- so a vulnerable pin guarded by
+    # `python_full_version < '3.12'` is silently skipped on 3.14. Verified: a
+    # marked `ujson==5.11.0` reports nothing on 3.14, while the same pin without
+    # the marker reports five advisories. pip-audit reads pylock.toml as a whole
+    # instead, covering every locked resolution and platform in one run,
+    # including the Windows-only and older-Python entries.
+    #
+    # --all-groups and --all-extras matter: the optional backends (cryptography,
+    # orjson, ujson, python-rapidjson, pycryptodome) are published extras that
+    # users install, and the development groups are what this repository runs on.
+    # --no-emit-project drops the editable self-reference, which is not a
+    # dependency. --frozen keeps the export tied to the lock.
     s.run_always(
         "uv",
         "export",
-        "--no-hashes",
+        "--frozen",
+        "--all-groups",
+        "--all-extras",
+        "--no-emit-project",
         "--format",
-        "requirements-txt",
+        "pylock.toml",
         "-o",
-        requirement_path,
+        str(lock_dir / "pylock.toml"),
     )
+    # --strict fails if any package could not be audited, so a gap cannot pass
+    # silently.
+    #
+    # If an advisory ever has no fixed release, add `--ignore-vuln <ID>` here
+    # together with a comment stating why and when to revisit it, rather than
+    # weakening the session as a whole.
     s.run(
-        "safety",
-        "check",
-        "--full-report",
-        f"--file={requirement_path}",
+        "pip-audit",
+        "--locked",
+        "--strict",
+        str(lock_dir),
+        *s.posargs,
     )
 
 
