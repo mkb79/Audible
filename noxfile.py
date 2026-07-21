@@ -235,7 +235,10 @@ def xdoctest(s: nox.Session) -> None:
 @session(name="docs-build", python=DEFAULT_PYTHON_VERSION, uv_groups=[DOCS_GROUP])
 def docs_build(s: nox.Session) -> None:
     """Build the documentation."""
-    default_args = ["docs/source", "docs/_build"]
+    # -W turns warnings into errors, matching `fail_on_warning` in
+    # .readthedocs.yaml. Catching them here gives feedback on the pull request
+    # instead of only when Read the Docs builds.
+    default_args = ["-W", "docs/source", "docs/_build"]
     args = s.posargs or default_args
 
     if not s.posargs and "FORCE_COLOR" in os.environ:

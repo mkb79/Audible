@@ -117,10 +117,16 @@ audible.json\_provider.protocols module
 audible.json\_provider.exceptions module
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+.. JSONDecodeError and JSONEncodeError are re-exported from the package and are
+   documented there, which is also how users import them. ``:no-index:`` keeps
+   this section readable while leaving ``audible.json_provider`` as the single
+   cross-reference target.
+
 .. automodule:: audible.json_provider.exceptions
    :members:
    :undoc-members:
    :show-inheritance:
+   :no-index:
 
 audible.json\_provider.registry module
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -173,10 +179,15 @@ audible.localization module
 audible.login module
 --------------------
 
+.. ``:undoc-members:`` pulls in the bs4 classes imported by this module and then
+   documents them as ``audible.login.*``. Excluding them keeps third-party types
+   out of our API reference and avoids resolving bs4's own forward references.
+
 .. automodule:: audible.login
    :members:
    :undoc-members:
    :show-inheritance:
+   :exclude-members: BeautifulSoup, NavigableString, Tag
 
 audible.metadata module
 -----------------------

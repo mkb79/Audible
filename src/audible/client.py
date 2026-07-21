@@ -13,7 +13,12 @@ from typing import (
 )
 
 import httpx
-from httpx import URL
+
+# `Headers` must stay importable under this name: httpx defines `HeaderTypes` as
+# `ForwardRef("Headers") | ...`, and that forward reference is resolved in the
+# namespace of the module using the annotation. Without the binding, tools that
+# evaluate annotations (sphinx-autodoc-typehints among them) cannot resolve it.
+from httpx import URL, Headers
 from httpx._models import HeaderTypes  # type: ignore[attr-defined]
 
 from ._types import TrueFalseT
@@ -96,7 +101,7 @@ class BaseClient(Generic[ClientT], metaclass=ABCMeta):
             raise Exception("Authenticator has no `Locale` class set.")
         self._api_url = httpx.URL(self._API_URL_TEMP + locale.domain)
 
-        default_headers = httpx.Headers(
+        default_headers = Headers(
             {
                 "Accept": "application/json",
                 "Accept-Charset": "utf-8",

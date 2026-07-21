@@ -15,12 +15,10 @@ class HashAlgorithm(Protocol):
 
     This protocol defines the interface that hash objects must provide.
     Compatible with hashlib hash objects (e.g., hashlib.sha256()).
-
-    Attributes:
-        name: The name of the hash algorithm (e.g., 'sha256', 'sha1').
     """
 
     name: str
+    """The name of the hash algorithm (e.g., 'sha256', 'sha1')."""
 
 
 @runtime_checkable

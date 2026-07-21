@@ -2,29 +2,32 @@
 Audible |version| documentation!
 ================================
 
-.. image:: https://img.shields.io/pypi/v/audible.svg
-   :target: https://pypi.org/project/audible/
+.. Badges are SVG and cannot be embedded by the latex builder, which makes the
+   pdf build warn about each one. They carry no meaning in a pdf anyway, so they
+   are restricted to the html output.
 
-.. image:: https://img.shields.io/pypi/l/audible.svg
-   :target: https://pypi.org/project/audible
+.. only:: html
 
-.. image:: https://img.shields.io/pypi/pyversions/audible.svg
-   :target: https://pypi.org/project/audible
+   .. image:: https://img.shields.io/pypi/v/audible.svg
+      :target: https://pypi.org/project/audible/
 
-.. image:: https://img.shields.io/pypi/status/audible.svg
-   :target: https://pypi.org/project/audible
+   .. image:: https://img.shields.io/pypi/l/audible.svg
+      :target: https://pypi.org/project/audible
 
-.. image:: https://img.shields.io/pypi/wheel/audible.svg
-   :target: https://pypi.org/project/audible
+   .. image:: https://img.shields.io/pypi/pyversions/audible.svg
+      :target: https://pypi.org/project/audible
 
-.. image:: https://img.shields.io/travis/mkb79/audible/master.svg?logo=travis
-   :target: https://travis-ci.org/mkb79/audible
+   .. image:: https://img.shields.io/pypi/status/audible.svg
+      :target: https://pypi.org/project/audible
 
-.. image:: https://www.codefactor.io/repository/github/mkb79/audible/badge
-   :target: https://www.codefactor.io/repository/github/mkb79/audible
+   .. image:: https://img.shields.io/pypi/wheel/audible.svg
+      :target: https://pypi.org/project/audible
 
-.. image:: https://img.shields.io/pypi/dm/audible.svg
-   :target: https://pypi.org/project/audible
+   .. image:: https://www.codefactor.io/repository/github/mkb79/audible/badge
+      :target: https://www.codefactor.io/repository/github/mkb79/audible
+
+   .. image:: https://img.shields.io/pypi/dm/audible.svg
+      :target: https://pypi.org/project/audible
 
 -------------------
 

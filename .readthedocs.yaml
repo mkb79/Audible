@@ -5,6 +5,10 @@ build:
     python: "3.14"
 sphinx:
   configuration: docs/source/conf.py
+  # The build is warning-free; keep it that way. A new warning is almost always a
+  # real regression (a broken cross-reference, a dead include, an ambiguous
+  # target) and is easy to miss in a wall of accepted noise.
+  fail_on_warning: true
 formats:
   - pdf
 python:
