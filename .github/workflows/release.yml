@@ -13,6 +13,12 @@ jobs:
   release:
     name: Release
     runs-on: ubuntu-latest
+    permissions:
+      # Push the version tag and publish the drafted release.
+      contents: write
+      # Release Drafter reads merged pull requests and their labels to
+      # categorize the release notes.
+      pull-requests: read
     outputs:
       tag: ${{ steps.check-version.outputs.tag }}
     steps:
