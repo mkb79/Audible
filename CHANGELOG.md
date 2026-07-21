@@ -4,6 +4,16 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [Unreleased]
+
+### Added
+
+- Asynchronous access token refresh for `AsyncClient`. `Authenticator.async_auth_flow` and the new `async_refresh_access_token` refresh the token without blocking the event loop, guarded by an `asyncio.Lock` (bound to the running event loop) so that multiple concurrent requests trigger only a single refresh. The synchronous `refresh_access_token` is likewise guarded by a `threading.Lock`.
+
+### Changed
+
+- API requests now authenticate with the `x-amz-access-token` header instead of the legacy `Authorization: Bearer` scheme, matching the current Audible API (see [#832](https://github.com/mkb79/Audible/issues/832)). Header construction is centralized in the new `audible.utils.build_access_token_header` helper. The obsolete `client-id: 0` header is no longer sent with bearer auth.
+
 ## [0.11.0] - 2026-07-20
 
 ### Added
