@@ -157,9 +157,7 @@ def test_pycryptodome_specific_invalid_hash(
         name = "unsupported_algo"
 
     with pytest.raises(ValueError, match="Unsupported hash algorithm"):
-        provider.pbkdf2.derive_key(
-            "password", b"salt", 1000, 32, lambda: UnsupportedHash()
-        )
+        provider.pbkdf2.derive_key("password", b"salt", 1000, 32, UnsupportedHash)
 
 
 # ---------------------------------------------------------------------------
