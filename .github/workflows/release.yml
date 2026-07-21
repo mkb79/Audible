@@ -62,7 +62,7 @@ jobs:
 
       - name: Publish the release notes
         id: create-release
-        uses: release-drafter/release-drafter@v6.1.0
+        uses: release-drafter/release-drafter@v6.4.0
         with:
           publish: ${{ steps.check-version.outputs.tag != '' }}
           tag: ${{ steps.check-version.outputs.tag }}
@@ -92,6 +92,6 @@ jobs:
       - name: Publish package on TestPyPI
         continue-on-error: true
         if: "! needs.release.outputs.tag"
-        uses: pypa/gh-action-pypi-publish@v1.13.0
+        uses: pypa/gh-action-pypi-publish@v1.14.1
         with:
           repository-url: https://test.pypi.org/legacy/
