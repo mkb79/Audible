@@ -6,7 +6,6 @@
   enabledManagers: [
     'github-actions',
     'pep621',
-    'pip_requirements',
     // Required for customManagers below to run at all: when enabledManagers is
     // set, custom managers are only active if listed here.
     'custom.regex',
@@ -42,6 +41,29 @@
     automerge: true,
     automergeType: 'pr',
   },
+  // Security fixes are handled here rather than through packageRules. The
+  // previous `matchCategories: ['security']` rules never matched anything:
+  // categories are ecosystems such as 'python', not a severity, so Renovate
+  // opened no vulnerability PRs at all while 34 Dependabot alerts were open.
+  vulnerabilityAlerts: {
+    enabled: true,
+    labels: [
+      'security',
+    ],
+    // Deliberately no semanticCommitType here. config:recommended brings
+    // :semanticPrefixFixDepsChoreOthers, which already types project.dependencies
+    // and project.optional-dependencies as `fix` and everything else, including
+    // dependency-groups, as `chore`. Forcing `fix` would turn a CVE in a
+    // development tool such as pytest into a user-facing patch release, even
+    // though nobody installing the package is affected.
+    // Vulnerability PRs default to updating only the lock file, which would
+    // leave a vulnerable `>=` floor in pyproject.toml untouched -- exactly the
+    // gap that had to be closed by hand in #860.
+    rangeStrategy: 'bump',
+    // Never wait for the weekly window, and never merge a security fix unread.
+    schedule: [],
+    automerge: false,
+  },
   packageRules: [
     {
       matchManagers: [
@@ -51,30 +73,19 @@
       matchPackageNames: [
         '/.*/',
       ],
-    },
-    {
-      matchManagers: [
-        'pip_requirements',
-      ],
-      matchFileNames: [
-        '.github/workflows/constraints.txt',
-      ],
-      groupName: 'workflow-updates',
-    },
-    {
-      matchManagers: [
-        'pip_requirements',
-      ],
-      matchFileNames: [
-        'docs/requirements.txt',
-      ],
-      groupName: 'doc-updates',
+      // Actions are CI tooling, like the pinned uv version below. Without this
+      // they default to chore(deps), which is inconsistent for the same kind of
+      // change.
+      semanticCommitType: 'ci',
     },
     {
       // The github-actions rule above cannot match this: the dependency comes
       // from the custom.regex manager. Without this, Renovate would default to
       // chore(deps) even though the pinned uv version is workflow tooling.
       description: 'Pinned uv version in workflows is CI tooling',
+      matchManagers: [
+        'custom.regex',
+      ],
       matchDepNames: [
         'astral-sh/uv',
       ],
@@ -107,44 +118,6 @@
       groupName: 'uv-updates-dev',
       automerge: true,
       automergeType: 'pr',
-    },
-    {
-      description: 'Dev security updates',
-      matchManagers: [
-        'pep621',
-      ],
-      matchCategories: [
-        'security',
-      ],
-      matchJsonata: [
-        "depType = 'dependency-groups' and managerData.depGroup in ['dev','docs','mypy','pre-commit','safety','tests','typeguard','xdocs']",
-      ],
-      groupName: 'uv-security-updates-dev',
-      labels: [
-        'security',
-        'uv',
-        'dev',
-      ],
-      prPriority: 1,
-    },
-    {
-      description: 'Production security updates',
-      matchManagers: [
-        'pep621',
-      ],
-      matchCategories: [
-        'security',
-      ],
-      matchDepTypes: [
-        'project.dependencies',
-      ],
-      groupName: 'uv-security-updates-prod',
-      labels: [
-        'security',
-        'uv',
-        'production',
-      ],
-      prPriority: 1,
     },
   ],
 }
