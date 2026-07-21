@@ -1,0 +1,199 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches:
+      - master
+  merge_group:
+    # Only respond to the merge queue asking for checks, not to future activity
+    # types added to this event.
+    types: [checks_requested]
+
+permissions:
+  contents: read
+
+concurrency:
+  # Pull request runs supersede each other, keyed by PR number. Every master and
+  # merge-queue run gets a unique group instead: `cancel-in-progress: false`
+  # protects only the *running* job, while a newer *pending* run would still
+  # replace an older pending one in a shared group. The release automation in
+  # #864 keys off a completed master result, so none of them may be dropped.
+  group: >-
+    ${{ github.workflow }}-${{ github.event_name == 'pull_request'
+    && github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  FORCE_COLOR: "1"
+  PRE_COMMIT_COLOR: "always"
+  # Pin uv so CI is reproducible; pyproject only requires >=0.7.1. Renovate
+  # updates this deliberately.
+  UV_VERSION: "0.11.28"
+
+jobs:
+  quality:
+    name: quality
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@v7
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v8.3.2
+        with:
+          version: ${{ env.UV_VERSION }}
+          python-version: "3.14"
+
+      - name: Verify the lock file is up to date
+        run: uv lock --check
+
+      - name: Lint, format and docstring checks
+        run: uv run nox --session=pre-commit --python=3.14
+
+      - name: Type-check
+        # mypy is configured with python_version = "3.11", so it analyses against
+        # 3.11 no matter which interpreter runs it. Running the whole supported
+        # matrix repeated identical work.
+        run: uv run nox --session=mypy --python=3.11
+
+  security:
+    # Independent of `quality` on purpose: a failure there must not stop the
+    # vulnerability scan, and an outage of the Safety service must not take the
+    # rest of CI with it. Replaced by pip-audit in security.yml (#864, phase 3).
+    name: security
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@v7
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v8.3.2
+        with:
+          version: ${{ env.UV_VERSION }}
+          python-version: "3.14"
+
+      - name: Scan dependencies for known vulnerabilities
+        run: uv run nox --session=safety --python=3.14
+
+  tests:
+    name: tests ${{ matrix.python }} / ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { python: "3.11", os: ubuntu-latest }
+          - { python: "3.12", os: ubuntu-latest }
+          - { python: "3.13", os: ubuntu-latest }
+          - { python: "3.14", os: ubuntu-latest }
+          # Other platforms only need the newest interpreter unless a real
+          # platform-specific problem shows up on an older one.
+          - { python: "3.14", os: windows-latest }
+          - { python: "3.14", os: macos-latest }
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@v7
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v8.3.2
+        with:
+          version: ${{ env.UV_VERSION }}
+          python-version: ${{ matrix.python }}
+
+      - name: Run the test suite
+        run: uv run nox --session=tests --python=${{ matrix.python }}
+
+      - name: Upload coverage data
+        # Oldest and newest supported interpreter on Linux. Aggregating every
+        # interpreter and platform multiplies artifact traffic without covering
+        # meaningfully different source lines; the other entries still run and
+        # still fail the build, their lines just do not reach the report.
+        if: >-
+          always() && matrix.os == 'ubuntu-latest' &&
+          (matrix.python == '3.11' || matrix.python == '3.14')
+        uses: actions/upload-artifact@v7
+        with:
+          name: coverage-data-${{ matrix.python }}
+          include-hidden-files: true
+          path: ".coverage.*"
+          retention-days: 1
+
+  assurance:
+    name: assurance
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@v7
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v8.3.2
+        with:
+          version: ${{ env.UV_VERSION }}
+          python-version: "3.14"
+
+      - name: Runtime type checking
+        run: uv run nox --session=typeguard --python=3.14
+
+      - name: Documentation examples
+        run: uv run nox --session=xdoctest --python=3.14
+
+      - name: Build the documentation
+        # Warnings are errors here (-W in the nox session), matching
+        # fail_on_warning in .readthedocs.yaml.
+        run: uv run nox --session=docs-build --python=3.14
+
+  coverage:
+    name: coverage
+    runs-on: ubuntu-latest
+    needs: tests
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@v7
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v8.3.2
+        with:
+          version: ${{ env.UV_VERSION }}
+          python-version: "3.14"
+
+      - name: Download coverage data
+        uses: actions/download-artifact@v8
+        with:
+          pattern: coverage-data-*
+          merge-multiple: true
+
+      - name: Combine coverage data and display a human readable report
+        run: uv run nox --reuse-existing-virtualenvs --session=coverage
+
+      - name: Create the coverage report
+        run: uv run nox --reuse-existing-virtualenvs --session=coverage -- xml
+
+      - name: Upload the coverage report
+        uses: codecov/codecov-action@v7.0.0
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: ./coverage.xml
+          # Make the explicit file list authoritative instead of letting the
+          # action discover report files on its own.
+          disable_search: true
+
+  gate:
+    # Single stable check name to require in branch protection, so changing the
+    # matrix above never needs a repository settings change.
+    name: required
+    runs-on: ubuntu-latest
+    needs: [quality, security, tests, assurance, coverage]
+    if: always()
+    steps:
+      - name: Verify that every job succeeded
+        env:
+          RESULTS: ${{ join(needs.*.result, ' ') }}
+        run: |
+          echo "Job results: $RESULTS"
+          for result in $RESULTS; do
+            if [ "$result" != "success" ]; then
+              echo "::error::A required job did not succeed."
+              exit 1
+            fi
+          done

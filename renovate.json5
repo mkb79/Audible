@@ -7,6 +7,26 @@
     'github-actions',
     'pep621',
     'pip_requirements',
+    // Required for customManagers below to run at all: when enabledManagers is
+    // set, custom managers are only active if listed here.
+    'custom.regex',
+  ],
+  customManagers: [
+    {
+      customType: 'regex',
+      description: 'Keep the pinned uv version in the workflows up to date',
+      managerFilePatterns: [
+        '/^\\.github/workflows/.+\\.ya?ml$/',
+      ],
+      matchStrings: [
+        'UV_VERSION:\\s*["\']?(?<currentValue>\\d+\\.\\d+\\.\\d+)["\']?',
+      ],
+      // github-releases matches what setup-uv actually installs (the published
+      // CLI binaries), rather than uv's secondary PyPI distribution. uv tags are
+      // plain versions like 0.11.28, so no extractVersionTemplate is needed.
+      depNameTemplate: 'astral-sh/uv',
+      datasourceTemplate: 'github-releases',
+    },
   ],
   prConcurrentLimit: 15,
   timezone: 'Europe/Berlin',
@@ -49,6 +69,17 @@
         'docs/requirements.txt',
       ],
       groupName: 'doc-updates',
+    },
+    {
+      // The github-actions rule above cannot match this: the dependency comes
+      // from the custom.regex manager. Without this, Renovate would default to
+      // chore(deps) even though the pinned uv version is workflow tooling.
+      description: 'Pinned uv version in workflows is CI tooling',
+      matchDepNames: [
+        'astral-sh/uv',
+      ],
+      semanticCommitType: 'ci',
+      semanticCommitScope: 'deps',
     },
     {
       description: 'Customize lockFileMaintenance PR labels/grouping',
