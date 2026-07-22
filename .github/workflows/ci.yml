@@ -45,6 +45,20 @@ jobs:
           version: ${{ env.UV_VERSION }}
           python-version: "3.14"
 
+      - name: Verify the changelog manifest is append-only
+        # tests/test_changelog_integrity.py compares the changelog against the
+        # manifest, but both live in the repository: a change that rewrites a
+        # published section and recomputes its hash is self-consistent and
+        # passes. This compares against the manifest on the base branch, which
+        # the pull request cannot alter, so recorded entries must reappear
+        # unchanged and in order.
+        if: github.event_name == 'pull_request'
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: |
+          git fetch --no-tags --depth=1 origin "$BASE_SHA"
+          python3 tools/check_manifest_append_only.py "$BASE_SHA"
+
       - name: Verify the lock file is up to date
         run: uv lock --check
 
