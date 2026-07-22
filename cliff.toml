@@ -77,6 +77,14 @@ commit_parsers = [
   # -- raises the version (protect_breaking_commits keeps it from the
   # catch-all), so it must also be readable, not filed under a raw lowercase
   # type heading.
+  #
+  # This deliberately trusts the bang on *any* word, including a typo like
+  # `feature!:`. Restricting it would change nothing about the release --
+  # git-cliff bumps on the breaking marker itself, and protection keeps the
+  # commit regardless -- it would only bury the entry under a raw heading. An
+  # explicit `!` is a claim worth honouring: dropping a real breaking change
+  # over a misspelt type is the worse failure, and the pull request title
+  # check rejects unknown types before they reach master anyway.
   { message = '^\w+(\(.+\))?!:', group = "Changed" },
   { message = ".*", skip = true },
 ]

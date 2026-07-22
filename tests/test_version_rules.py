@@ -225,6 +225,25 @@ class TestWhatBumpsAndToWhere:
             ("chore(deps): raise cryptography floor\n\nChangelog: security", "v0.11.1"),
             # The footer token is matched case-insensitively.
             ("fix(client): internal only\n\nchangelog: skip", None),
+            # The bump comes from the conventional type, not from the chosen
+            # section: a feat filed under Fixed still releases a minor version.
+            ("feat(auth): add login\n\nChangelog: fixed", "v0.12.0"),
+            # And skipping a feat suppresses the minor bump entirely.
+            ("feat(auth): internal scaffolding\n\nChangelog: skip", None),
+            # A footer works next to the trailers squash commits routinely
+            # carry; the rules match each trailer individually.
+            (
+                "fix(client): internal only\n\n"
+                "Changelog: skip\n"
+                "Co-authored-by: someone <s@example.com>",
+                None,
+            ),
+            # A footer that is not the message's final paragraph is prose, per
+            # the git trailer convention, and changes nothing.
+            (
+                "feat(auth): add login\n\nChangelog: skip\n\nMore prose after it.",
+                "v0.12.0",
+            ),
         ],
     )
     def test_a_changelog_footer_decides_both_ways(
@@ -240,6 +259,20 @@ class TestWhatBumpsAndToWhere:
         _commit(repo, message)
         assert bumped(repo) == expected
 
+    def test_an_explicit_bang_is_trusted_even_on_an_unknown_type(
+        self, repo: Path
+    ) -> None:
+        """`feature!: x` releases, although plain `feature:` does not.
+
+        Deliberate: git-cliff bumps on the breaking marker itself, so a parser
+        allowlist could only hide the entry, never stop the release. An
+        explicit `!` is honoured -- dropping a real breaking change over a
+        misspelt type would be the worse failure -- and the pull request title
+        check rejects unknown types before they reach master anyway.
+        """
+        _commit(repo, "feature!: accidental but explicitly breaking")
+        assert bumped(repo) == "v0.12.0"
+
     def test_a_breaking_change_cannot_be_skipped(self, repo: Path) -> None:
         """`Changelog: skip` loses against protect_breaking_commits.
 
@@ -251,6 +284,11 @@ class TestWhatBumpsAndToWhere:
             "feat(auth)!: drop the marketplace argument\n\nChangelog: skip",
         )
         assert bumped(repo) == "v0.12.0"
+        # The entry survives too, under its raw type heading -- the skip rule
+        # matched first, so the protected commit keeps no assigned group.
+        fragment = _run([_git_cliff(), "--unreleased", "--tag", "v0.12.0"], repo)
+        assert "**BREAKING**" in fragment
+        assert "Drop the marketplace argument" in fragment
 
     @pytest.mark.parametrize(
         "message",
