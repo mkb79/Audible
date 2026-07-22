@@ -63,10 +63,10 @@ Type checking with mypy:
 uv run nox --session=mypy
 ```
 
-Security check dependencies:
+Audit dependencies for known vulnerabilities:
 
 ```bash
-uv run nox --session=safety
+uv run nox --session=audit
 ```
 
 Runtime type checking:
@@ -100,7 +100,7 @@ uv run nox --list-sessions
 Default sessions (run with `uv run nox`):
 
 - pre-commit
-- safety
+- audit
 - mypy
 - tests
 - typeguard
@@ -208,7 +208,9 @@ This ensures all quality gates pass before code reaches the remote repository:
 3. ✅ **Re-run `uv run nox`** to verify fixes
 4. 💬 **If you cannot fix the issue**, ask the repository maintainer for guidance before pushing
 
-**Exception:** The `safety` session may fail due to external API issues (rate limits, service unavailable). This is acceptable and does not block pushing.
+**Exception:** The `audit` session queries an external advisory service and may fail if that service is unavailable. A genuine finding must be fixed; a service outage does not block pushing.
+
+Note that `audit` is not part of the `required` check. It runs in `security.yml`, which contributes its own `security` check.
 
 ### Why This Matters
 

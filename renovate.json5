@@ -109,7 +109,7 @@
         'pep621',
       ],
       matchJsonata: [
-        "depType = 'dependency-groups' and managerData.depGroup in ['dev','docs','mypy','pre-commit','safety','tests','typeguard','xdocs']",
+        "depType = 'dependency-groups' and managerData.depGroup in ['audit','dev','docs','mypy','pre-commit','tests','typeguard','xdocs']",
       ],
       matchUpdateTypes: [
         'minor',

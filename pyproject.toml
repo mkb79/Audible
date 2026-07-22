@@ -90,8 +90,8 @@ pre-commit = [
     "ruff>=0.14.11",
 ]
 
-safety = [
-    "safety>=3.7.0",
+audit = [
+    "pip-audit>=2.10.1",
 ]
 
 tests = [
