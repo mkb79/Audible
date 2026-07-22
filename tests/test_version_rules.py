@@ -1,8 +1,10 @@
 """The rules by which commit messages become versions and changelog entries.
 
 cliff.toml encodes decisions this repository depends on: the type is read only
-from the subject line, a breaking change on 0.x raises the minor version, and
-only four commit types reach a reader. git-cliff is a dependency like any
+from the subject line, a breaking change on 0.x raises the minor version, feat,
+fix and perf reach a reader by default, and a ``Changelog:`` footer overrides
+that default in either direction -- with the same footer deciding the release,
+because what is skipped bumps nothing. git-cliff is a dependency like any
 other, so an update could change any of this silently -- these tests pin the
 measured behaviour, and a change fails in the update pull request rather than
 in a release.
@@ -139,12 +141,16 @@ class TestWhatBumpsAndToWhere:
     @pytest.mark.parametrize(
         ("message", "expected"),
         [
-            # The four types that release, and where they land.
+            # The three types that release by default, and where they land.
             ("feat(auth): add browser login", "v0.12.0"),
             ("fix(client): handle expired tokens", "v0.11.1"),
             ("perf(json): faster parsing", "v0.11.1"),
-            ("refactor(cli): tidy up", "v0.11.1"),
-            # Types that are recorded in git but release nothing.
+            # Types that are recorded in git but release nothing. refactor is
+            # here on purpose: an internal restructuring is not something a
+            # user needs to read about, and what is not changelog-worthy is
+            # not release-worthy either. A refactor that *does* matter opts in
+            # with a `Changelog:` footer, tested below.
+            ("refactor(cli): tidy up", None),
             ("docs(readme): tidy", None),
             ("chore(deps): update pytest", None),
             ("ci(deps): update actions/checkout", None),
@@ -204,6 +210,47 @@ class TestWhatBumpsAndToWhere:
         """
         _commit(repo, "fix(client): a crash\n\n```\nfeat: add login\n```")
         assert bumped(repo) == "v0.11.1"
+
+    @pytest.mark.parametrize(
+        ("message", "expected"),
+        [
+            # Opting out: not worth telling users about means not worth a
+            # release. The commit stays in git; the version does not move.
+            ("fix(client): internal retry tweak\n\nChangelog: skip", None),
+            ("perf(parser): cold-path allocation\n\nChangelog: skip", None),
+            # Opting in: the footer puts the entry in the changelog and, by the
+            # same act, makes the commit release-worthy -- a patch release.
+            ("refactor(client): drop legacy pipeline\n\nChangelog: changed", "v0.11.1"),
+            ("docs(auth): document browser auth\n\nChangelog: added", "v0.11.1"),
+            ("chore(deps): raise cryptography floor\n\nChangelog: security", "v0.11.1"),
+            # The footer token is matched case-insensitively.
+            ("fix(client): internal only\n\nchangelog: skip", None),
+        ],
+    )
+    def test_a_changelog_footer_decides_both_ways(
+        self, repo: Path, message: str, expected: str | None
+    ) -> None:
+        """The override changes the release along with the changelog.
+
+        Args:
+            repo: Scratch repository.
+            message: Full commit message.
+            expected: Version, or None for no release.
+        """
+        _commit(repo, message)
+        assert bumped(repo) == expected
+
+    def test_a_breaking_change_cannot_be_skipped(self, repo: Path) -> None:
+        """`Changelog: skip` loses against protect_breaking_commits.
+
+        Whoever tries to skip a breaking change is wrong about one of the two
+        labels, and the safe resolution is to release and show it.
+        """
+        _commit(
+            repo,
+            "feat(auth)!: drop the marketplace argument\n\nChangelog: skip",
+        )
+        assert bumped(repo) == "v0.12.0"
 
     @pytest.mark.parametrize(
         "message",
@@ -282,16 +329,34 @@ class TestWhatTheChangelogContains:
         assert "**BREAKING**" in fragment
         assert "the x-adp-token header is gone" in fragment
 
-    def test_only_the_four_reader_facing_types_appear(self, repo: Path) -> None:
-        """chore, ci, docs and friends stay out of the changelog."""
+    def test_only_reader_facing_commits_appear(self, repo: Path) -> None:
+        """refactor, chore, ci, docs and friends stay out by default."""
         _commit(repo, "feat(auth): add browser login")
         _commit(repo, "chore(deps): update pytest")
         _commit(repo, "ci(deps): update actions/checkout")
         _commit(repo, "docs(readme): tidy")
-        fragment = self.fragment(repo)
+        _commit(repo, "refactor(cli): shuffle internals")
+        fragment = self.fragment(repo, "v0.12.0")
         assert "Add browser login" in fragment
-        for absent in ("pytest", "checkout", "Tidy"):
+        for absent in ("pytest", "checkout", "Tidy", "internals"):
             assert absent not in fragment
+
+    def test_a_footer_override_lands_in_its_section(self, repo: Path) -> None:
+        """The footer names the section the entry appears under."""
+        _commit(
+            repo,
+            "refactor(client): drop the legacy pipeline\n\nChangelog: changed",
+        )
+        _commit(
+            repo,
+            "chore(deps): raise the cryptography floor\n\nChangelog: security",
+        )
+        fragment = self.fragment(repo, "v0.11.1")
+        assert "### Changed" in fragment
+        assert "Drop the legacy pipeline" in fragment
+        assert "### Security" in fragment
+        assert "Raise the cryptography floor" in fragment
+        assert "Changelog:" not in fragment, "the footer itself must not leak"
 
     @pytest.mark.parametrize(
         "message",

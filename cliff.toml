@@ -6,6 +6,11 @@
 # git-cliff parses the subject, body and footers structurally, per Conventional
 # Commits 1.0.0. tests/test_version_rules.py holds the measured cases; a
 # git-cliff update that changes any of this fails there, not in a release.
+#
+# One property ties everything together: a skipped commit does not bump the
+# version either. What is not worth telling users about is not worth a release,
+# so changelog visibility and release relevance are the same decision -- made
+# per commit, recorded in the commit, reproducible from git alone.
 
 [bump]
 # A breaking change on 0.x raises the minor version, so 0.11.0 becomes 0.12.0
@@ -26,29 +31,52 @@ filter_unconventional = true
 # splitting a deviation from Conventional Commits.
 split_commits = false
 # A skip rule below must not be able to swallow a breaking change: a
-# `chore(deps)!:` still has to raise the version even though chore is skipped.
+# `chore(deps)!:` or an explicit `Changelog: skip` on a breaking commit still
+# raises the version and stays visible. Breaking changes are not skippable.
 protect_breaking_commits = true
-# Only release tags. The repository also carries a `publish_to_testpypi` tag,
-# which must not be mistaken for the last release.
+# Only release tags. The repository also carries a `publish_to_testpypi` tag
+# and old prerelease tags like v0.2.0-alpha-2, which must not be mistaken for
+# the last release. The release workflow selects its comparison tag with this
+# exact expression; the two must never disagree about what a release tag is.
 tag_pattern = '^v[0-9]+\.[0-9]+\.[0-9]+$'
 
-# Only these four types reach the changelog and (with the breaking exception
-# above) the version: the same four commitizen recorded, grouped under the
-# headings the historical changelog already uses. Everything else is recorded in
-# git, but is not something a user of the library needs to read about. The
-# catch-all keeps an unexpected type from appearing ungrouped -- being valid is
-# not the same as being recorded.
+# The default rule, by type: feat, fix and perf reach the changelog and the
+# version; everything else -- notably refactor -- is recorded in git but is not
+# something a user of the library needs to read about, and releases nothing.
+#
+# The default is only a default. A `Changelog:` footer in the commit message
+# overrides it in either direction, and the footer rules sit first because the
+# first matching rule wins:
+#
+#     perf(parser): avoid an allocation on a cold path
+#
+#     Changelog: skip                <- worth keeping out: no entry, no release
+#
+#     refactor(client): drop the legacy request pipeline
+#
+#     Changelog: changed             <- worth telling users: entry + release
+#
+# The categories match the section headings: skip, added, changed, fixed,
+# security. A footer both places the entry and opts the commit into a release,
+# so `Changelog: security` on a `chore(deps)` bump makes that security fix
+# visible and shippable without relabelling the commit type.
+#
 # The patterns anchor the whole type, not a prefix of it: `^feat` alone also
 # matched `feature:`, and `^fix` matched `fixup:` -- measured, both released a
 # version they should not have. A type ends at its scope, its bang or its colon.
 commit_parsers = [
+  { footer = "(?i)^changelog: ?skip$", skip = true },
+  { footer = "(?i)^changelog: ?added$", group = "Added" },
+  { footer = "(?i)^changelog: ?changed$", group = "Changed" },
+  { footer = "(?i)^changelog: ?fixed$", group = "Fixed" },
+  { footer = "(?i)^changelog: ?security$", group = "Security" },
   { message = '^feat(\(.+\))?!?:', group = "Added" },
   { message = '^fix(\(.+\))?!?:', group = "Fixed" },
-  { message = '^refactor(\(.+\))?!?:', group = "Changed" },
   { message = '^perf(\(.+\))?!?:', group = "Performance" },
-  # A breaking change of any other type -- `docs(readme)!:`, `chore(deps)!:` --
-  # raises the version (protect_breaking_commits keeps it from the catch-all),
-  # so it must also be readable, not filed under a raw lowercase type heading.
+  # A breaking change of any other type -- `refactor(api)!:`, `chore(deps)!:`
+  # -- raises the version (protect_breaking_commits keeps it from the
+  # catch-all), so it must also be readable, not filed under a raw lowercase
+  # type heading.
   { message = '^\w+(\(.+\))?!:', group = "Changed" },
   { message = ".*", skip = true },
 ]
