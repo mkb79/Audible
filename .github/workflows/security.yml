@@ -71,8 +71,17 @@ jobs:
   scorecard:
     # Informational only, and deliberately not part of the gate: the score
     # reacts to repository settings rather than to the change under review.
+    #
+    # Runs on master pushes as well as on the schedule. Scorecard grades the
+    # repository's configuration -- workflow permissions, pinned actions,
+    # branch protection -- and merging changes that configuration, so a weekly
+    # measurement would lag behind reality. Not on pull requests: the settings
+    # it grades cannot be changed by a pull request, and a score that moves for
+    # unrelated reasons must never block one.
     name: scorecard
-    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    if: >-
+      github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+      || (github.event_name == 'push' && github.ref == 'refs/heads/master')
     runs-on: ubuntu-latest
     permissions:
       contents: read
