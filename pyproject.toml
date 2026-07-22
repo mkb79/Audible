@@ -177,6 +177,9 @@ exclude_lines = [
 
 [tool.mypy]
 python_version = "3.11"
+# tools/ is repository tooling rather than part of the package, but the tests
+# import from it, so it has to be resolvable.
+mypy_path = "tools"
 pretty = true
 show_column_numbers = true
 show_error_codes = true
@@ -234,7 +237,9 @@ convention = "google"
 
 [tool.ruff.lint.isort]
 force-single-line = false
-known-first-party = ["audible"]
+# changelog and the release helpers live in tools/ and are imported by the
+# tests, so they sort with the project rather than with third-party packages.
+known-first-party = ["audible", "changelog", "prepare_release"]
 lines-after-imports = 2
 
 [tool.ruff.lint.per-file-ignores]
@@ -246,6 +251,9 @@ lines-after-imports = 2
 
 [tool.pytest.ini_options]
 testpaths = ["tests", "src/audible"]
+# tools/ holds the changelog and release helpers. They are repository tooling
+# rather than part of the package, but they are tested like anything else.
+pythonpath = ["tools"]
 
 [tool.pydoclint]
 style = "google"

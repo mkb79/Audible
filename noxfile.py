@@ -197,7 +197,7 @@ def audit(s: nox.Session) -> None:
 )
 def mypy(s: nox.Session) -> None:
     """Type-check using mypy."""
-    default_args = ["src/audible", "tests", "docs/source/conf.py"]
+    default_args = ["src/audible", "tests", "tools", "docs/source/conf.py"]
     args = s.posargs or default_args
 
     s.run("mypy", *args)
