@@ -285,3 +285,31 @@ class TestWhatTheChangelogContains:
         assert "Add browser login" in fragment
         for absent in ("pytest", "checkout", "Tidy"):
             assert absent not in fragment
+
+    @pytest.mark.parametrize(
+        "message",
+        [
+            # The bang form is caught by an explicit parser rule; the
+            # footer-only form on a skipped type survives via
+            # protect_breaking_commits. Either way the rule is the same: a
+            # commit that raises the version must never be invisible in the
+            # changelog -- a version that jumps with no entry explaining it is
+            # exactly the silent failure this file exists to prevent.
+            "docs(readme)!: restructure the guide\n\nBREAKING CHANGE: links changed",
+            "docs(readme): restructure the guide\n\nBREAKING CHANGE: links changed",
+            "chore(deps)!: drop support for Python 3.10",
+        ],
+    )
+    def test_a_breaking_commit_of_a_skipped_type_stays_visible(
+        self, repo: Path, message: str
+    ) -> None:
+        """Whatever raises the version must appear in the fragment.
+
+        Args:
+            repo: Scratch repository.
+            message: Full commit message.
+        """
+        _commit(repo, message)
+        assert bumped(repo) == "v0.12.0", "the version must move"
+        fragment = self.fragment(repo)
+        assert "**BREAKING**" in fragment, "and the entry must be readable"
