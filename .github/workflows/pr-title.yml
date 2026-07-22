@@ -1,0 +1,101 @@
+name: PR Title
+
+# The pull request title is the commit message. This repository merges by squash
+# only, with squash_merge_commit_title set to PR_TITLE and
+# squash_merge_commit_message set to PR_BODY, so the title and description land
+# on master as one commit -- and commitizen reads that commit to decide the next
+# version and to write the changelog.
+#
+# A message it cannot parse produces no changelog entry and no release, and does
+# so silently: "no releasable commits" is exactly what a quiet week looks like.
+# That is worth catching before the merge rather than noticing weeks later that
+# a fix never shipped.
+
+on:
+  pull_request:
+    # `edited` is what makes this usable: without it a corrected title is never
+    # re-checked, so the failed check would block the merge forever. It also
+    # covers the description, which becomes the commit body.
+    types: [opened, edited, reopened, synchronize]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pr-title-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+env:
+  UV_VERSION: "0.11.28"
+
+jobs:
+  check:
+    name: pr-title
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out the base branch
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          # The base commit, not the pull request. This runs for forks, and
+          # nothing here needs the proposed code -- only the repository's own
+          # commitizen configuration. A pull request that changes that
+          # configuration is therefore still judged by the configuration the
+          # base branch has today.
+          ref: ${{ github.event.pull_request.base.sha }}
+          persist-credentials: false
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@11f9893b081a58869d3b5fccaea48c9e9e46f990 # v8.3.2
+        with:
+          version: ${{ env.UV_VERSION }}
+          python-version: "3.14"
+
+      - name: Install commitizen
+        run: uv sync --no-install-project --group release
+
+      - name: Check the commit message
+        env:
+          # Passed through the environment, never interpolated into the script:
+          # both are attacker-controlled text on a fork pull request.
+          PR_TITLE: ${{ github.event.pull_request.title }}
+          PR_BODY: ${{ github.event.pull_request.body }}
+        run: |
+          # Assembled the way GitHub assembles the squash commit, and checked as
+          # one message rather than as a bare subject line, so what is validated
+          # is what will actually be committed.
+          message="$RUNNER_TEMP/commit.txt"
+          printf '%s\n\n%s\n' "$PR_TITLE" "$PR_BODY" > "$message"
+
+          # commitizen rather than a hand-written pattern, deliberately. This has
+          # to enforce exactly the pattern that later decides the version bump; a
+          # second copy of it would drift, and the drift would admit titles the
+          # release path then ignores -- the very failure being prevented.
+          if uv run --no-sync python -m commitizen check --commit-msg-file "$message"; then
+            exit 0
+          fi
+
+          echo "::error::The title is not a conventional commit, so merging it would produce no changelog entry and no release."
+          cat <<'GUIDE'
+
+          The title becomes the commit subject on master. It must read like:
+
+            fix(client): handle expired refresh tokens
+            feat(auth): add browser-based login
+            refactor(cli)!: remove the legacy command parser
+
+          Accepted types: build, chore, ci, docs, feat, fix, perf, refactor,
+          revert, style, test.
+
+          Only four of them reach a release. feat raises the minor version; fix,
+          perf and refactor raise the patch version. Those same four are the
+          whole of commitizen's change_type_map, so everything else -- including
+          revert -- appears in no changelog section and bumps nothing. Valid is
+          not the same as recorded. If users should read about the change, pick
+          a type that reaches them: a revert of a released fix is best titled
+          for its effect, e.g. `fix(auth): restore the previous token header`.
+
+          Note that "Merge ...", "Revert \"...\"" and "fixup! ..." are rejected
+          here even though commitizen ships with them allowed -- see the comment
+          on allowed_prefixes in pyproject.toml.
+          GUIDE
+          exit 1
