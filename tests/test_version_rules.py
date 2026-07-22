@@ -149,6 +149,13 @@ class TestWhatBumpsAndToWhere:
             ("chore(deps): update pytest", None),
             ("ci(deps): update actions/checkout", None),
             ("revert: undo the auth change", None),
+            # Words that merely begin with a releasing type. `^feat` alone
+            # matched all four of these -- measured, each released 0.11.1
+            # before the patterns were anchored at the type boundary.
+            ("feature: accidental", None),
+            ("fixup: accidental", None),
+            ("refactoring: accidental", None),
+            ("performance: accidental", None),
         ],
     )
     def test_subjects(self, repo: Path, message: str, expected: str | None) -> None:

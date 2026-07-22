@@ -140,7 +140,17 @@ jobs:
             exit 1
           fi
 
-          last="$(git describe --tags --abbrev=0 --match 'v[0-9]*')"
+          # The "nothing to release" test below compares git-cliff's answer
+          # with the newest release tag, so both must agree on what a release
+          # tag is. This regex mirrors tag_pattern in cliff.toml exactly; a
+          # git describe glob would not -- 'v[0-9]*' also matches the old
+          # v0.2.0-alpha-2 style tags this repository still carries, and a
+          # future prerelease tag would silently break the comparison.
+          last="$(git tag --list | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | sort -V | tail -1)"
+          if [ -z "$last" ]; then
+            echo "::error::No release tag found to compare against."
+            exit 1
+          fi
 
           # git-cliff rather than commitizen, deliberately: commitizen applies
           # its type pattern to every line of a commit message, so a body line
@@ -189,7 +199,10 @@ jobs:
         env:
           VERSION: ${{ steps.version.outputs.version }}
         run: |
-          previous="$(git describe --tags --abbrev=0 --match 'v[0-9]*')"
+          # Same regex as in the version step, mirroring cliff.toml's
+          # tag_pattern; --unreleased itself ranges from that tag anyway, this
+          # only keeps the log line honest.
+          previous="$(git tag --list | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | sort -V | tail -1)"
           echo "Collecting commits from $previous to HEAD."
 
           # Written outside the checkout so it cannot end up in the commit.

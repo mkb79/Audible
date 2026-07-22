@@ -38,11 +38,14 @@ tag_pattern = '^v[0-9]+\.[0-9]+\.[0-9]+$'
 # git, but is not something a user of the library needs to read about. The
 # catch-all keeps an unexpected type from appearing ungrouped -- being valid is
 # not the same as being recorded.
+# The patterns anchor the whole type, not a prefix of it: `^feat` alone also
+# matched `feature:`, and `^fix` matched `fixup:` -- measured, both released a
+# version they should not have. A type ends at its scope, its bang or its colon.
 commit_parsers = [
-  { message = "^feat", group = "Added" },
-  { message = "^fix", group = "Fixed" },
-  { message = "^refactor", group = "Changed" },
-  { message = "^perf", group = "Performance" },
+  { message = '^feat(\(.+\))?!?:', group = "Added" },
+  { message = '^fix(\(.+\))?!?:', group = "Fixed" },
+  { message = '^refactor(\(.+\))?!?:', group = "Changed" },
+  { message = '^perf(\(.+\))?!?:', group = "Performance" },
   # A breaking change of any other type -- `docs(readme)!:`, `chore(deps)!:` --
   # raises the version (protect_breaking_commits keeps it from the catch-all),
   # so it must also be readable, not filed under a raw lowercase type heading.
