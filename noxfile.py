@@ -46,6 +46,9 @@ TESTS_GROUP = "tests"
 COVERAGE_GROUP = TESTS_GROUP
 TYPEGUARD_GROUP = "typeguard"
 XDOCTEST_GROUP = "xdocs"
+# tools/check_pr_message.py asks commitizen what a commit message would
+# release, so the sessions that import or type-check it need commitizen.
+RELEASE_GROUP = "release"
 EXTRA_DEPS_GROUP = "extra-deps"
 
 
@@ -193,7 +196,7 @@ def audit(s: nox.Session) -> None:
 
 @session(
     python=PYTHON_VERSIONS,
-    uv_groups=[MYPY_GROUP, TESTS_GROUP, EXTRA_DEPS_GROUP],
+    uv_groups=[MYPY_GROUP, TESTS_GROUP, EXTRA_DEPS_GROUP, RELEASE_GROUP],
 )
 def mypy(s: nox.Session) -> None:
     """Type-check using mypy."""
@@ -207,7 +210,7 @@ def mypy(s: nox.Session) -> None:
 
 @session(
     python=PYTHON_VERSIONS,
-    uv_groups=[TESTS_GROUP, EXTRA_DEPS_GROUP],
+    uv_groups=[TESTS_GROUP, EXTRA_DEPS_GROUP, RELEASE_GROUP],
 )
 def tests(s: nox.Session) -> None:
     """Run the test suite."""
@@ -238,7 +241,7 @@ def coverage(s: nox.Session) -> None:
 
 @session(
     python=DEFAULT_PYTHON_VERSION,
-    uv_groups=[TYPEGUARD_GROUP, EXTRA_DEPS_GROUP],
+    uv_groups=[TYPEGUARD_GROUP, EXTRA_DEPS_GROUP, RELEASE_GROUP],
 )
 def typeguard(s: nox.Session) -> None:
     """Runtime type checking using Typeguard."""
