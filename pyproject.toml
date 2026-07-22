@@ -94,6 +94,10 @@ audit = [
     "pip-audit>=2.10.1",
 ]
 
+release = [
+    "commitizen>=4.16.5",
+]
+
 tests = [
     "coverage[toml]>=7.13.1",
     "pytest>=9.0.2",
@@ -133,6 +137,26 @@ build-backend = "hatchling.build"
 
 [tool.uv]
 required-version = ">=0.7.1"
+
+[tool.commitizen]
+name = "cz_conventional_commits"
+# Reads and writes the version in pyproject.toml *and* uv.lock, so the two
+# cannot drift apart during a release.
+version_provider = "uv"
+tag_format = "v$version"
+# Currently the default. Stated explicitly because it decides how a prerelease
+# or development version would be ordered, and that is easy to get wrong later.
+version_scheme = "pep440"
+# The repository carries a non-version tag from an old experiment. Without this
+# commitizen tries to parse it as a version and fails.
+ignored_tag_formats = ["publish_to_testpypi"]
+# A breaking change produces 0.x+1, not 1.0.0. Moving to 1.0 stays a deliberate
+# decision rather than a side effect of a commit footer.
+major_version_zero = true
+# The changelog is written by the release workflow, which prepends a generated
+# fragment above the historical part. commitizen must never rewrite the file.
+update_changelog_on_bump = false
+
 
 [tool.coverage.paths]
 source = ["src/audible", "*/site-packages"]

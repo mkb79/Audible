@@ -1,0 +1,77 @@
+{
+  "_comment": "Hashes of published changelog sections. Entries are appended when a version is released and never modified or removed; the wording of a published entry must not change. Verified by tests/test_changelog_integrity.py.",
+  "sections": [
+    {
+      "version": "0.11.0",
+      "sha256": "1f519a9d9d99eb30c666c2e02c9714845f4835fdc4cd2d857afa7fe744283e13"
+    },
+    {
+      "version": "0.10.0",
+      "sha256": "eb6fcf05ba81fed5c5d85fb4f7ec1b041f904889725cbcc1f7df45d9ba7e7d25"
+    },
+    {
+      "version": "0.9.1",
+      "sha256": "f61b314f88edfc1067740ec84f05e5b7a43c0efa3b9fab306abee0676092d8a2"
+    },
+    {
+      "version": "0.9.0",
+      "sha256": "9604d6628ab14a4b528e117f69692c4658276719440c8e8d289d6762517778df"
+    },
+    {
+      "version": "0.8.2",
+      "sha256": "9b75e732f822c6b3823d35dbe15a079a24cf7dcd3d02748d580b3a0bd7314fad"
+    },
+    {
+      "version": "0.8.1",
+      "sha256": "626b0b462ee54ac56e13fca4247d358b7fe21ba84e43eb6a407cf19f20781cd3"
+    },
+    {
+      "version": "0.8.0",
+      "sha256": "8bda4dc3850abe50e4b7ec50d2a98f9972c2c0405d6e6d7df6f1f6e19c7416db"
+    },
+    {
+      "version": "0.7.2",
+      "sha256": "9965a3e772c98564cde91e90a407c2fb1881d816a28092a95b73b0aceb61d312"
+    },
+    {
+      "version": "0.7.1",
+      "sha256": "9c2e5c25a3bb4afae62f54407aaae827f0e1aee8666c17efdb610e602e6ffeb9"
+    },
+    {
+      "version": "0.7.0",
+      "sha256": "6351a4a5ba3e9a0237f444cfe0b695f8c839d7c17ca890e317b53c3a6e87b994"
+    },
+    {
+      "version": "0.6.0",
+      "sha256": "22c17b88db0d90c533d057a5795c1929e8a381fcf428e525a4a6aa18a02e2bd8"
+    },
+    {
+      "version": "0.5.5",
+      "sha256": "bdd1135536bc4cf02a78c2af9e4dd46ac5ad70eec686f940410bf82c6dd82e19"
+    },
+    {
+      "version": "0.5.4",
+      "sha256": "3fc4ec0f947ba03c8b6230452dae053b30ec6e5cdde04c1ab3ff5c80fe7a6676"
+    },
+    {
+      "version": "0.5.3",
+      "sha256": "4b1632d1decd90efed473d73e5fb3e01f90a47329982fd39f12f5e15a1022661"
+    },
+    {
+      "version": "0.5.2",
+      "sha256": "f7d9eec8f8aeb9a4a2a7d23ce79e39faa38a289be157a196029f3169ff303bcf"
+    },
+    {
+      "version": "0.5.1",
+      "sha256": "28c58cb9e7b4f35995b95fc7c23c122c66e7cf00b397d130b0ea2e66383d0d66"
+    },
+    {
+      "version": "0.5.0",
+      "sha256": "4add72c8d1f673d3bb9a43487092baa86eb1d97c7b5f6698a5a2539de25c97aa"
+    },
+    {
+      "version": "0.4.4",
+      "sha256": "4c662d252a176c19277d7c85bc4f1e3dfbcf7b3a1485a8faadb05ace7201bb51"
+    }
+  ]
+}
