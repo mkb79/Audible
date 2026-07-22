@@ -1,0 +1,31 @@
+# Code owners for this repository.
+#
+# "Require review from Code Owners" is deliberately disabled in the branch
+# protection rules: this is a solo-maintainer project, and a review requirement
+# the maintainer cannot satisfy would block every pull request. This file
+# therefore documents ownership and drives review requests, rather than gating
+# merges.
+#
+# The paths listed here are the ones where a mistake is expensive or hard to
+# notice: they decide what gets published, under which version, and with which
+# credentials.
+
+# Everything, unless a more specific rule below matches.
+*                               @mkb79
+
+# Release and CI machinery. A change here can publish, tag, or hand out
+# credentials.
+/.github/workflows/             @mkb79
+/.github/CODEOWNERS             @mkb79
+
+# Build metadata and the lock file. The version, the published dependency
+# constraints, and the resolved set all live here.
+/pyproject.toml                 @mkb79
+/uv.lock                        @mkb79
+
+# Changelog. Entries for published releases must never change wording.
+/CHANGELOG.md                   @mkb79
+
+# Security policy and dependency automation.
+/SECURITY.md                    @mkb79
+/renovate.json5                 @mkb79
