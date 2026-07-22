@@ -46,6 +46,9 @@ TESTS_GROUP = "tests"
 COVERAGE_GROUP = TESTS_GROUP
 TYPEGUARD_GROUP = "typeguard"
 XDOCTEST_GROUP = "xdocs"
+# tests/test_version_rules.py drives the git-cliff binary, which the release
+# group provides; the sessions that run pytest need it installed.
+RELEASE_GROUP = "release"
 EXTRA_DEPS_GROUP = "extra-deps"
 
 
@@ -207,7 +210,7 @@ def mypy(s: nox.Session) -> None:
 
 @session(
     python=PYTHON_VERSIONS,
-    uv_groups=[TESTS_GROUP, EXTRA_DEPS_GROUP],
+    uv_groups=[TESTS_GROUP, EXTRA_DEPS_GROUP, RELEASE_GROUP],
 )
 def tests(s: nox.Session) -> None:
     """Run the test suite."""
@@ -238,7 +241,7 @@ def coverage(s: nox.Session) -> None:
 
 @session(
     python=DEFAULT_PYTHON_VERSION,
-    uv_groups=[TYPEGUARD_GROUP, EXTRA_DEPS_GROUP],
+    uv_groups=[TYPEGUARD_GROUP, EXTRA_DEPS_GROUP, RELEASE_GROUP],
 )
 def typeguard(s: nox.Session) -> None:
     """Runtime type checking using Typeguard."""

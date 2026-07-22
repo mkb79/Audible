@@ -122,7 +122,7 @@ jobs:
       - name: Install the release tooling
         # Without --no-install-project every `uv run` installs audible, which
         # means running its build backend. Nothing here imports the package --
-        # commitizen reads git, and prepare_release.py imports only tools/ -- so
+        # git-cliff reads git, and prepare_release.py imports only tools/ -- so
         # a workflow that must never build has no reason to build. Every command
         # below therefore uses --no-sync, or uv would reinstate the project.
         if: steps.tested.outputs.skip != 'true'
@@ -132,39 +132,42 @@ jobs:
         id: version
         if: steps.tested.outputs.skip != 'true'
         run: |
-          # commitizen inspects the working tree, and on a dirty one it tries to
-          # prompt -- which on a runner surfaces as a bare EOFError with no
-          # indication of the cause. Checking first turns that into a diagnosis.
-          # Tracked files only; a fresh checkout has nothing else.
+          # A dirty tree here means an earlier step touched tracked files, and
+          # the add-paths list further down assumes nothing else did.
           if ! git diff --quiet || ! git diff --cached --quiet; then
             echo "::error::Tracked files are modified; refusing to derive a version."
             git status --short
             exit 1
           fi
 
-          set +e
-          # Invoked as a module rather than via the `cz` entry point: `uv run`
-          # falls through to a same-named binary on PATH when the command is not
-          # in the environment, and silently using some other commitizen to pick
-          # a version is not a failure mode worth leaving open.
-          next="$(uv run --no-sync python -m commitizen bump --get-next \
-                  2>"$RUNNER_TEMP/cz.err")"
-          code=$?
-          set -e
-          # 21 is commitizen's NoneIncrementExit: the commits since the last tag
-          # are all of types that do not warrant a release. That is the ordinary
-          # state of master most of the time, not a failure.
-          if [ "$code" -eq 21 ]; then
-            echo "::notice::No releasable commits since the last tag."
+          last="$(git describe --tags --abbrev=0 --match 'v[0-9]*')"
+
+          # git-cliff rather than commitizen, deliberately: commitizen applies
+          # its type pattern to every line of a commit message, so a body line
+          # like `feat: x` under a `docs:` subject raises the version. git-cliff
+          # parses subject, body and footers structurally. The rules live in
+          # cliff.toml and are pinned by tests/test_version_rules.py.
+          #
+          # `uv run` falls through to a PATH binary when the command is missing
+          # from the environment. Runners do not ship git-cliff, so that
+          # misconfiguration surfaces as a loud failure, not a different tool.
+          next="$(uv run --no-sync git-cliff --bumped-version \
+                  2>"$RUNNER_TEMP/cliff.err")"
+          if [ -z "$next" ]; then
+            cat "$RUNNER_TEMP/cliff.err" >&2
+            echo "::error::git-cliff produced no version."
+            exit 1
+          fi
+
+          # With nothing worth releasing, --bumped-version answers with the
+          # current tag. That is the ordinary state of master most of the time.
+          if [ "$next" = "$last" ]; then
+            echo "::notice::No releasable commits since $last."
             echo "skip=true" >> "$GITHUB_OUTPUT"
             exit 0
           fi
-          if [ "$code" -ne 0 ]; then
-            cat "$RUNNER_TEMP/cz.err" >&2
-            exit "$code"
-          fi
 
-          next="$(echo "$next" | tr -d '[:space:]')"
+          next="${next#v}"
           echo "Next version: $next"
           echo "version=$next" >> "$GITHUB_OUTPUT"
 
@@ -186,17 +189,15 @@ jobs:
         env:
           VERSION: ${{ steps.version.outputs.version }}
         run: |
-          previous="$(git describe --tags --abbrev=0 --match 'v*')"
+          previous="$(git describe --tags --abbrev=0 --match 'v[0-9]*')"
           echo "Collecting commits from $previous to HEAD."
 
-          # Written outside the checkout so it cannot end up in the commit, and
-          # generated before the version is applied, while the tree is still
-          # clean -- see the note on commitizen and dirty checkouts above.
+          # Written outside the checkout so it cannot end up in the commit.
+          # --unreleased covers exactly the commits since the last release tag;
+          # cliff.toml's tag_pattern keeps the stray publish_to_testpypi tag
+          # from being mistaken for one.
           fragment="$RUNNER_TEMP/fragment.md"
-          uv run --no-sync python -m commitizen changelog \
-            --dry-run \
-            --start-rev "$previous" \
-            --unreleased-version "v$VERSION" > "$fragment"
+          uv run --no-sync git-cliff --unreleased --tag "v$VERSION" > "$fragment"
 
           # Updates pyproject.toml and uv.lock together, so the lock file cannot
           # disagree with the version being released.

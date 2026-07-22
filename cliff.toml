@@ -1,0 +1,66 @@
+# git-cliff derives the next version and the new changelog section from the
+# commit subjects on master. It replaced commitizen for these two jobs because
+# commitizen applies its type pattern to every line of a commit message --
+# measured: a `docs:` subject with a body line `feat: x` produced a minor bump,
+# and an upstream changelog embedded in a `chore(deps)` body leaked into ours.
+# git-cliff parses the subject, body and footers structurally, per Conventional
+# Commits 1.0.0. tests/test_version_rules.py holds the measured cases; a
+# git-cliff update that changes any of this fails there, not in a release.
+
+[bump]
+# A breaking change on 0.x raises the minor version, so 0.11.0 becomes 0.12.0
+# and never 1.0.0. Moving to 1.0 stays a deliberate decision, exactly as
+# major_version_zero did under commitizen.
+breaking_always_bump_major = false
+features_always_bump_minor = true
+
+[git]
+conventional_commits = true
+# Commits whose subject does not parse contribute nothing rather than aborting
+# the run. The pull request title check keeps them out of master in the first
+# place; this decides what happens if one slips past anyway.
+filter_unconventional = true
+# The load-bearing line. With true, git-cliff would split a message on body
+# lines that look like commit subjects -- reintroducing, deliberately, the very
+# behaviour this tool was chosen to avoid. Its own documentation calls the
+# splitting a deviation from Conventional Commits.
+split_commits = false
+# A skip rule below must not be able to swallow a breaking change: a
+# `chore(deps)!:` still has to raise the version even though chore is skipped.
+protect_breaking_commits = true
+# Only release tags. The repository also carries a `publish_to_testpypi` tag,
+# which must not be mistaken for the last release.
+tag_pattern = '^v[0-9]+\.[0-9]+\.[0-9]+$'
+
+# Only these four types reach the changelog and (with the breaking exception
+# above) the version: the same four commitizen recorded, grouped under the
+# headings the historical changelog already uses. Everything else is recorded in
+# git, but is not something a user of the library needs to read about. The
+# catch-all keeps an unexpected type from appearing ungrouped -- being valid is
+# not the same as being recorded.
+commit_parsers = [
+  { message = "^feat", group = "Added" },
+  { message = "^fix", group = "Fixed" },
+  { message = "^refactor", group = "Changed" },
+  { message = "^perf", group = "Performance" },
+  { message = ".*", skip = true },
+]
+
+[changelog]
+# The template is spelled out rather than inherited from git-cliff's embedded
+# default, for two reasons. The heading has to keep the exact historical form
+# `## [x.y.z] - date`, which tools/changelog.py parses and the manifest freezes.
+# And a breaking change renders its explanation, taken from the BREAKING CHANGE
+# footer -- the embedded default prints only a marker, and a breaking change
+# whose explanation exists only in the pull request is one nobody reads.
+header = ""
+body = """
+## [{{ version | trim_start_matches(pat="v") }}] - {{ timestamp | date(format="%Y-%m-%d") }}
+{% for group, commits in commits | group_by(attribute="group") %}
+### {{ group }}
+{% for commit in commits %}
+- {% if commit.breaking %}**BREAKING** {% endif %}{% if commit.scope %}**{{ commit.scope }}**: {% endif %}{{ commit.message | upper_first }}{% if commit.breaking and commit.breaking_description and commit.breaking_description != commit.message %} — {{ commit.breaking_description }}{% endif %}
+{%- endfor %}
+{% endfor %}"""
+footer = ""
+trim = true
