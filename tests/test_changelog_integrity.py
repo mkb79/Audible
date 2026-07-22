@@ -6,88 +6,25 @@ history that users have already read.
 
 `.changelog-manifest.json` records a hash per published section. This test
 recomputes them, so any edit to a released section fails the pull request
-instead of being noticed later, or not at all. The release tooling appends a
-new entry when it publishes; nothing removes or rewrites existing ones.
+instead of being noticed later, or not at all.
+
+This only compares the two files against each other. Rewriting a section *and*
+its hash in the same change is self-consistent and passes here; that case is
+caught by tools/check_manifest_append_only.py, which compares against the base
+branch.
 """
 
-import hashlib
-import json
-import re
 from collections import Counter
 from pathlib import Path
 
 import pytest
 
+from changelog import UNRELEASED, digest, load_manifest, split_sections
+
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 CHANGELOG = REPO_ROOT / "CHANGELOG.md"
 MANIFEST = REPO_ROOT / ".changelog-manifest.json"
-
-# Two heading styles have to be recognised. Sections written before releases
-# were generated look like "## [0.11.0] - 2026-07-20", and "## [Unreleased]"
-# uses the same bracketed form. Generated sections look like
-# "## v0.12.0 (2026-07-22)".
-#
-# Matching only the bracketed form would make every future section invisible to
-# this test: it would not appear as published, so nothing would report it as
-# unprotected either. The gap would be silent.
-#
-# Neither alternative matches "## Bugfix", which older sections contain as a
-# subheading at the same level and which is content, not a boundary.
-SECTION_HEADING = re.compile(
-    r"^## (?:\[(?P<bracketed>[^\]]+)\]|v(?P<generated>\d+\.\d+\.\d+))",
-    re.MULTILINE,
-)
-
-
-def _version_of(match: re.Match[str]) -> str:
-    """Return the version a section heading refers to.
-
-    Args:
-        match: A match of :data:`SECTION_HEADING`.
-
-    Returns:
-        The version string, without the leading ``v`` of generated headings.
-    """
-    return match.group("bracketed") or match.group("generated")
-
-
-UNRELEASED = "Unreleased"
-
-
-def split_sections(text: str) -> list[tuple[str, str]]:
-    """Split a changelog into its sections.
-
-    Returns a list rather than a mapping on purpose. A mapping would silently
-    collapse two sections carrying the same version, which is exactly the state
-    a botched release would leave behind, and it would hide it from every check
-    built on top.
-
-    Args:
-        text: Full contents of the changelog.
-
-    Returns:
-        Pairs of version and the exact text of its section, heading included,
-        in the order they appear.
-    """
-    marks = [(m.start(), _version_of(m)) for m in SECTION_HEADING.finditer(text)]
-    sections = []
-    for index, (start, version) in enumerate(marks):
-        end = marks[index + 1][0] if index + 1 < len(marks) else len(text)
-        sections.append((version, text[start:end]))
-    return sections
-
-
-def digest(section: str) -> str:
-    """Return the hash recorded for a section.
-
-    Args:
-        section: Exact text of one changelog section.
-
-    Returns:
-        Hex-encoded SHA-256 of the section's UTF-8 bytes.
-    """
-    return hashlib.sha256(section.encode("utf-8")).hexdigest()
 
 
 @pytest.fixture(scope="module")
@@ -107,10 +44,7 @@ def manifest_entries() -> list[dict[str, str]]:
     Returns:
         The raw entries, so duplicates stay visible.
     """
-    data: dict[str, list[dict[str, str]]] = json.loads(
-        MANIFEST.read_text(encoding="utf-8")
-    )
-    return data["sections"]
+    return load_manifest(MANIFEST)
 
 
 @pytest.fixture(scope="module")
