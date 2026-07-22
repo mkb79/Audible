@@ -86,13 +86,15 @@ jobs:
           Accepted types: build, chore, ci, docs, feat, fix, perf, refactor,
           revert, style, test.
 
-          Only four of them reach a release. feat raises the minor version; fix,
-          perf and refactor raise the patch version. Those same four are the
-          whole of commitizen's change_type_map, so everything else -- including
-          revert -- appears in no changelog section and bumps nothing. Valid is
-          not the same as recorded. If users should read about the change, pick
-          a type that reaches them: a revert of a released fix is best titled
-          for its effect, e.g. `fix(auth): restore the previous token header`.
+          Of these, feat raises the minor version, and fix and perf raise the
+          patch version; a breaking change (`!` after the type, or a
+          BREAKING CHANGE footer) always releases. Everything else --
+          including refactor and revert -- appears in no changelog section and
+          releases nothing by default; a `Changelog:` footer as the last
+          paragraph of the description can override that (see cliff.toml).
+          Valid is not the same as recorded: if users should read about the
+          change, pick a type that reaches them, e.g.
+          `fix(auth): restore the previous token header` for a revert.
 
           Note that "Merge ...", "Revert \"...\"" and "fixup! ..." are rejected
           here even though commitizen ships with them allowed -- see the comment
