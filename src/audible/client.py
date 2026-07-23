@@ -19,7 +19,7 @@ import httpx
 # namespace of the module using the annotation. Without the binding, tools that
 # evaluate annotations (sphinx-autodoc-typehints among them) cannot resolve it.
 from httpx import URL, Headers
-from httpx._models import HeaderTypes  # type: ignore[attr-defined]
+from httpx._types import HeaderTypes
 
 from ._types import TrueFalseT
 from .auth import Authenticator
