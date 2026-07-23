@@ -221,6 +221,96 @@ Note that `audit` is not part of the `required` check. It runs in `security.yml`
 
 **This requirement applies to everyone working on the repository, including AI assistants like Claude.**
 
+## Release Process
+
+Releases are automated from Conventional Commit messages. The single manual step
+is merging a release pull request; everything else follows from it.
+
+### How a change becomes a release
+
+1. **Merge a pull request to `master`.** The repository squash-merges only, and
+   the **PR title becomes the commit subject** on `master`. `pr-title.yml`
+   validates that title with `cz check` (commitizen) as a required check, so an
+   unparseable title cannot merge. commitizen is used _only_ for this check.
+2. **CI passes on `master`.** `release-pr.yml` then runs (via `workflow_run`)
+   and asks **git-cliff** — using this repo's `cliff.toml` — what the next
+   version and changelog section are. commitizen does **not** decide the
+   version; git-cliff does, because it reads only the subject line, whereas
+   commitizen scanned every body line and mis-released on quoted examples.
+3. If there is something to release, a pull request titled
+   `chore(release): vX.Y.Z` is opened/updated on branch `release/next`. Its diff
+   is exactly the generated changelog section plus the version bump in
+   `pyproject.toml`, `uv.lock`, and `.changelog-manifest.json`. **Edit the notes
+   in that PR if they need sharpening** — editing stops auto-regeneration.
+4. **Merge that release PR.** `release.yml` re-verifies the commit, builds
+   reproducibly, smoke-tests wheel and sdist, tags `vX.Y.Z` (release GitHub App),
+   publishes to PyPI (trusted publishing), and creates the GitHub release with
+   the changelog section as its body. It is idempotent — a failed run can be
+   retried by re-running the release commit's CI.
+
+### Which commit types release
+
+git-cliff (`cliff.toml`) releases on, and only on:
+
+- `feat:` → **minor**
+- `fix:`, `perf:` → **patch**
+- a breaking change (`type!:` or a `BREAKING CHANGE:` footer) → **minor** while
+  the version is `0.x` (`major_version_zero`), major after 1.0
+
+Everything else — `refactor`, `docs`, `ci`, `build`, `chore`, `style`, `test`,
+`revert` — is recorded in git but **does not release** and does not appear in
+the changelog. "Valid commit" is not the same as "released": only the four
+reader-facing types (feat/fix/perf, plus breaking) reach the changelog.
+
+### The `Changelog:` footer override
+
+A `Changelog:` footer on the **last line** of a commit message (i.e. the PR
+description, since the body becomes the squash commit body) overrides the
+type-based default in either direction:
+
+- `Changelog: skip` — no changelog entry **and no release**, even for a `fix`.
+  Use this for a deliberate, non-user-relevant edit (e.g. a routine dependency
+  floor bump that does not warrant a release).
+- `Changelog: added` / `changed` / `fixed` / `security` — force the entry into
+  that section **and** release it, even for a `chore`/`docs`. Use `security` to
+  surface a security fix that arrived as `chore(deps)`.
+
+A breaking change cannot be skipped (`protect_breaking_commits`). What is skipped
+releases nothing, so changelog visibility and release-worthiness are one
+decision, made in the commit and reproducible from git alone.
+
+### Dependency-update commit types (Renovate)
+
+- `project.dependencies` / `project.optional-dependencies` (published install
+  requirements) → `fix(deps)` → **releases**. A changed runtime floor is
+  user-facing.
+- `dependency-groups` (dev/docs/test tooling) → `chore(deps)` → no release.
+- GitHub Actions and the pinned uv version → `ci(deps)`; the pinned build
+  backend in `build-constraints.txt` → `build(deps)`. Neither releases.
+- Renovate's default `rangeStrategy` does not widen `>=` floors, so routine
+  updates touch only `uv.lock` (no release); only a security bump
+  (`vulnerabilityAlerts` uses `rangeStrategy: 'bump'`) or a manual edit changes
+  a floor. Both are user-facing and should release.
+
+### The changelog is immutable once published
+
+Every published section's SHA-256 is frozen in `.changelog-manifest.json`. CI
+(`check_manifest_append_only.py`) fails a pull request that rewrites an existing
+section's hash — a tripwire, not a lock (an admin can override for a deliberate
+markup correction; see #885). New releases only ever prepend. Do not edit a
+released section's wording.
+
+### Other release facts
+
+- **Docs preview:** the changelog page on Read the Docs (`latest`) shows an
+  `## Unreleased (expected X.Y.Z)` block, generated at docs-build time by
+  git-cliff from the commits since the last tag. It is suppressed on tagged and
+  pull-request builds and never writes to the repo (`tools/unreleased_docs.py`).
+- **Rehearsal:** `release.yml` via `workflow_dispatch` builds the current
+  `master` as a `.dev` version and publishes it to **TestPyPI** only, touching
+  no tags, PyPI, or releases.
+- **The tracking issue for this whole system is #864.**
+
 ## Python Version Support
 
 Requires Python 3.11-3.14 (per pyproject.toml: `>=3.11,<3.15`)
