@@ -102,6 +102,19 @@
       semanticCommitScope: 'deps',
     },
     {
+      // build-constraints.txt pins hatchling, the build backend. Without this
+      // the pip_requirements manager falls back to config:recommended's
+      // chore(deps), inconsistent with the pinned uv above -- both are pinned
+      // release infrastructure. build(deps) is the precise conventional type
+      // for the build system; like ci and chore, it does not trigger a release.
+      description: 'Pinned build backend is build tooling',
+      matchManagers: [
+        'pip_requirements',
+      ],
+      semanticCommitType: 'build',
+      semanticCommitScope: 'deps',
+    },
+    {
       description: 'Customize lockFileMaintenance PR labels/grouping',
       matchUpdateTypes: [
         'lockFileMaintenance',
