@@ -142,6 +142,21 @@ required-version = ">=0.7.1"
 
 [tool.commitizen]
 name = "cz_conventional_commits"
+# commitizen's default allows "Merge", "Revert", "Pull request", "fixup!",
+# "squash!" and "amend!" to bypass validation entirely -- `cz check` returns
+# success for "Merge nonsense". Those prefixes exist for repositories that merge
+# rather than squash; here the pull request title *is* the commit subject, and a
+# title commitizen waves through but later ignores produces no changelog entry
+# and no release, silently. Emptying the list closes that hole for every caller,
+# so the pull request check and the master check cannot disagree.
+#
+# Consequence worth knowing: GitHub's Revert button proposes "Revert \"...\"",
+# which is now rejected. `revert: ...` is accepted, but be aware that it is not
+# the same as being recorded -- commitizen's change_type_map covers only feat,
+# fix, refactor and perf, so a revert produces neither a changelog entry nor a
+# version bump. If undoing the change is something users should read about,
+# title it for its effect, e.g. `fix(auth): restore the previous token header`.
+allowed_prefixes = []
 # Reads and writes the version in pyproject.toml *and* uv.lock, so the two
 # cannot drift apart during a release.
 version_provider = "uv"
