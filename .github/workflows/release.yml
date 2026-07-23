@@ -215,8 +215,23 @@ jobs:
           VERSION: ${{ needs.inspect.outputs.version }}
           SHA: ${{ needs.inspect.outputs.sha }}
         run: |
-          existing="$(gh api "repos/$GITHUB_REPOSITORY/git/ref/tags/v$VERSION" \
-                        --jq .object.sha 2>/dev/null || true)"
+          # gh api prints the error JSON to *stdout* on an HTTP error --
+          # measured: a 404 put {"message":"Not Found",...} into the capture,
+          # which the first production run then treated as a mismatching tag
+          # and hard-stopped. Absence is only ever concluded from an explicit
+          # HTTP 404 on stderr; any other failure (network, auth) stops the
+          # release rather than risking a create over an unknown state.
+          if existing="$(gh api "repos/$GITHUB_REPOSITORY/git/ref/tags/v$VERSION" \
+                           --jq .object.sha 2>"$RUNNER_TEMP/tag-lookup.err")"; then
+            :
+          elif grep -q "HTTP 404" "$RUNNER_TEMP/tag-lookup.err"; then
+            existing=""
+          else
+            cat "$RUNNER_TEMP/tag-lookup.err" >&2
+            echo "::error::Could not determine whether v$VERSION exists."
+            exit 1
+          fi
+
           if [ -z "$existing" ]; then
             gh api "repos/$GITHUB_REPOSITORY/git/refs" \
               -f ref="refs/tags/v$VERSION" -f sha="$SHA" >/dev/null
