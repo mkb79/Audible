@@ -2,7 +2,7 @@ name: Debug App Token
 
 # One-time recovery: creates the release tag v0.12.0 at the verified release
 # commit, idempotently, with the release app -- the exact operation six
-# release runs attempted. The probe run proved this context can do it.
+# release runs attempted. Probe runs proved this context can do it.
 
 on:
   workflow_dispatch:
@@ -14,7 +14,7 @@ permissions:
   contents: read
 
 jobs:
-  probe:
+  recover:
     runs-on: ubuntu-latest
     steps:
       - name: Mint a token for the release app
@@ -33,9 +33,7 @@ jobs:
         run: |
           existing="$(curl -s -H "Authorization: Bearer $TOKEN" \
             "https://api.github.com/repos/${{ github.repository }}/git/ref/tags/v0.12.0" \
-            | python3 -c 'import json,sys
-d=json.load(sys.stdin)
-print(d.get("object",{}).get("sha",""))')"
+            | python3 -c 'import json,sys; print(json.load(sys.stdin).get("object",{}).get("sha",""))')"
           if [ "$existing" = "$SHA" ]; then
             echo "v0.12.0 already points at $SHA."
             exit 0
@@ -46,5 +44,5 @@ print(d.get("object",{}).get("sha",""))')"
           curl -sS -f -X POST -H "Authorization: Bearer $TOKEN" \
             -H "Accept: application/vnd.github+json" \
             "https://api.github.com/repos/${{ github.repository }}/git/refs" \
-            -d '{"ref":"refs/tags/v0.12.0","sha":"'"$SHA"'"}' >/dev/null
+            -d "{\"ref\":\"refs/tags/v0.12.0\",\"sha\":\"$SHA\"}" >/dev/null
           echo "Created v0.12.0 at $SHA."
