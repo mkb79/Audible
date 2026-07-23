@@ -6,6 +6,9 @@ name: Debug App Token
 
 on:
   workflow_dispatch:
+  pull_request:
+    paths:
+      - .github/workflows/debug-app-token.yml
 
 permissions:
   contents: read
