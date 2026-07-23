@@ -15,14 +15,13 @@ import re
 from pathlib import Path
 
 
-# Two heading styles have to be recognised. Sections written before releases
-# were generated look like "## [0.11.0] - 2026-07-20", and "## [Unreleased]"
-# uses the same bracketed form. Generated sections look like
-# "## v0.12.0 (2026-07-22)".
-#
-# Matching only the bracketed form would make every generated section invisible:
-# it would appear neither as published nor as unprotected, so nothing would
-# complain. The gap would be silent.
+# Two heading styles have to be recognised. Historical sections look like
+# "## [0.11.0] - 2026-07-20", "## [Unreleased]" uses the same bracketed form,
+# and the template in cliff.toml continues it for generated sections. The
+# "## v0.12.0 (2026-07-22)" form is what commitizen would emit; it is kept
+# recognised defensively, so a heading hand-written in that style would still
+# be seen as a section boundary rather than becoming silently invisible --
+# neither published nor unprotected.
 #
 # Neither alternative matches "## Bugfix", which older sections contain as a
 # subheading at the same level and which is content, not a boundary.

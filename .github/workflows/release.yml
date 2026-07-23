@@ -1,103 +1,413 @@
 name: Release
 
+# Publishes a release after its pull request is merged -- the merge that
+# release-pr.yml proposed is the one manual step, and everything here follows
+# from it. Nothing in this workflow decides anything: the version, the
+# changelog section and the frozen hashes were all fixed in the merged commit,
+# and every job only verifies and applies them.
+#
+# Runs after CI has *passed* on master, not on the push itself, so nothing is
+# ever published from a commit whose tests have not been seen to pass -- the
+# same discipline release-pr.yml applies to proposing.
+#
+# Idempotent by design: any job can fail and the whole run be retried. A tag
+# that already exists is accepted if it points at the release commit; files
+# already on PyPI are accepted if their hashes match the freshly built
+# artifacts (builds are reproducible via SOURCE_DATE_EPOCH, verified); an
+# existing GitHub release is accepted if its body matches the changelog
+# section. Any other pre-existing state is a hard stop, never a guess.
+#
+# The trusted publishers on PyPI and TestPyPI are bound to this file name and
+# separated by environment -- renaming this file breaks publishing.
+
 on:
-  push:
-    branches:
-      - main
-      - master
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+    branches: [master]
+  # A rehearsal builds the current master as a .dev version and takes it
+  # through the full pipeline against TestPyPI -- build, twine, smoke test,
+  # trusted publishing -- without touching tags, PyPI or releases.
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  # Never cancel: a production release must run to completion or fail loudly.
+  # Runs for distinct commits serialise; idempotency makes the second run of
+  # the same release a verified no-op.
+  #
+  # queue: max, because the default keeps only ONE pending run per group and
+  # replaces it on the next arrival -- a pending production release could be
+  # displaced by an ordinary post-release CI success and would then simply
+  # never publish. With max, arrivals queue instead of displacing.
+  group: release-publish
+  cancel-in-progress: false
+  queue: max
 
 env:
-  PYTHON_VERSION: "3.14"
+  UV_VERSION: "0.11.28"
 
 jobs:
-  release:
-    name: Release
+  inspect:
+    name: inspect
     runs-on: ubuntu-latest
-    permissions:
-      # Push the version tag and publish the drafted release.
-      contents: write
-      # Release Drafter reads merged pull requests and their labels to
-      # categorize the release notes.
-      pull-requests: read
+    # Same guard as release-pr.yml: a completed run is not a passed one, and
+    # CI also runs for pull requests and the merge queue, including forks.
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.workflow_run.conclusion == 'success' &&
+       github.event.workflow_run.event == 'push')
     outputs:
-      tag: ${{ steps.check-version.outputs.tag }}
+      # At most one of these is 'true'; neither means an ordinary master push.
+      release: ${{ steps.decide.outputs.release }}
+      rehearsal: ${{ steps.decide.outputs.rehearsal }}
+      version: ${{ steps.decide.outputs.version }}
+      # Every later job pins to this commit, so a run keeps meaning the same
+      # thing even if master moves while it is in flight.
+      sha: ${{ steps.decide.outputs.sha }}
     steps:
-      - name: Check out the repository
-        uses: actions/checkout@v7
+      - name: Check out the tested commit
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
-          fetch-depth: 2
+          # For workflow_run this is the commit CI actually tested -- not the
+          # branch tip, which may have moved on.
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
 
-      - name: Set up Python
-        uses: actions/setup-python@v7
+      - name: Decide what this run is
+        id: decide
+        run: |
+          sha="$(git rev-parse HEAD)"
+          echo "sha=$sha" >> "$GITHUB_OUTPUT"
+
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "rehearsal=true" >> "$GITHUB_OUTPUT"
+            echo "::notice::Rehearsal from $sha against TestPyPI."
+            exit 0
+          fi
+
+          # A release commit is the squash merge of release-pr.yml's pull
+          # request. The subject carries the version; whether the commit as a
+          # whole really is that release is verified in the next job.
+          subject="$(git log -1 --format=%s)"
+          if printf '%s' "$subject" | \
+             grep -qE '^chore\(release\): v[0-9]+\.[0-9]+\.[0-9]+( \(#[0-9]+\))?$'; then
+            version="$(printf '%s' "$subject" | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1)"
+            echo "release=true" >> "$GITHUB_OUTPUT"
+            echo "version=$version" >> "$GITHUB_OUTPUT"
+            echo "::notice::Release commit for v$version."
+          else
+            echo "::notice::Not a release commit; nothing to publish."
+          fi
+
+  verify-and-build:
+    name: verify-and-build
+    runs-on: ubuntu-latest
+    needs: inspect
+    if: >-
+      needs.inspect.outputs.release == 'true' ||
+      needs.inspect.outputs.rehearsal == 'true'
+    steps:
+      - name: Check out the release commit
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
-          python-version: ${{ env.PYTHON_VERSION }}
+          ref: ${{ needs.inspect.outputs.sha }}
 
       - name: Install uv
-        uses: astral-sh/setup-uv@v8.3.2
-
-      - name: Check if there is a parent commit
-        id: check-parent-commit
-        run: |
-          echo "sha=$(git rev-parse --verify --quiet HEAD^)" >> $GITHUB_OUTPUT
-
-      - name: Detect and tag new version
-        id: check-version
-        if: steps.check-parent-commit.outputs.sha
-        uses: salsify/action-detect-and-tag-new-version@v2.0.3
+        uses: astral-sh/setup-uv@11f9893b081a58869d3b5fccaea48c9e9e46f990 # v8.3.2
         with:
-          version-command: |
-            bash -c "uv version --short"
+          version: ${{ env.UV_VERSION }}
+          python-version: "3.14"
 
-      - name: Bump version for developmental release
-        if: "! steps.check-version.outputs.tag"
+      - name: Install the release tooling
+        run: uv sync --no-install-project --group release
+
+      - name: Verify the commit is a coherent release
+        # Everything must agree before anything irreversible: pyproject,
+        # uv.lock, the changelog's newest section and the manifest's newest
+        # hash all name the same version, and every published section still
+        # matches its frozen hash. See tools/verify_release_commit.py.
+        if: needs.inspect.outputs.release == 'true'
+        env:
+          VERSION: ${{ needs.inspect.outputs.version }}
         run: |
-          uv version --bump patch &&
-          version=$(uv version --short) &&
-          uv version $version.dev.$(date +%s)
+          uv lock --check
+          uv run --no-sync python tools/verify_release_commit.py "$VERSION"
 
-      - name: Build package
+      - name: Stamp the rehearsal version
+        if: needs.inspect.outputs.rehearsal == 'true'
         run: |
-          uv build
+          base="$(uv version --short)"
+          # run_id is unique per run, so repeated rehearsals cannot collide on
+          # TestPyPI, where uploads are as irrevocable as anywhere.
+          uv version --no-sync "${base}.dev${{ github.run_id }}"
+          echo "Rehearsing as $(uv version --short)."
 
-      - name: Upload build package artifact
-        uses: actions/upload-artifact@v7
+      - name: Build the distributions
+        run: |
+          # Pinning SOURCE_DATE_EPOCH to the commit makes the build
+          # byte-reproducible (verified: two builds, identical hashes), and
+          # build-constraints.txt pins the backend, because timestamps only
+          # freeze the build against the same hatchling. Together they let a
+          # retried run compare its fresh build against files already on PyPI
+          # instead of giving up.
+          SOURCE_DATE_EPOCH="$(git log -1 --format=%ct)" \
+            uv build --build-constraints build-constraints.txt
+          sha256sum dist/* > SHA256SUMS
+          cat SHA256SUMS
+
+      - name: Check the distributions
+        run: uv run --no-sync twine check --strict dist/*
+
+      - name: Smoke-test both distributions
+        # Outside the checkout, in clean environments: the wheel as users
+        # install it, and the sdist including a source build -- twine cannot
+        # prove an sdist is buildable, only installing it can.
+        run: |
+          expected="$(uv version --short)"
+          for dist in dist/*.whl dist/*.tar.gz; do
+            echo "::group::Smoke test $dist"
+            venv="$RUNNER_TEMP/smoke-$(basename "$dist" | tr '.' '-')"
+            uv venv -q "$venv"
+            VIRTUAL_ENV="$venv" uv pip install -q "$PWD/$dist"
+            got="$("$venv/bin/python" -c 'import audible; print(audible.__version__)')"
+            if [ "$got" != "$expected" ]; then
+              echo "::error::$dist reports version $got, expected $expected."
+              exit 1
+            fi
+            echo "$dist imports cleanly as $got"
+            echo "::endgroup::"
+          done
+
+      - name: Upload the distributions
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: dist
-          path: dist
-          retention-days: 1
+          path: |
+            dist/
+            SHA256SUMS
+          if-no-files-found: error
+          retention-days: 7
 
-      - name: Publish the release notes
-        id: create-release
-        uses: release-drafter/release-drafter@v7.6.0
-        with:
-          publish: ${{ steps.check-version.outputs.tag != '' }}
-          tag: ${{ steps.check-version.outputs.tag }}
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-  pypi-publish:
-    needs: release
-    environment:
-      name: publish
-    name: upload release to PyPI or TestPyPI
+  tag:
+    name: tag
     runs-on: ubuntu-latest
+    needs: [inspect, verify-and-build]
+    if: needs.inspect.outputs.release == 'true'
+    permissions:
+      contents: read
+    steps:
+      - name: Mint a token for the release app
+        id: app-token
+        # The v* tag ruleset restricts creation to the release app -- the
+        # workflow's own token could not create this tag even with
+        # contents: write. Narrowed to contents; nothing here needs more.
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
+        with:
+          app-id: ${{ secrets.RELEASE_APP_CLIENT_ID }}
+          private-key: ${{ secrets.RELEASE_APP_PRIVATE_KEY }}
+          permission-contents: write
+
+      - name: Create the tag, or verify it
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          VERSION: ${{ needs.inspect.outputs.version }}
+          SHA: ${{ needs.inspect.outputs.sha }}
+        run: |
+          existing="$(gh api "repos/$GITHUB_REPOSITORY/git/ref/tags/v$VERSION" \
+                        --jq .object.sha 2>/dev/null || true)"
+          if [ -z "$existing" ]; then
+            gh api "repos/$GITHUB_REPOSITORY/git/refs" \
+              -f ref="refs/tags/v$VERSION" -f sha="$SHA" >/dev/null
+            echo "Created v$VERSION at $SHA."
+          elif [ "$existing" = "$SHA" ]; then
+            # A retried run after a later failure: the tag is already right.
+            echo "v$VERSION already points at $SHA."
+          else
+            echo "::error::v$VERSION exists but points at $existing, not $SHA."
+            echo "This release was prepared for a different commit; do not proceed."
+            exit 1
+          fi
+
+  publish-pypi:
+    name: publish-pypi
+    runs-on: ubuntu-latest
+    needs: [inspect, verify-and-build, tag]
+    if: needs.inspect.outputs.release == 'true'
+    environment:
+      name: pypi
+      url: https://pypi.org/project/audible/${{ needs.inspect.outputs.version }}/
+    permissions:
+      # Trusted publishing: the OIDC token is the credential; contents stays
+      # read-only, so nothing on this job can touch the repository.
+      id-token: write
+      contents: read
+    steps:
+      - name: Download the distributions
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+        with:
+          name: dist
+
+      - name: Verify the artifact survived the handoff
+        run: sha256sum -c SHA256SUMS
+
+      - name: Check what PyPI already has
+        id: pypi-state
+        env:
+          VERSION: ${{ needs.inspect.outputs.version }}
+        run: |
+          status="$(curl -s -o response.json -w '%{http_code}' \
+                    "https://pypi.org/pypi/audible/$VERSION/json")"
+          if [ "$status" = "404" ]; then
+            echo "Version $VERSION is not on PyPI yet."
+            echo "present=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          if [ "$status" != "200" ]; then
+            echo "::error::PyPI answered $status; cannot determine the state."
+            exit 1
+          fi
+
+          # The version exists. Whatever is published must match our fresh
+          # build byte for byte -- reproducible builds make that comparison
+          # meaningful, and any mismatch is a different release wearing our
+          # version number: hard stop. Matching files may however be a
+          # *subset*: twine uploads sequentially, so a failed run can leave
+          # the wheel published and the sdist not. That state must be
+          # completable, or no retry could ever heal it.
+          # Redirected, not piped: a pipe into tee would let bash's plain -e
+          # miss python's exit code, and a hash mismatch would fall through to
+          # the upload -- the exact catastrophe this step exists to prevent.
+          python3 - > pypi-state.txt <<'EOF'
+          import hashlib
+          import json
+          import pathlib
+          import sys
+
+          published = {
+              f["filename"]: f["digests"]["sha256"]
+              for f in json.load(open("response.json"))["urls"]
+          }
+          problems = []
+          missing = []
+          local = sorted(pathlib.Path("dist").iterdir())
+          for path in local:
+              digest = hashlib.sha256(path.read_bytes()).hexdigest()
+              recorded = published.pop(path.name, None)
+              if recorded is None:
+                  missing.append(path.name)
+              elif recorded != digest:
+                  problems.append(f"{path.name} differs from the published file")
+          for leftover in published:
+              problems.append(f"PyPI carries {leftover}, which this run did not build")
+          if problems:
+              print("The published release does not match this build:")
+              for p in problems:
+                  print(f"  - {p}")
+              sys.exit(1)
+          if missing:
+              print("PARTIAL: published files match; still missing: "
+                    + ", ".join(missing))
+          else:
+              print("COMPLETE: all files already published and identical.")
+          EOF
+
+          cat pypi-state.txt
+          if grep -q '^COMPLETE' pypi-state.txt; then
+            echo "present=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "present=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Publish to PyPI
+        if: steps.pypi-state.outputs.present == 'false'
+        uses: pypa/gh-action-pypi-publish@ba38be9e461d3875417946c167d0b5f3d385a247 # v1.14.1
+        with:
+          packages-dir: dist/
+          # Safe here and only here: the step above has already proven that
+          # every file PyPI carries is byte-identical to this build, so
+          # "already exists" can only mean our own earlier partial upload.
+          skip-existing: true
+
+  github-release:
+    name: github-release
+    runs-on: ubuntu-latest
+    # After PyPI on purpose: the release announcement is the last step, so its
+    # existence implies everything before it succeeded.
+    needs: [inspect, tag, publish-pypi]
+    if: needs.inspect.outputs.release == 'true'
+    permissions:
+      # Creating a release needs contents: write; the tag it attaches to
+      # already exists, so the tag ruleset is not involved.
+      contents: write
+    steps:
+      - name: Check out the release commit
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ needs.inspect.outputs.sha }}
+
+      - name: Create the release, or verify it
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ needs.inspect.outputs.version }}
+        run: |
+          # The body is the changelog section, byte for byte. The manifest
+          # froze that section when the release pull request was prepared, and
+          # the scheduled audit in security.yml compares live bodies against
+          # it -- one text, one hash, one place drift shows up.
+          python3 tools/print_section.py "$VERSION" > "$RUNNER_TEMP/body.md"
+
+          if ! gh release view "v$VERSION" --json body --jq .body \
+               > "$RUNNER_TEMP/live.md" 2>/dev/null; then
+            gh release create "v$VERSION" \
+              --title "v$VERSION" \
+              --notes-file "$RUNNER_TEMP/body.md" \
+              --verify-tag
+            echo "Created the release for v$VERSION."
+            exit 0
+          fi
+
+          # A retried run: accept the existing release only if it says what
+          # the changelog says.
+          python3 - "$RUNNER_TEMP/body.md" "$RUNNER_TEMP/live.md" <<'EOF'
+          import pathlib
+          import sys
+          sys.path.insert(0, "tools")
+          from check_release_bodies import normalise
+
+          expected, live = (
+              normalise(pathlib.Path(p).read_text(encoding="utf-8"))
+              for p in sys.argv[1:3]
+          )
+          if expected != live:
+              print("The existing release body differs from the changelog "
+                    "section; refusing to continue.")
+              sys.exit(1)
+          print("The release already exists and matches the changelog.")
+          EOF
+
+  publish-testpypi:
+    name: publish-testpypi
+    runs-on: ubuntu-latest
+    needs: [inspect, verify-and-build]
+    if: needs.inspect.outputs.rehearsal == 'true'
+    environment:
+      name: testpypi
     permissions:
       id-token: write
+      contents: read
     steps:
-      - name: Download build package artifact
-        uses: actions/download-artifact@v8
+      - name: Download the distributions
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
         with:
           name: dist
-          path: dist
 
-      - name: Publish package distributions to PyPI
-        continue-on-error: true
-        if: needs.release.outputs.tag
-        uses: pypa/gh-action-pypi-publish@release/v1
+      - name: Verify the artifact survived the handoff
+        run: sha256sum -c SHA256SUMS
 
-      - name: Publish package on TestPyPI
-        continue-on-error: true
-        if: "! needs.release.outputs.tag"
-        uses: pypa/gh-action-pypi-publish@v1.14.1
+      - name: Publish to TestPyPI
+        uses: pypa/gh-action-pypi-publish@ba38be9e461d3875417946c167d0b5f3d385a247 # v1.14.1
         with:
           repository-url: https://test.pypi.org/legacy/
+          packages-dir: dist/

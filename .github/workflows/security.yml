@@ -106,6 +106,36 @@ jobs:
         with:
           sarif_file: results.sarif
 
+  release-bodies:
+    # Detection, because prevention is impossible: the releases API is
+    # governed by the contents permission, and no token able to push a branch
+    # can be denied it. Compares every published GitHub release body against
+    # its recorded text -- frozen hashes for the pre-automation era, the
+    # changelog section (itself frozen in the manifest) for generated ones.
+    #
+    # Not on pull requests: a pull request cannot change a published release,
+    # and drift that happened elsewhere must never block one. Like scorecard,
+    # informational rather than part of the gate.
+    name: release-bodies
+    if: >-
+      github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+
+      - name: Compare live release bodies against their recorded text
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh api --paginate "repos/$GITHUB_REPOSITORY/releases" \
+            > "$RUNNER_TEMP/releases.json"
+          # Stdlib only -- tools/check_release_bodies.py and the changelog
+          # helper it imports need no third-party packages, so no uv setup.
+          python3 tools/check_release_bodies.py "$RUNNER_TEMP/releases.json"
+
   gate:
     # Stable check name to require in branch protection, alongside `required`
     # from ci.yml.

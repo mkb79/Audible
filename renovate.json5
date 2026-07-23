@@ -6,10 +6,17 @@
   enabledManagers: [
     'github-actions',
     'pep621',
+    // build-constraints.txt pins the build backend so retried release builds
+    // stay byte-identical; pip_requirements keeps that pin current.
+    'pip_requirements',
     // Required for customManagers below to run at all: when enabledManagers is
     // set, custom managers are only active if listed here.
     'custom.regex',
   ],
+  pip_requirements: {
+    // Only the build-backend pin -- there is no other requirements file left.
+    managerFilePatterns: ['/^build-constraints\\.txt$/'],
+  },
   customManagers: [
     {
       customType: 'regex',

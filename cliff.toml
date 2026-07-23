@@ -1,0 +1,109 @@
+# git-cliff derives the next version and the new changelog section from the
+# commit subjects on master. It replaced commitizen for these two jobs because
+# commitizen applies its type pattern to every line of a commit message --
+# measured: a `docs:` subject with a body line `feat: x` produced a minor bump,
+# and an upstream changelog embedded in a `chore(deps)` body leaked into ours.
+# git-cliff parses the subject, body and footers structurally, per Conventional
+# Commits 1.0.0. tests/test_version_rules.py holds the measured cases; a
+# git-cliff update that changes any of this fails there, not in a release.
+#
+# One property ties everything together: a skipped commit does not bump the
+# version either. What is not worth telling users about is not worth a release,
+# so changelog visibility and release relevance are the same decision -- made
+# per commit, recorded in the commit, reproducible from git alone.
+
+[bump]
+# A breaking change on 0.x raises the minor version, so 0.11.0 becomes 0.12.0
+# and never 1.0.0. Moving to 1.0 stays a deliberate decision, exactly as
+# major_version_zero did under commitizen.
+breaking_always_bump_major = false
+features_always_bump_minor = true
+
+[git]
+conventional_commits = true
+# Commits whose subject does not parse contribute nothing rather than aborting
+# the run. The pull request title check keeps them out of master in the first
+# place; this decides what happens if one slips past anyway.
+filter_unconventional = true
+# The load-bearing line. With true, git-cliff would split a message on body
+# lines that look like commit subjects -- reintroducing, deliberately, the very
+# behaviour this tool was chosen to avoid. Its own documentation calls the
+# splitting a deviation from Conventional Commits.
+split_commits = false
+# A skip rule below must not be able to swallow a breaking change: a
+# `chore(deps)!:` or an explicit `Changelog: skip` on a breaking commit still
+# raises the version and stays visible. Breaking changes are not skippable.
+protect_breaking_commits = true
+# Only release tags. The repository also carries a `publish_to_testpypi` tag
+# and old prerelease tags like v0.2.0-alpha-2, which must not be mistaken for
+# the last release. The release workflow selects its comparison tag with this
+# exact expression; the two must never disagree about what a release tag is.
+tag_pattern = '^v[0-9]+\.[0-9]+\.[0-9]+$'
+
+# The default rule, by type: feat, fix and perf reach the changelog and the
+# version; everything else -- notably refactor -- is recorded in git but is not
+# something a user of the library needs to read about, and releases nothing.
+#
+# The default is only a default. A `Changelog:` footer in the commit message
+# overrides it in either direction, and the footer rules sit first because the
+# first matching rule wins:
+#
+#     perf(parser): avoid an allocation on a cold path
+#
+#     Changelog: skip                <- worth keeping out: no entry, no release
+#
+#     refactor(client): drop the legacy request pipeline
+#
+#     Changelog: changed             <- worth telling users: entry + release
+#
+# The categories match the section headings: skip, added, changed, fixed,
+# security. A footer both places the entry and opts the commit into a release,
+# so `Changelog: security` on a `chore(deps)` bump makes that security fix
+# visible and shippable without relabelling the commit type.
+#
+# The patterns anchor the whole type, not a prefix of it: `^feat` alone also
+# matched `feature:`, and `^fix` matched `fixup:` -- measured, both released a
+# version they should not have. A type ends at its scope, its bang or its colon.
+commit_parsers = [
+  { footer = "(?i)^changelog: ?skip$", skip = true },
+  { footer = "(?i)^changelog: ?added$", group = "Added" },
+  { footer = "(?i)^changelog: ?changed$", group = "Changed" },
+  { footer = "(?i)^changelog: ?fixed$", group = "Fixed" },
+  { footer = "(?i)^changelog: ?security$", group = "Security" },
+  { message = '^feat(\(.+\))?!?:', group = "Added" },
+  { message = '^fix(\(.+\))?!?:', group = "Fixed" },
+  { message = '^perf(\(.+\))?!?:', group = "Performance" },
+  # A breaking change of any other type -- `refactor(api)!:`, `chore(deps)!:`
+  # -- raises the version (protect_breaking_commits keeps it from the
+  # catch-all), so it must also be readable, not filed under a raw lowercase
+  # type heading.
+  #
+  # This deliberately trusts the bang on *any* word, including a typo like
+  # `feature!:`. Restricting it would change nothing about the release --
+  # git-cliff bumps on the breaking marker itself, and protection keeps the
+  # commit regardless -- it would only bury the entry under a raw heading. An
+  # explicit `!` is a claim worth honouring: dropping a real breaking change
+  # over a misspelt type is the worse failure, and the pull request title
+  # check rejects unknown types before they reach master anyway.
+  { message = '^\w+(\(.+\))?!:', group = "Changed" },
+  { message = ".*", skip = true },
+]
+
+[changelog]
+# The template is spelled out rather than inherited from git-cliff's embedded
+# default, for two reasons. The heading has to keep the exact historical form
+# `## [x.y.z] - date`, which tools/changelog.py parses and the manifest freezes.
+# And a breaking change renders its explanation, taken from the BREAKING CHANGE
+# footer -- the embedded default prints only a marker, and a breaking change
+# whose explanation exists only in the pull request is one nobody reads.
+header = ""
+body = """
+## [{{ version | trim_start_matches(pat="v") }}] - {{ timestamp | date(format="%Y-%m-%d") }}
+{% for group, commits in commits | group_by(attribute="group") %}
+### {{ group | upper_first }}
+{% for commit in commits %}
+- {% if commit.breaking %}**BREAKING** {% endif %}{% if commit.scope %}**{{ commit.scope }}**: {% endif %}{{ commit.message | upper_first }}{% if commit.breaking and commit.breaking_description and commit.breaking_description != commit.message %} — {{ commit.breaking_description }}{% endif %}
+{%- endfor %}
+{% endfor %}"""
+footer = ""
+trim = true

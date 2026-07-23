@@ -1,0 +1,342 @@
+name: Release PR
+
+# Proposes the next release as a pull request. It publishes nothing: the only
+# things it can produce are a branch and a pull request against master, and the
+# single manual step of a release is merging that pull request.
+#
+# A release is only ever proposed from a commit that CI has been seen to pass,
+# for every trigger -- see "Require a tested master" below.
+
+on:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+    branches: [master]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  # Deliberately not cancelling *running* jobs. Runs arrive in the order their
+  # CI finished, not in commit order: a slower run for an older commit can
+  # complete after a faster one for a newer commit. Cancelling would let the
+  # older arrival kill the newer proposal and then skip itself as stale, leaving
+  # no proposal at all.
+  #
+  # This does not queue every arrival -- GitHub keeps only the newest pending
+  # run and drops the rest. That is harmless here: each run checks out whatever
+  # master points at when it starts, not the commit that triggered it, so a
+  # surviving run always proposes from the current tip.
+  group: release-pr
+  cancel-in-progress: false
+
+env:
+  UV_VERSION: "0.11.28"
+
+jobs:
+  prepare:
+    name: prepare
+    runs-on: ubuntu-latest
+    # A completed CI run is not a passed one, and CI also runs for pull requests
+    # and the merge queue, including from forks. `workflow_run.event` is set by
+    # GitHub from the event that started the triggering run and cannot be
+    # influenced by the branch name or payload, so this excludes both.
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.workflow_run.conclusion == 'success' &&
+       github.event.workflow_run.event == 'push')
+    permissions:
+      # Reading only. Every write is done with the app token below.
+      contents: read
+      actions: read
+      pull-requests: read
+    steps:
+      - name: Mint a token for the release app
+        id: app-token
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
+        with:
+          app-id: ${{ secrets.RELEASE_APP_CLIENT_ID }}
+          private-key: ${{ secrets.RELEASE_APP_PRIVATE_KEY }}
+          # Narrowed to what this workflow needs, dropping whatever else the
+          # installation grants. It does not put releases out of reach: GitHub
+          # governs the releases and tags APIs with the contents permission, and
+          # pushing release/next requires contents:write, so no token that can
+          # do this job can be prevented from editing a release. That guarantee
+          # has to come from detection -- the changelog manifest here, and the
+          # release-body audit in #864 -- not from token scoping.
+          permission-contents: write
+          permission-pull-requests: write
+
+      - name: Check out master
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: master
+          # commitizen derives the next version from the commits since the last
+          # tag, so both the full history and the tags are required.
+          fetch-depth: 0
+          fetch-tags: true
+          token: ${{ steps.app-token.outputs.token }}
+
+      - name: Require a tested master
+        id: tested
+        # Asks the same question for every trigger: has CI passed for the exact
+        # commit that is checked out? For a workflow_run that also settles
+        # freshness -- if master has moved on, the new tip has no successful run
+        # yet and this stops, while the run for that tip triggers this workflow
+        # again. A manual dispatch is held to the identical standard, so it
+        # cannot be used to propose a release from an untested commit.
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          head="$(git rev-parse HEAD)"
+          echo "sha=$head" >> "$GITHUB_OUTPUT"
+
+          passed="$(gh api \
+            "repos/$GITHUB_REPOSITORY/actions/workflows/ci.yml/runs?head_sha=$head&event=push&status=success" \
+            --jq '.total_count')"
+
+          # Fail closed: an empty result from a failed API call must not read as
+          # a pass, and must not read as a quiet skip either.
+          if [ -z "$passed" ]; then
+            echo "::error::Could not determine whether CI passed for $head."
+            exit 1
+          fi
+
+          if [ "$passed" -eq 0 ]; then
+            if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+              echo "::error::No successful CI run for $head; refusing to propose a release."
+              exit 1
+            fi
+            echo "::notice::master is at $head, which has no successful CI run yet."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Install uv
+        if: steps.tested.outputs.skip != 'true'
+        uses: astral-sh/setup-uv@11f9893b081a58869d3b5fccaea48c9e9e46f990 # v8.3.2
+        with:
+          version: ${{ env.UV_VERSION }}
+          python-version: "3.14"
+
+      - name: Install the release tooling
+        # Without --no-install-project every `uv run` installs audible, which
+        # means running its build backend. Nothing here imports the package --
+        # git-cliff reads git, and prepare_release.py imports only tools/ -- so
+        # a workflow that must never build has no reason to build. Every command
+        # below therefore uses --no-sync, or uv would reinstate the project.
+        if: steps.tested.outputs.skip != 'true'
+        run: uv sync --no-install-project --group release
+
+      - name: Determine the next version
+        id: version
+        if: steps.tested.outputs.skip != 'true'
+        run: |
+          # A dirty tree here means an earlier step touched tracked files, and
+          # the add-paths list further down assumes nothing else did.
+          if ! git diff --quiet || ! git diff --cached --quiet; then
+            echo "::error::Tracked files are modified; refusing to derive a version."
+            git status --short
+            exit 1
+          fi
+
+          # The release commit itself must not propose a release. Between its
+          # merge and release.yml creating the tag there is a window in which
+          # the commits it ships are still untagged; proposing from inside
+          # that window would fail loudly on "changelog already contains this
+          # section". Publishing is release.yml's job; this one stands down.
+          subject="$(git log -1 --format=%s)"
+          if printf '%s' "$subject" | \
+             grep -qE '^chore\(release\): v[0-9]+\.[0-9]+\.[0-9]+( \(#[0-9]+\))?$'; then
+            echo "::notice::HEAD is a release commit; release.yml takes over from here."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          # The "nothing to release" test below compares git-cliff's answer
+          # with the newest release tag, so both must agree on what a release
+          # tag is. This regex mirrors tag_pattern in cliff.toml exactly; a
+          # git describe glob would not -- 'v[0-9]*' also matches the old
+          # v0.2.0-alpha-2 style tags this repository still carries, and a
+          # future prerelease tag would silently break the comparison.
+          last="$(git tag --list | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | sort -V | tail -1)"
+          if [ -z "$last" ]; then
+            echo "::error::No release tag found to compare against."
+            exit 1
+          fi
+
+          # git-cliff rather than commitizen, deliberately: commitizen applies
+          # its type pattern to every line of a commit message, so a body line
+          # like `feat: x` under a `docs:` subject raises the version. git-cliff
+          # parses subject, body and footers structurally. The rules live in
+          # cliff.toml and are pinned by tests/test_version_rules.py.
+          #
+          # `uv run` falls through to a PATH binary when the command is missing
+          # from the environment. Runners do not ship git-cliff, so that
+          # misconfiguration surfaces as a loud failure, not a different tool.
+          next="$(uv run --no-sync git-cliff --bumped-version \
+                  2>"$RUNNER_TEMP/cliff.err")"
+          if [ -z "$next" ]; then
+            cat "$RUNNER_TEMP/cliff.err" >&2
+            echo "::error::git-cliff produced no version."
+            exit 1
+          fi
+
+          # With nothing worth releasing, --bumped-version answers with the
+          # current tag. That is the ordinary state of master most of the time.
+          if [ "$next" = "$last" ]; then
+            echo "::notice::No releasable commits since $last."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          next="${next#v}"
+          echo "Next version: $next"
+          echo "version=$next" >> "$GITHUB_OUTPUT"
+
+      - name: Refuse if that version already exists
+        # prepare_release.py rejects a version already present in the changelog
+        # or the manifest. A tag is the one place it cannot see, and a tag that
+        # already exists means a release either happened or half happened.
+        if: steps.version.outputs.skip != 'true' && steps.tested.outputs.skip != 'true'
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          if git rev-parse -q --verify "refs/tags/v$VERSION" >/dev/null; then
+            echo "::error::Tag v$VERSION already exists."
+            exit 1
+          fi
+
+      - name: Prepare the release
+        if: steps.version.outputs.skip != 'true' && steps.tested.outputs.skip != 'true'
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          # Same regex as in the version step, mirroring cliff.toml's
+          # tag_pattern; --unreleased itself ranges from that tag anyway, this
+          # only keeps the log line honest.
+          previous="$(git tag --list | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | sort -V | tail -1)"
+          echo "Collecting commits from $previous to HEAD."
+
+          # Written outside the checkout so it cannot end up in the commit.
+          # --unreleased covers exactly the commits since the last release tag;
+          # cliff.toml's tag_pattern keeps the stray publish_to_testpypi tag
+          # from being mistaken for one.
+          fragment="$RUNNER_TEMP/fragment.md"
+          uv run --no-sync git-cliff --unreleased --tag "v$VERSION" > "$fragment"
+
+          # Updates pyproject.toml and uv.lock together, so the lock file cannot
+          # disagree with the version being released.
+          uv version --no-sync "$VERSION"
+
+          # Refuses unless every precondition holds, and writes nothing if any
+          # of them does not. See tools/prepare_release.py.
+          uv run --no-sync python tools/prepare_release.py "$VERSION" "$fragment"
+
+          {
+            echo "### Proposed release notes"
+            echo
+            cat "$fragment"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Refuse to overwrite work on the release branch
+        # The pull request is regenerated by force-pushing release/next. That is
+        # correct while the branch holds only generated commits, and destructive
+        # once someone has edited or approved it: the release notes are meant to
+        # be sharpened by hand, and silently discarding that would be worse than
+        # not proposing a release at all.
+        #
+        # Two honest limits. This catches accidental human work, not a
+        # determined forgery -- git author metadata is chosen by whoever writes
+        # the commit. And it is a check before a later write, so an edit landing
+        # in the seconds between the two is still overwritten; it runs as late
+        # as possible to keep that window short.
+        if: steps.version.outputs.skip != 'true' && steps.tested.outputs.skip != 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          # The identity pinned on the commit step below. Matched exactly rather
+          # than by a "[bot]" suffix: the action's own default author is the
+          # human who triggered the run, so a loose match would reject this
+          # workflow's own previous commit.
+          BOT_EMAIL: "41898282+github-actions[bot]@users.noreply.github.com"
+        run: |
+          set -o pipefail
+
+          if ! git ls-remote --exit-code --heads origin release/next >/dev/null 2>&1; then
+            echo "No release branch yet."
+            exit 0
+          fi
+
+          # Compared against HEAD rather than origin/master: HEAD is the master
+          # tip this job checked out, and it does not depend on which
+          # remote-tracking refs the checkout happened to create.
+          #
+          # awk compares the address as a string. grep would read the "[bot]" in
+          # it as a character class, so the pattern would not match the very
+          # address it was built from and every generated commit would be
+          # reported as foreign.
+          git fetch --no-tags origin release/next
+          foreign="$(git log --format='%ae' HEAD..FETCH_HEAD |
+                     awk -v bot="$BOT_EMAIL" '$0 != bot' | sort -u)"
+          if [ -n "$foreign" ]; then
+            echo "::error::release/next carries commits this workflow did not write:"
+            echo "$foreign" | sed 's/^/  /'
+            echo "Merge or delete the branch, then let the next master push propose again."
+            exit 1
+          fi
+
+          approved="$(gh pr list --head release/next --base master --state open \
+                        --json reviews \
+                        --jq '[.[0].reviews[]? | select(.state == "APPROVED")] | length')"
+          # Fail closed: a query that produced nothing has not shown that the
+          # pull request is unapproved.
+          if [ -z "$approved" ]; then
+            echo "::error::Could not read reviews for the open release pull request."
+            exit 1
+          fi
+          if [ "$approved" -gt 0 ]; then
+            echo "::error::The open release pull request is approved."
+            echo "Merge it, or dismiss the approval to let it be regenerated."
+            exit 1
+          fi
+
+      - name: Open or update the release pull request
+        if: steps.version.outputs.skip != 'true' && steps.tested.outputs.skip != 'true'
+        uses: peter-evans/create-pull-request@5f6978faf089d4d20b00c7766989d076bb2fc7f1 # v8.1.1
+        with:
+          token: ${{ steps.app-token.outputs.token }}
+          branch: release/next
+          base: master
+          # Restricts which *uncommitted* changes are staged. It is not a filter
+          # on commits an earlier step might already have made -- no step here
+          # commits, and the preceding one is checked to touch only these four.
+          add-paths: |
+            pyproject.toml
+            uv.lock
+            CHANGELOG.md
+            .changelog-manifest.json
+          # Pinned so the branch carries one recognisable identity. The action's
+          # default author is the triggering human, which would make the
+          # ownership check above reject its own work.
+          author: github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>
+          committer: github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>
+          commit-message: "chore(release): v${{ steps.version.outputs.version }}"
+          title: "chore(release): v${{ steps.version.outputs.version }}"
+          labels: release
+          delete-branch: true
+          body: |
+            Prepared from ${{ steps.tested.outputs.sha }}, which CI passed.
+
+            Merging this pull request releases **v${{ steps.version.outputs.version }}**.
+            Closing it releases nothing; the next push to master proposes again.
+
+            The changelog section below was generated from the commits since the
+            last tag. **Edit it here if it needs sharpening** — the wording that
+            lands in this pull request is the wording that gets published and
+            frozen. Note that editing the branch stops this workflow from
+            regenerating it, so a later master push will report a conflict
+            rather than discard your changes.
+
+            Sections for versions already released are untouched, and their
+            hashes in `.changelog-manifest.json` are unchanged — CI verifies
+            both against the base branch.
