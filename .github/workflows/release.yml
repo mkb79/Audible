@@ -208,12 +208,17 @@ jobs:
           app-id: ${{ secrets.RELEASE_APP_CLIENT_ID }}
           private-key: ${{ secrets.RELEASE_APP_PRIVATE_KEY }}
           permission-contents: write
-          # Without this, the narrowed token answered REST reads with 403
-          # "Resource not accessible by integration" -- while git-protocol
-          # access with the same token worked. Most repository REST endpoints
-          # sit behind metadata read, which an unnarrowed installation token
-          # carries implicitly and the narrowing dropped.
-          permission-metadata: read
+          # Creating a tag needs more than contents when the target commit's
+          # workflow files differ from the branch heads: GitHub then treats
+          # the tag as making those workflow versions reachable and demands
+          # the workflows permission of apps -- over git as an explicit
+          # "refusing to allow a GitHub App to create or update workflow"
+          # (GH013), over REST as a bare 403. In normal operation the tag is
+          # created minutes after the merge, while the release commit still
+          # is the head, and the requirement never triggers. A *retried*
+          # release with fixes merged in between is exactly when it does --
+          # measured, six failed runs long.
+          permission-workflows: write
 
       - name: Look up the tag
         id: lookup
