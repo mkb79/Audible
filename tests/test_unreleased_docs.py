@@ -11,6 +11,7 @@ from __future__ import annotations
 from pathlib import Path
 
 import pytest
+
 from unreleased_docs import fragment, last_release_tag, strip_v, to_unreleased
 
 
@@ -19,6 +20,21 @@ SECTION = (
     "### Added\n\n- **client**: A pending feature\n\n"
     "### Fixed\n\n- **json**: A pending fix\n"
 )
+
+
+class TestTheMarkerExists:
+    """The source-read handler is inert without its marker."""
+
+    def test_the_changelog_page_carries_the_marker(self) -> None:
+        """A removed marker would silently disable the whole feature."""
+        page = (
+            Path(__file__).resolve().parent.parent
+            / "docs"
+            / "source"
+            / "misc"
+            / "changelog.md"
+        )
+        assert "<!-- unreleased -->" in page.read_text(encoding="utf-8")
 
 
 class TestToUnreleased:
@@ -96,10 +112,64 @@ class TestFragmentDegrades:
 
 
 class TestLastReleaseTag:
-    """Choosing the newest release tag from the repository's own history."""
+    """Choosing the newest release tag from a repository's history.
 
-    def test_the_newest_release_tag_of_this_repo(self) -> None:
-        """Runs against the real repository, whose newest tag is at least 0.12.0."""
-        tag = last_release_tag(Path(__file__).resolve().parent.parent)
-        assert tag.startswith("v")
-        assert [int(n) for n in strip_v(tag).split(".")] >= [0, 12, 0]
+    Uses a scratch repository rather than the ambient checkout: CI clones
+    shallow and without tags, so the real repository has none to find there.
+    """
+
+    @staticmethod
+    def _repo(tmp_path: Path, tags: list[str]) -> Path:
+        """Create a git repository carrying the given tags.
+
+        Args:
+            tmp_path: Temporary directory supplied by pytest.
+            tags: Tags to create, each on its own commit.
+
+        Returns:
+            The repository path.
+        """
+        import subprocess
+
+        def git(*args: str) -> None:
+            subprocess.run(  # noqa: S603
+                ["git", *args],  # noqa: S607
+                cwd=tmp_path,
+                check=True,
+                capture_output=True,
+            )
+
+        git("init", "-q")
+        git("config", "user.email", "t@t")
+        git("config", "user.name", "t")
+        for tag in tags:
+            git("commit", "-q", "--allow-empty", "-m", tag)
+            git("tag", tag)
+        return tmp_path
+
+    def test_the_newest_release_tag_sorts_numerically(self, tmp_path: Path) -> None:
+        """0.10.0 is newer than 0.9.0 -- numeric, not lexical.
+
+        Args:
+            tmp_path: Temporary directory supplied by pytest.
+        """
+        repo = self._repo(tmp_path, ["v0.9.0", "v0.10.0", "v0.12.0"])
+        assert last_release_tag(repo) == "v0.12.0"
+
+    def test_non_release_tags_are_ignored(self, tmp_path: Path) -> None:
+        """Prerelease and non-version tags are not release tags.
+
+        Args:
+            tmp_path: Temporary directory supplied by pytest.
+        """
+        repo = self._repo(tmp_path, ["v0.12.0", "v0.13.0a1", "publish_to_testpypi"])
+        assert last_release_tag(repo) == "v0.12.0"
+
+    def test_no_release_tag_yields_the_empty_string(self, tmp_path: Path) -> None:
+        """A repository without release tags -- the CI checkout -- returns ''.
+
+        Args:
+            tmp_path: Temporary directory supplied by pytest.
+        """
+        repo = self._repo(tmp_path, ["publish_to_testpypi"])
+        assert last_release_tag(repo) == ""

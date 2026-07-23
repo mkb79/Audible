@@ -212,7 +212,7 @@ disallow_untyped_decorators = false
 # sphinx ships no type information and is not in the mypy dependency group;
 # docs/source/conf.py imports it only to type its build hooks.
 [[tool.mypy.overrides]]
-module = "sphinx.*"
+module = "sphinx.application"
 ignore_missing_imports = true
 
 [tool.ruff]
@@ -263,7 +263,7 @@ convention = "google"
 force-single-line = false
 # changelog and the release helpers live in tools/ and are imported by the
 # tests, so they sort with the project rather than with third-party packages.
-known-first-party = ["audible", "changelog", "prepare_release"]
+known-first-party = ["audible", "changelog", "prepare_release", "unreleased_docs"]
 lines-after-imports = 2
 
 [tool.ruff.lint.per-file-ignores]

@@ -8,7 +8,9 @@ build:
     # last release tag; Read the Docs clones shallow and without tags, so fetch
     # them. --unshallow errors on an already-complete clone, hence the fallback.
     post_checkout:
-      - git fetch --unshallow --tags || git fetch --tags
+      # `|| true` so a transient fetch failure degrades to no pending block
+      # rather than failing the whole docs build.
+      - git fetch --unshallow --tags || git fetch --tags || true
 sphinx:
   configuration: docs/source/conf.py
   # The build is warning-free; keep it that way. A new warning is almost always a

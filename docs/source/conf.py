@@ -93,8 +93,9 @@ html_theme = "sphinx_rtd_theme"
 # generated from this checkout's commits. See tools/unreleased_docs.py: it only
 # reads git, writes nothing, and degrades to showing nothing on any failure.
 sys.path.insert(0, os.path.abspath("../../tools"))
-import unreleased_docs  # noqa: E402
 from sphinx.application import Sphinx  # noqa: E402
+
+import unreleased_docs  # noqa: E402
 
 
 _UNRELEASED_MARKER = "<!-- unreleased -->"

@@ -61,8 +61,13 @@ def to_unreleased(section: str, version: str) -> str:
     Returns:
         The section with its heading replaced by an Unreleased heading.
     """
+    # A function replacement, not a string: a string would let a backslash in
+    # version (there is none in a semver, but this is the boundary) be read as
+    # a regex group reference.
     body = _GENERATED_HEADING.sub(
-        f"## Unreleased (expected {version})", section.strip("\n"), count=1
+        lambda _: f"## Unreleased (expected {version})",
+        section.strip("\n"),
+        count=1,
     )
     return body.strip("\n") + "\n"
 
@@ -125,6 +130,13 @@ def fragment(repo_root: Path) -> str:
             return ""
         section = _run(["git-cliff", "--unreleased", "--tag", bumped], repo_root)
         return to_unreleased(section, strip_v(bumped))
-    except (subprocess.CalledProcessError, FileNotFoundError, OSError) as error:
+    except (
+        subprocess.CalledProcessError,
+        FileNotFoundError,
+        OSError,
+        UnicodeDecodeError,
+    ) as error:
+        # UnicodeDecodeError is not an OSError: git output that is not valid
+        # UTF-8 must degrade like any other failure, never break the build.
         print(f"unreleased_docs: showing nothing pending ({error})")
         return ""
