@@ -85,3 +85,43 @@ html_theme = "sphinx_rtd_theme"
 
 # No custom static files are used, so html_static_path is left unset. Setting it
 # to a directory that does not exist makes Sphinx emit a warning on every build.
+
+
+# -- Pending changes on the changelog page -----------------------------------
+
+# Inject "what the next release will contain" at the top of the changelog page,
+# generated from this checkout's commits. See tools/unreleased_docs.py: it only
+# reads git, writes nothing, and degrades to showing nothing on any failure.
+sys.path.insert(0, os.path.abspath("../../tools"))
+from sphinx.application import Sphinx  # noqa: E402
+
+import unreleased_docs  # noqa: E402
+
+
+_UNRELEASED_MARKER = "<!-- unreleased -->"
+_REPO_ROOT = pathlib.Path(__file__).resolve().parents[2]
+
+
+def _inject_unreleased(app: Sphinx, docname: str, source: list[str]) -> None:
+    """Replace the changelog page's marker with the pending-changes block.
+
+    Args:
+        app: The Sphinx application (unused).
+        docname: The document being read.
+        source: A single-element list holding the document's source, modified
+            in place per the ``source-read`` contract.
+    """
+    if docname != "misc/changelog":
+        return
+    source[0] = source[0].replace(
+        _UNRELEASED_MARKER, unreleased_docs.fragment(_REPO_ROOT), 1
+    )
+
+
+def setup(app: Sphinx) -> None:
+    """Connect the changelog injection to Sphinx.
+
+    Args:
+        app: The Sphinx application.
+    """
+    app.connect("source-read", _inject_unreleased)

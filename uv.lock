@@ -133,6 +133,7 @@ dev = [
     { name = "nox-uv" },
 ]
 docs = [
+    { name = "git-cliff" },
     { name = "myst-parser" },
     { name = "sphinx", version = "9.0.4", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.12'" },
     { name = "sphinx", version = "9.1.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.12'" },
@@ -210,6 +211,7 @@ dev = [
     { name = "nox-uv", specifier = ">=0.7.0" },
 ]
 docs = [
+    { name = "git-cliff", specifier = ">=2.13.1" },
     { name = "myst-parser", specifier = ">=4.0.1" },
     { name = "sphinx", specifier = ">=8.2.3" },
     { name = "sphinx-autobuild", specifier = ">=2025.8.25" },
