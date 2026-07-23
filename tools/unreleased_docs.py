@@ -129,7 +129,11 @@ def fragment(repo_root: Path) -> str:
         if strip_v(bumped) == strip_v(last):
             return ""
         section = _run(["git-cliff", "--unreleased", "--tag", bumped], repo_root)
-        return to_unreleased(section, strip_v(bumped))
+        # A thematic break sets the pending block off from the released
+        # history that follows. It is part of the returned block, so it
+        # appears only when there is a block -- never a rule floating above
+        # nothing.
+        return to_unreleased(section, strip_v(bumped)).rstrip("\n") + "\n\n---\n"
     except (
         subprocess.CalledProcessError,
         FileNotFoundError,
