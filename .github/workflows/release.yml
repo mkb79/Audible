@@ -202,18 +202,29 @@ jobs:
         id: app-token
         # The v* tag ruleset restricts creation to the release app -- the
         # workflow's own token could not create this tag even with
-        # contents: write. Narrowed to contents; nothing here needs more.
+        # contents: write.
         uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
         with:
           app-id: ${{ secrets.RELEASE_APP_CLIENT_ID }}
           private-key: ${{ secrets.RELEASE_APP_PRIVATE_KEY }}
           permission-contents: write
+          # Without this, the narrowed token answered REST reads with 403
+          # "Resource not accessible by integration" -- while git-protocol
+          # access with the same token worked. Most repository REST endpoints
+          # sit behind metadata read, which an unnarrowed installation token
+          # carries implicitly and the narrowing dropped.
+          permission-metadata: read
 
-      - name: Create the tag, or verify it
+      - name: Look up the tag
+        id: lookup
+        # Deliberately with the workflow's own read token, not the app token:
+        # the read has to keep working even when something is wrong with the
+        # app, because it is this lookup that tells a retried run whether the
+        # state it sees is its own earlier progress. Only the *create* needs
+        # the app.
         env:
-          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          GH_TOKEN: ${{ github.token }}
           VERSION: ${{ needs.inspect.outputs.version }}
-          SHA: ${{ needs.inspect.outputs.sha }}
         run: |
           # gh api prints the error JSON to *stdout* on an HTTP error --
           # measured: a 404 put {"message":"Not Found",...} into the capture,
@@ -231,16 +242,24 @@ jobs:
             echo "::error::Could not determine whether v$VERSION exists."
             exit 1
           fi
+          echo "existing=$existing" >> "$GITHUB_OUTPUT"
 
-          if [ -z "$existing" ]; then
+      - name: Create the tag, or verify it
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          VERSION: ${{ needs.inspect.outputs.version }}
+          SHA: ${{ needs.inspect.outputs.sha }}
+          EXISTING: ${{ steps.lookup.outputs.existing }}
+        run: |
+          if [ -z "$EXISTING" ]; then
             gh api "repos/$GITHUB_REPOSITORY/git/refs" \
               -f ref="refs/tags/v$VERSION" -f sha="$SHA" >/dev/null
             echo "Created v$VERSION at $SHA."
-          elif [ "$existing" = "$SHA" ]; then
+          elif [ "$EXISTING" = "$SHA" ]; then
             # A retried run after a later failure: the tag is already right.
             echo "v$VERSION already points at $SHA."
           else
-            echo "::error::v$VERSION exists but points at $existing, not $SHA."
+            echo "::error::v$VERSION exists but points at $EXISTING, not $SHA."
             echo "This release was prepared for a different commit; do not proceed."
             exit 1
           fi
