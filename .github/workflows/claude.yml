@@ -10,6 +10,17 @@ on:
   pull_request_review:
     types: [submitted]
 
+# Read-only by default, matching every other workflow here. The claude job
+# overrides this with the exact set it needs. Without a workflow-level block the
+# default token permissions apply to any job that does not set its own, which
+# OSSF Scorecard flags (TokenPermissions).
+#
+# Note this bounds only the GITHUB_TOKEN. What the Claude GitHub App itself can
+# reach is governed by its installation permissions in repository settings, not
+# by this block -- tighten there if the app's access needs narrowing further.
+permissions:
+  contents: read
+
 jobs:
   claude:
     if: |
