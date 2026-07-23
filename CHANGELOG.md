@@ -134,14 +134,14 @@ were written; the wording of a published entry never changes.
 
 ## [0.9.1] - 2023-09-27
 
-## Bugfix
+### Bugfix
 
 - Fix login issues on brazilian marketplace.
 - Fix a `RecursionError` which occurs when checking the length of an `Authenticator` instance.
 
 ## [0.9.0] - 2023-09-27
 
-## Bugfix
+### Bugfix
 
 - Multiple fixes for XXTEA encryption/decryption in metadata module.
 
