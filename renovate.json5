@@ -34,7 +34,9 @@
       datasourceTemplate: 'github-releases',
     },
   ],
-  prConcurrentLimit: 15,
+  // Enough for a normal Monday batch without flooding the PR list; a backlog
+  // simply queues into the next window.
+  prConcurrentLimit: 10,
   timezone: 'Europe/Berlin',
   schedule: [
     'before 4am on monday',
