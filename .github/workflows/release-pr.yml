@@ -140,6 +140,19 @@ jobs:
             exit 1
           fi
 
+          # The release commit itself must not propose a release. Between its
+          # merge and release.yml creating the tag there is a window in which
+          # the commits it ships are still untagged; proposing from inside
+          # that window would fail loudly on "changelog already contains this
+          # section". Publishing is release.yml's job; this one stands down.
+          subject="$(git log -1 --format=%s)"
+          if printf '%s' "$subject" | \
+             grep -qE '^chore\(release\): v[0-9]+\.[0-9]+\.[0-9]+( \(#[0-9]+\))?$'; then
+            echo "::notice::HEAD is a release commit; release.yml takes over from here."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
           # The "nothing to release" test below compares git-cliff's answer
           # with the newest release tag, so both must agree on what a release
           # tag is. This regex mirrors tag_pattern in cliff.toml exactly; a
