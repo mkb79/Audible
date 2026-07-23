@@ -1,15 +1,11 @@
 name: Debug App Token
 
-# Temporary diagnostic for the release-app 403s. Runs on this pull request
-# only; the branch is deleted afterwards. Probes what the minted token can
-# actually do and captures X-Accepted-GitHub-Permissions, which names the
-# permission an endpoint wanted when it answers 403.
+# One-time recovery: creates the release tag v0.12.0 at the verified release
+# commit, idempotently, with the release app -- the exact operation six
+# release runs attempted. The probe run proved this context can do it.
 
 on:
   workflow_dispatch:
-  pull_request:
-    paths:
-      - .github/workflows/debug-app-token.yml
 
 permissions:
   contents: read
@@ -27,36 +23,25 @@ jobs:
           permission-contents: write
           permission-metadata: read
 
-      - name: Probe the API with the app token
+      - name: Create v0.12.0 at the release commit
         env:
           TOKEN: ${{ steps.app-token.outputs.token }}
+          SHA: 97575861ff03528013b1c8a77e68a238ea456951
         run: |
-          call() {
-            echo "::group::$1 $2"
-            curl -sS -i -X "$1" \
-              -H "Authorization: Bearer $TOKEN" \
-              -H "Accept: application/vnd.github+json" \
-              "https://api.github.com$2" \
-              ${3:+-d "$3"} 2>&1 | grep -iE "^HTTP|^x-accepted-github-permissions|^x-github-request-id|\"message\"" || true
-            echo "::endgroup::"
-          }
-
-          MASTER_SHA="$(curl -s https://api.github.com/repos/${{ github.repository }}/commits/master | python3 -c 'import json,sys; print(json.load(sys.stdin)["sha"])')"
-          echo "master: $MASTER_SHA"
-
-          # 1. REST-Read mit App-Token (der Pfad, der um 07:00 403 lieferte)
-          call GET "/repos/${{ github.repository }}/git/ref/tags/v0.11.0"
-
-          # 2. Ref-Erzeugung OHNE Ruleset-Beteiligung (kein v*-Muster):
-          #    reiner Berechtigungstest fuer contents:write
-          call POST "/repos/${{ github.repository }}/git/refs" \
-            '{"ref":"refs/tags/app-token-probe","sha":"'"$MASTER_SHA"'"}'
-
-          # 3. Ref-Erzeugung MIT Ruleset-Beteiligung (v*-Muster):
-          #    testet den Bypass der App
-          call POST "/repos/${{ github.repository }}/git/refs" \
-            '{"ref":"refs/tags/v0.0.0-probe","sha":"'"$MASTER_SHA"'"}'
-
-          # Aufraeumen, was entstanden ist
-          call DELETE "/repos/${{ github.repository }}/git/refs/tags/app-token-probe"
-          call DELETE "/repos/${{ github.repository }}/git/refs/tags/v0.0.0-probe"
+          existing="$(curl -s -H "Authorization: Bearer $TOKEN" \
+            "https://api.github.com/repos/${{ github.repository }}/git/ref/tags/v0.12.0" \
+            | python3 -c 'import json,sys
+d=json.load(sys.stdin)
+print(d.get("object",{}).get("sha",""))')"
+          if [ "$existing" = "$SHA" ]; then
+            echo "v0.12.0 already points at $SHA."
+            exit 0
+          elif [ -n "$existing" ]; then
+            echo "::error::v0.12.0 exists at $existing, expected $SHA."
+            exit 1
+          fi
+          curl -sS -f -X POST -H "Authorization: Bearer $TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            "https://api.github.com/repos/${{ github.repository }}/git/refs" \
+            -d '{"ref":"refs/tags/v0.12.0","sha":"'"$SHA"'"}' >/dev/null
+          echo "Created v0.12.0 at $SHA."
