@@ -10,7 +10,7 @@ from __future__ import annotations
 from typing import ClassVar
 
 import pytest
-from check_release_bodies import body_digest, compare, normalise
+from check_release_bodies import body_digest, compare, normalise, parse_api_pages
 from print_section import section_for
 from verify_release_commit import lock_version_of, problems_for
 
@@ -166,6 +166,10 @@ class TestReleaseBodyDrift:
         """GitHub's editor rewrites line endings; that is noise, not an edit."""
         releases = [
             self.release("v0.11.0", "old body, written by hand\r\n"),
+            self.release(
+                "v0.12.0",
+                "## [0.12.0] - 2026-07-23\n\n### Added\n\n- **auth**: Browser login",
+            ),
         ]
         assert compare(releases, self.BASELINE, CHANGELOG) == []
 
@@ -201,8 +205,21 @@ class TestReleaseBodyDrift:
                 ],
                 "an unexpected release",
             ),
-            # A deleted release.
+            # A deleted pre-automation release.
             ([], "no longer published"),
+            # A deleted generated release: v0.12.0 has a changelog section but
+            # no baseline entry, so its absence must be flagged by the
+            # changelog rule, not silently tolerated.
+            (
+                [
+                    {
+                        "tag_name": "v0.11.0",
+                        "body": "old body, written by hand",
+                        "draft": False,
+                    },
+                ],
+                "a generated release was deleted",
+            ),
         ],
     )
     def test_drift_is_named(
@@ -221,9 +238,34 @@ class TestReleaseBodyDrift:
         """Release Drafter's leftover draft is not a published body."""
         releases = [
             self.release("v0.11.0", "old body, written by hand"),
+            self.release(
+                "v0.12.0",
+                "## [0.12.0] - 2026-07-23\n\n### Added\n\n- **auth**: Browser login",
+            ),
             self.release("untagged-abc", "draft noise", draft=True),
         ]
         assert compare(releases, self.BASELINE, CHANGELOG) == []
+
+    @pytest.mark.parametrize(
+        ("text", "count"),
+        [
+            # One page, the only shape 37 releases produce today.
+            ('[{"tag_name": "a"}, {"tag_name": "b"}]', 2),
+            # Concatenated pages, what `gh api --paginate` emits from the 38th
+            # release on -- json.loads rejects this outright (measured).
+            ('[{"tag_name": "a"}]\n[{"tag_name": "b"}, {"tag_name": "c"}]', 3),
+            # Slurped pages, the `--slurp` shape.
+            ('[[{"tag_name": "a"}], [{"tag_name": "b"}]]', 2),
+        ],
+    )
+    def test_every_pagination_shape_parses(self, text: str, count: int) -> None:
+        """The audit must not break on the day the API grows a second page.
+
+        Args:
+            text: Raw API output in one of the three shapes.
+            count: Releases it contains.
+        """
+        assert len(parse_api_pages(text)) == count
 
     def test_normalise_folds_only_line_endings_and_trailing_space(self) -> None:
         """Interior wording changes must never normalise away."""

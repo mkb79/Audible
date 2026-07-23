@@ -37,8 +37,14 @@ concurrency:
   # Never cancel: a production release must run to completion or fail loudly.
   # Runs for distinct commits serialise; idempotency makes the second run of
   # the same release a verified no-op.
+  #
+  # queue: max, because the default keeps only ONE pending run per group and
+  # replaces it on the next arrival -- a pending production release could be
+  # displaced by an ordinary post-release CI success and would then simply
+  # never publish. With max, arrivals queue instead of displacing.
   group: release-publish
   cancel-in-progress: false
+  queue: max
 
 env:
   UV_VERSION: "0.11.28"
@@ -141,10 +147,13 @@ jobs:
       - name: Build the distributions
         run: |
           # Pinning SOURCE_DATE_EPOCH to the commit makes the build
-          # byte-reproducible (verified: two builds, identical hashes). That
-          # is what lets a retried run compare its fresh build against files
-          # already on PyPI instead of giving up.
-          SOURCE_DATE_EPOCH="$(git log -1 --format=%ct)" uv build
+          # byte-reproducible (verified: two builds, identical hashes), and
+          # build-constraints.txt pins the backend, because timestamps only
+          # freeze the build against the same hatchling. Together they let a
+          # retried run compare its fresh build against files already on PyPI
+          # instead of giving up.
+          SOURCE_DATE_EPOCH="$(git log -1 --format=%ct)" \
+            uv build --build-constraints build-constraints.txt
           sha256sum dist/* > SHA256SUMS
           cat SHA256SUMS
 
@@ -260,11 +269,17 @@ jobs:
             exit 1
           fi
 
-          # The version exists. A retried run is fine exactly when every file
-          # we built matches what is published, byte for byte -- reproducible
-          # builds make that comparison meaningful. Anything else is a
-          # different release wearing our version number: hard stop.
-          python3 - <<'EOF'
+          # The version exists. Whatever is published must match our fresh
+          # build byte for byte -- reproducible builds make that comparison
+          # meaningful, and any mismatch is a different release wearing our
+          # version number: hard stop. Matching files may however be a
+          # *subset*: twine uploads sequentially, so a failed run can leave
+          # the wheel published and the sdist not. That state must be
+          # completable, or no retry could ever heal it.
+          # Redirected, not piped: a pipe into tee would let bash's plain -e
+          # miss python's exit code, and a hash mismatch would fall through to
+          # the upload -- the exact catastrophe this step exists to prevent.
+          python3 - > pypi-state.txt <<'EOF'
           import hashlib
           import json
           import pathlib
@@ -275,12 +290,13 @@ jobs:
               for f in json.load(open("response.json"))["urls"]
           }
           problems = []
+          missing = []
           local = sorted(pathlib.Path("dist").iterdir())
           for path in local:
               digest = hashlib.sha256(path.read_bytes()).hexdigest()
               recorded = published.pop(path.name, None)
               if recorded is None:
-                  problems.append(f"{path.name} is not on PyPI")
+                  missing.append(path.name)
               elif recorded != digest:
                   problems.append(f"{path.name} differs from the published file")
           for leftover in published:
@@ -290,15 +306,29 @@ jobs:
               for p in problems:
                   print(f"  - {p}")
               sys.exit(1)
-          print(f"All {len(local)} files already published and identical.")
+          if missing:
+              print("PARTIAL: published files match; still missing: "
+                    + ", ".join(missing))
+          else:
+              print("COMPLETE: all files already published and identical.")
           EOF
-          echo "present=true" >> "$GITHUB_OUTPUT"
+
+          cat pypi-state.txt
+          if grep -q '^COMPLETE' pypi-state.txt; then
+            echo "present=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "present=false" >> "$GITHUB_OUTPUT"
+          fi
 
       - name: Publish to PyPI
         if: steps.pypi-state.outputs.present == 'false'
         uses: pypa/gh-action-pypi-publish@ba38be9e461d3875417946c167d0b5f3d385a247 # v1.14.1
         with:
           packages-dir: dist/
+          # Safe here and only here: the step above has already proven that
+          # every file PyPI carries is byte-identical to this build, so
+          # "already exists" can only mean our own earlier partial upload.
+          skip-existing: true
 
   github-release:
     name: github-release

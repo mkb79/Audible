@@ -1,0 +1,8 @@
+# Pins the build backend for the release workflow. SOURCE_DATE_EPOCH makes a
+# build reproducible only against the same backend: pyproject.toml requires
+# bare "hatchling", so without this pin a retried release could resolve a newer
+# hatchling and produce different bytes -- and the retry heals a half-published
+# release precisely by proving its fresh build is byte-identical to what PyPI
+# already has. Renovate keeps this current; an update PR that changes the
+# produced bytes is harmless, because it cannot land mid-release.
+hatchling==1.31.0

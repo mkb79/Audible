@@ -33,7 +33,7 @@ import json
 import sys
 from pathlib import Path
 
-from changelog import split_sections
+from changelog import UNRELEASED, split_sections
 
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
@@ -117,6 +117,20 @@ def compare(
                 "a release was deleted"
             )
 
+    # The generated era has no baseline entries -- its releases are accounted
+    # for by the changelog itself. Every section outside the baseline must
+    # therefore still be published, or a generated release was deleted and the
+    # baseline loop above would never notice.
+    for version in sections:
+        if version == UNRELEASED:
+            continue
+        tag = f"v{version}"
+        if tag not in baseline and tag not in seen:
+            problems.append(
+                f"{tag}: the changelog has this section but no release is "
+                "published for it -- a generated release was deleted"
+            )
+
     return problems
 
 
@@ -149,6 +163,44 @@ def snapshot(releases: list[dict[str, object]]) -> int:
     return 0
 
 
+def parse_api_pages(text: str) -> list[dict[str, object]]:
+    """Return the releases from any shape ``gh api`` produces.
+
+    ``gh api --paginate`` writes the pages as *concatenated* JSON arrays --
+    ``[...][...]`` -- which ``json.loads`` rejects outright. With 37 releases
+    everything fits one page today, so a plain load works right up until the
+    38th-plus release pushes the API onto a second page, and the audit would
+    break on the exact day the repository grows. ``--slurp`` wraps the pages
+    in an outer array instead. All three shapes are accepted here, so the
+    caller cannot get this wrong.
+
+    Args:
+        text: Raw output of the releases API call.
+
+    Returns:
+        The release objects, flattened across pages.
+    """
+    decoder = json.JSONDecoder()
+    pages = []
+    index = 0
+    while index < len(text):
+        page, end = decoder.raw_decode(text, index)
+        pages.append(page)
+        index = end
+        while index < len(text) and text[index].isspace():
+            index += 1
+
+    flat: list[dict[str, object]] = []
+    for page in pages:
+        for item in page:
+            # --slurp nests the pages one level deeper.
+            if isinstance(item, list):
+                flat.extend(item)
+            else:
+                flat.append(item)
+    return flat
+
+
 def main(argv: list[str]) -> int:
     """Compare live release bodies against their recorded text.
 
@@ -166,14 +218,7 @@ def main(argv: list[str]) -> int:
         )
         return 2
 
-    raw = json.loads(Path(argv[0]).read_text(encoding="utf-8"))
-    # `gh api --paginate` without --slurp concatenates arrays; tolerate both a
-    # single array and the already-flat form.
-    releases: list[dict[str, object]] = (
-        [item for page in raw for item in page]
-        if raw and isinstance(raw[0], list)
-        else raw
-    )
+    releases = parse_api_pages(Path(argv[0]).read_text(encoding="utf-8"))
 
     if len(argv) == 2:
         return snapshot(releases)
