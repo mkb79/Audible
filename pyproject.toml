@@ -34,7 +34,7 @@ dependencies = [
 
 [project.optional-dependencies]
 cryptography = [
-    "cryptography (>=48.0.1)",
+    "cryptography (>=50.0.0)",
 ]
 pycryptodome = [
     "pycryptodome (>=3.23.0)",
@@ -118,7 +118,7 @@ xdocs = [
 ]
 
 extra-deps = [
-    "cryptography>=48.0.1",
+    "cryptography>=50.0.0",
     "pycryptodome>=3.23.0",
     "orjson>=3.11.6",
     "ujson>=5.13.0",
