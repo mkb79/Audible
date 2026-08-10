@@ -6,6 +6,12 @@ New entries are generated from Conventional Commit messages and are
 grouped by commit type. Sections below that predate this are kept as they
 were written; the wording of a published entry never changes.
 
+## [0.12.1] - 2026-08-10
+
+### Fixed
+
+- **deps**: Update dependency cryptography to v50 [security] (#895)
+
 ## [0.12.0] - 2026-07-23
 
 ### Added
