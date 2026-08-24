@@ -5,4 +5,4 @@
 # release precisely by proving its fresh build is byte-identical to what PyPI
 # already has. Renovate keeps this current; an update PR that changes the
 # produced bytes is harmless, because it cannot land mid-release.
-hatchling==1.31.0
+hatchling==1.32.0
