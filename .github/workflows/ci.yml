@@ -29,7 +29,7 @@ env:
   PRE_COMMIT_COLOR: "always"
   # Pin uv so CI is reproducible; pyproject only requires >=0.7.1. Renovate
   # updates this deliberately.
-  UV_VERSION: "0.11.28"
+  UV_VERSION: "0.12.10"
 
 jobs:
   quality:
