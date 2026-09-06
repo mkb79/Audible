@@ -155,6 +155,7 @@ mypy = [
     { name = "types-beautifulsoup4" },
     { name = "types-docutils" },
     { name = "types-html5lib" },
+    { name = "types-pyasn1" },
     { name = "types-pygments" },
 ]
 pre-commit = [
@@ -231,6 +232,7 @@ mypy = [
     { name = "types-beautifulsoup4", specifier = ">=4.12.0.20250516" },
     { name = "types-docutils", specifier = ">=0.22.3.20251115" },
     { name = "types-html5lib", specifier = ">=1.1.11.20251117" },
+    { name = "types-pyasn1", specifier = ">=0.6.0.20260724" },
     { name = "types-pygments", specifier = ">=2.19.0.20251121" },
 ]
 pre-commit = [
@@ -2467,6 +2469,15 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/b8/5a/0c708d1b0d35ad48b6a223c77c4a882fd016b40c25becb082a92e02a9c00/types_html5lib-1.1.11.20260518.tar.gz", hash = "sha256:4f33c087cb1119d65c4c80eca4323c2b501f9eaf8af9616b8b732ed4d8eae8fa", size = 18420, upload-time = "2026-05-18T06:07:23.662Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/4d/d0/b088b9f11eb69637d6826843f06caaff60247156735a25512922d3dc2c13/types_html5lib-1.1.11.20260518-py3-none-any.whl", hash = "sha256:9baa7912224ebb37027c5ccb7e3768e43ea47b1dfdd977e7ddc4b0a4a550584d", size = 24339, upload-time = "2026-05-18T06:07:22.876Z" },
+]
+
+[[package]]
+name = "types-pyasn1"
+version = "0.6.0.20260724"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/24/ba/a3be5620ec108bfb21481a7796a3c352e627969fa67db6a033cdaeacd117/types_pyasn1-0.6.0.20260724.tar.gz", hash = "sha256:00b9324c1ce8167ec1dc503018cc7d4f190f5770dd3e9a365e897e290e0532db", size = 17373, upload-time = "2026-07-24T04:57:47.402Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/ce/ab/9936badd94cfbfb73d2ec83409e203fee44fc83a744e09a8779b37042f45/types_pyasn1-0.6.0.20260724-py3-none-any.whl", hash = "sha256:487987e4492ce2e1ba6f0048f025165383c49d5d16a345ae5dfe7d44045b7910", size = 24054, upload-time = "2026-07-24T04:57:46.482Z" },
 ]
 
 [[package]]
