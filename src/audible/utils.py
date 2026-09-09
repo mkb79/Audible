@@ -74,10 +74,12 @@ def _check_device_private_key(value: str) -> None:
         )
 
     fmt = (
-        r"^(?P<device_private_key>-----BEGIN RSA PRIVATE KEY-----.*"
-        r"-----END RSA PRIVATE KEY-----\n)$"
+        r"^(?P<device_private_key>"
+        r"-----BEGIN (?P<private_key_type>(?:RSA )?PRIVATE KEY)-----.*"
+        r"-----END \2-----\n)$"
     )
-    if not re.match(fmt, value, re.S):
+    key_match = re.match(fmt, value, re.S)
+    if not key_match:
         raise ValueError("device_private_key: Invalid token.")
 
 

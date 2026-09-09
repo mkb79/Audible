@@ -132,15 +132,46 @@ def test_provider_hashes(provider_instance: tuple[str, Any]) -> None:
 
 
 def test_provider_rsa_signatures(
-    provider_instance: tuple[str, Any], rsa_private_key: str
+    provider_instance: tuple[str, Any], rsa_private_key: str, rsa_private_key_pkcs8: str
 ) -> None:
     """RSA load/sign works for every provider."""
     _, provider = provider_instance
 
-    key_obj = provider.rsa.load_private_key(rsa_private_key)
-    signature = provider.rsa.sign(key_obj, b"data to sign")
+    for test_key in (rsa_private_key, rsa_private_key_pkcs8):
+        key_obj = provider.rsa.load_private_key(test_key)
+        signature = provider.rsa.sign(key_obj, b"data to sign")
+        assert len(signature) > 0
 
-    assert len(signature) > 0
+
+def test_legacy_provider_rsa_bad_keys(
+    rsa_private_key: str, rsa_private_key_pkcs8: str, dsa_private_key_pkcs8: str
+) -> None:
+    """Load various types of invalid private keys."""
+    provider = get_crypto_providers(LegacyProvider)
+
+    # Read a PKCS#1 key as PKCS#8 RSA
+    bad_key = rsa_private_key.replace("RSA PRIVATE KEY", "PRIVATE KEY")
+    with pytest.raises(Exception) as exc_info:
+        provider.rsa.load_private_key(bad_key)
+    assert "not in asn1Spec" in str(exc_info.value)
+
+    # Read a PKCS#8 RSA key as PKCS#1
+    bad_key = rsa_private_key_pkcs8.replace("PRIVATE KEY", "RSA PRIVATE KEY")
+    with pytest.raises(TypeError) as type_exc_info:
+        provider.rsa.load_private_key(bad_key)
+    assert "argument must be a string" in str(type_exc_info.value)
+
+    # Claim that private key is OPENSSH (unsupported)
+    bad_key = rsa_private_key.replace("RSA PRIVATE KEY", "OPENSSH PRIVATE KEY")
+    with pytest.raises(ValueError) as value_exc_info:
+        provider.rsa.load_private_key(bad_key)
+    assert "pem_data: Invalid token" in str(value_exc_info.value)
+
+    # Read PKCS#8 DSA key
+    bad_key = dsa_private_key_pkcs8
+    with pytest.raises(ValueError) as value_exc_info:
+        provider.rsa.load_private_key(bad_key)
+    assert "Algorithm is not RSA." in str(value_exc_info.value)
 
 
 @pytest.mark.parametrize("backend", ["pycryptodome"])
