@@ -446,6 +446,66 @@ Content
 
    For a succesful request, returns JSON body with `content_url`.
 
+.. http:post:: /1.0/content/(string:asin)/licenserequest
+   :noindex:
+
+   **licenserequest (current app variant)** — same endpoint as above, documented
+   separately to capture the full set of fields sent by the current Audible
+   Android app. ``supported_media_features`` carries the codec/DRM selection.
+
+   :param asin: The asin of the book
+   :type asin: string
+   :<json string response_groups: [chapter_info, content_reference, last_position_heard,
+                                   pdf_url, ad_insertion, certificate, content_url,
+                                   relationships, ebook_companion]
+   :<json string acr: Audible Content Reference (to re-license a known version)
+   :<json string version: content version
+   :<json string file_version: content file version
+   :<json dict supported_media_features: codec/DRM selection, see fields below
+   :<json list drm_types: within supported_media_features — [Adrm, Mpeg, Dash, Hls,
+                          PlayReady, Widevine]
+   :<json list codecs: within supported_media_features — [mp4a.40.2, mp4a.40.42, ec+3,
+                       ac-4, avc1]
+   :<json string chapter_titles_type: within supported_media_features — [Tree, Flat]
+   :<json boolean previews: within supported_media_features
+   :<json boolean catalog_samples: within supported_media_features
+   :<json list visual_drm_types: within supported_media_features
+   :<json boolean spatial: [true, false]
+   :<json string consumption_type: [Streaming, Offline, Download]
+   :<json string quality: [Low, Normal, High, Extreme]
+   :<json boolean use_adaptive_bit_rate: [true, false]
+   :<json string tenant_id: Audible
+   :<json string rights_validation:
+   :<json list supported_rights_types: [Ownership, Membership, AYCL, Radio,
+                                        EbookOwnership, Client]
+   :<json list supported_features:
+   :<json integer playback_start_ms:
+   :<json integer playback_end_ms:
+   :<json dict ebook_companion:
+
+   **Example request body**
+
+   .. code-block:: json
+
+       {
+           "consumption_type": "Download",
+           "response_groups": "last_position_heard,pdf_url,content_reference,chapter_info",
+           "quality": "High",
+           "tenant_id": "Audible",
+           "spatial": false,
+           "supported_media_features": {
+               "drm_types": ["Mpeg", "Adrm"],
+               "codecs": ["mp4a.40.2", "mp4a.40.42"],
+               "chapter_titles_type": "Tree"
+           }
+       }
+
+   :>json object content_license: contains ``acr``, ``content_metadata``
+      (``content_reference``, ``chapter_info``, ``content_url``), ``drm_type``,
+      ``license_response`` (the encrypted voucher / DRM license), ``license_id``,
+      ``allowed_users``, ``status_code``, ``refresh_date``, ``removal_date``,
+      ``granted_right``, ``pdf_url``
+
 .. http:get:: /1.0/content/(string:asin)/metadata
 
    :param asin: the asin of the book
@@ -469,6 +529,123 @@ Content
 .. http:get:: 1.0/content/FairPlay/certificate
 
    :>json string certificate: The base64 encoded FairPlay certificate
+
+.. http:post:: /1.0/content-license-refresh
+
+   Refreshes (renews) the DRM licenses/vouchers for one or more titles in a
+   single batch request. Used to keep offline downloads playable before their
+   ``license_removal_date`` / ``license_expiration_date`` is reached, without
+   requesting a full ``licenserequest`` per title.
+
+   :<json array license_refresh_requests: list of refresh request objects (see below)
+   :<json string tenant_id: Audible
+   :<json array supported_rights_types: optional, e.g. [Ownership, Membership]
+
+   Each object in ``license_refresh_requests``:
+
+   :<json string asin: the title ASIN
+   :<json string acr: Audible Content Reference, from a prior licenserequest
+   :<json string file_version: content file version, from a prior licenserequest
+   :<json string drm_type: [Adrm, Widevine, Dash, Hls, PlayReady, Mpeg]
+   :<json string drm_challenge: base64 CDM challenge; only required for Widevine
+                                (null for Adrm)
+
+   :>json string request_id: request identifier (may be null)
+   :>json array license_refresh_responses: list of per-title results (see below)
+
+   Each object in ``license_refresh_responses``:
+
+   :>json string asin: the title ASIN
+   :>json array allowed_users: directed IDs allowed to use the license
+   :>json string access_expiry_date: access expiry timestamp
+   :>json string granted_right: e.g. Ownership, Membership, AYCL
+   :>json string license: refreshed license/voucher (for Adrm the encrypted voucher)
+   :>json object license_metadata: ``license_id``, ``license_refresh_date``,
+      ``license_removal_date``, ``license_expiration_date``
+   :>json object status: ``status_code``, ``license_denial_reasons``, ``error_message``
+
+   :statuscode 200: batch processed; individual titles may still be denied via
+                    ``status.status_code``
+
+   **Example request body**
+
+   .. code-block:: json
+
+       {
+           "license_refresh_requests": [
+               {
+                   "asin": "B0XXXXXXXX",
+                   "acr": "CR!...",
+                   "file_version": "1",
+                   "drm_type": "Adrm"
+               }
+           ],
+           "tenant_id": "Audible"
+       }
+
+.. http:post:: /1.0/content/(string:asin)/playback-state
+
+   Returns playback state for a title, primarily the last position heard (LPH)
+   together with content/product metadata.
+
+   :param asin: The asin of the book
+   :type asin: string
+   :<json string asin: the title ASIN
+   :<json string acr: Audible Content Reference
+   :<json string tenant_id: Audible
+   :<json dict supported_media_features: codec/DRM selection
+   :<json string chapter_titles_type: [Tree, Flat]
+   :<json list supported_features: optional feature flags
+   :<json string response_groups: [last_position_heard, content_reference, chapter_info]
+
+   :>json object last_position_heard: last listening position (status + position in ms)
+   :>json array response_groups: echoes the groups returned
+   :>json object content_metadata: ``content_reference``, ``chapter_info``,
+      ``content_url``, ``last_position_heard``
+   :>json object product_metadata: product-level metadata
+   :>json string timeline_sidecar_url: URL of the timeline sidecar, if present
+
+.. http:get:: /1.0/content/(string:asin)/supplementalassetmetadata/
+
+   Returns metadata for the supplemental assets of a title, e.g. an eBook
+   companion (Immersion Reading / Whispersync) or its sync file.
+
+   :param asin: The asin of the book
+   :type asin: string
+   :query acr: Audible Content Reference of the title
+   :query response_groups: [ebook_companion, ebook_sync_file]
+   :query ebook_asin: ASIN of the companion eBook (required for ebook_sync_file)
+   :query ebook_acr: ACR of the companion eBook (used with ebook_sync_file)
+   :query tenant_id: Audible
+
+   :>json array response_groups: echoes the groups returned, e.g.
+      [always-returned, ebook_companion]
+   :>json object ebook_companion_metadata: ``asin``, ``acr``, ``version``
+      (empty object if the title has no companion)
+   :>json array supplemental_assets: list of supplemental asset objects (empty if none)
+
+   :statuscode 200: metadata returned
+   :statuscode 400: invalid response group, or the ASIN is a non-audio asset
+                    (e.g. PodcastParent)
+
+.. http:get:: /1.0/content/(string:asin)/recap
+
+   Returns a generated "Recap" (a short catch-up summary of what has been heard
+   so far, from the last position) as an audio asset.
+
+   :param asin: The asin of the book
+   :type asin: string
+   :query acr: Audible Content Reference
+   :query recap_mode: recap mode selector
+   :query voice: narration voice
+   :query language: recap language
+   :query lph_ms: last position heard, in milliseconds
+   :query lph_timestamp: timestamp of the last position heard
+   :query supported_codecs: repeatable; supported audio codecs
+   :query supported_drm_types: repeatable; supported DRM types
+
+   :>json object recap_metadata: ``asin``, ``acr``, ``status``, ``drm_type``,
+      ``denial_reason``, ``license_id``, ``recap_url``
 
 Account
 -------
