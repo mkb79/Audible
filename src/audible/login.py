@@ -249,7 +249,7 @@ def build_client_id(serial: str) -> str:
     return client_id.hex()
 
 
-def build_oauth_url(
+def build_oauth_url(  # noqa: PLR0917
     country_code: str,
     domain: str,
     market_place_id: str,
@@ -375,7 +375,7 @@ def is_valid_email(obj: str) -> bool:
     return False
 
 
-def login(
+def login(  # noqa: PLR0917
     username: str,
     password: str,
     country_code: str,
@@ -591,7 +591,7 @@ def login(
     }
 
 
-def external_login(
+def external_login(  # noqa: PLR0917
     country_code: str,
     domain: str,
     market_place_id: str,

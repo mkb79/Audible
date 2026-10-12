@@ -220,7 +220,7 @@ def user_profile_audible(access_token: str, domain: str) -> dict[str, Any]:
     return profile
 
 
-def sign_request(
+def sign_request(  # noqa: PLR0917
     method: str,
     path: str,
     body: bytes,
@@ -496,7 +496,7 @@ class Authenticator(httpx.Auth):
         return auth
 
     @classmethod
-    def from_login(
+    def from_login(  # noqa: PLR0917
         cls,
         username: str,
         password: str,

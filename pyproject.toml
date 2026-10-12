@@ -88,7 +88,7 @@ pre-commit = [
     "nox>=2025.11.12",
     "pre-commit>=4.5.1",
     "pre-commit-hooks>=6.0.0",
-    "ruff>=0.14.11",
+    "ruff>=0.16.0",
 ]
 
 audit = [
@@ -267,7 +267,7 @@ known-first-party = ["audible", "changelog", "prepare_release", "unreleased_docs
 lines-after-imports = 2
 
 [tool.ruff.lint.per-file-ignores]
-"tests/*" = ["S101", "PLC0415", "S106"]
+"tests/*" = ["S101", "PLC0415", "S106", "PLR0917"]
 "examples/*" = ["S101", "PLC0415"]
 "src/audible/json_provider/protocols.py" = ["D417"]
 "src/audible/json_provider/*_provider.py" = ["PLC0415"]
