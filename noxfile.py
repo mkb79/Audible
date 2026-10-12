@@ -14,7 +14,7 @@ from nox_uv import session
 nox.needs_version = ">= 2023.04.22"
 nox.options.default_venv_backend = "uv"
 nox.options.error_on_external_run = True
-nox.options.sessions = (
+nox.options.sessions = [
     "pre-commit",
     "audit",
     "mypy",
@@ -22,7 +22,7 @@ nox.options.sessions = (
     "typeguard",
     "xdoctest",
     "docs-build",
-)
+]
 
 # uv refuses to create a virtualenv where one already exists, so a plain
 # `nox` run fails for every session once `.nox/` has been populated by an
