@@ -98,7 +98,7 @@ audit = [
 release = [
     "commitizen>=4.16.5",
     "git-cliff>=2.13.1",
-    "twine>=6.2.0",
+    "twine>=7.0.0",
 ]
 
 tests = [
