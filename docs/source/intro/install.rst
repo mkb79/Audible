@@ -9,10 +9,8 @@ Audible needs at least *Python 3.11*.
 
 It depends on the following packages:
 
-* beautifulsoup4
 * httpx
 * pbkdf2
-* Pillow
 * pyaes
 * pyasn1
 * rsa

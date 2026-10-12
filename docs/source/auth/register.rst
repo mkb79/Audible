@@ -5,19 +5,17 @@ Register a Audible device
 Register
 ========
 
-Clients are obtaining additional authentication data and information after
-registration a "virtual" Audible device.
+Clients obtain their authentication data by registering a "virtual"
+Audible device. Logging in and registering are one step::
 
-To authorize and register a new device you can do::
+   login = audible.create_login(country_code)
+   prompt = login.start()
+   print(f"Open {prompt.verification_url} and enter the code {prompt.public_code}")
+   auth = login.wait()
 
-   auth = audible.Authenticator.from_login(
-       username,
-       password,
-       locale=country_code,
-       with_username=False,
-   )
-
-This will authorize you to your account and register an Audible device.
+The returned :class:`audible.Authenticator` holds the credentials of the new
+device. Pre-Amazon accounts sign in through a browser instead; see
+:ref:`authorization` for both ways.
 
 New registrations use a random 40-character serial containing ASCII letters and
 digits, together with the default Audible for iPhone profile (app ``4.60``,

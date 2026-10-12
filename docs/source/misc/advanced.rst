@@ -156,9 +156,9 @@ Audible package.
    The :class:`Authenticator` with the  classmethods ``from_file`` and
    ``from_login``
 
-The :meth:`Authenticator.from_login` classmethod is used to authorize
-an user and then authenticate requests with the received data. The
-:meth:`Authenticator.from_file` classmethod is used to load
+A new device is registered with :func:`audible.create_login`, whose
+``result()`` is an :class:`Authenticator` that authenticates requests with the
+received data. The :meth:`Authenticator.from_file` classmethod is used to load
 previous saved authentication data.
 
 With an Authenticator you can:
@@ -220,7 +220,7 @@ are missing in the provided link. As a workaround you can do::
    import httpx
 
    asin = ASIN_FROM_BOOK
-   auth = audible.Authenticator.from_file(...)  # or Authenticator.from_login
+   auth = audible.Authenticator.from_file(...)  # or login.result()
    tld = auth.locale.domain
 
    with httpx.Client(auth=auth) as client:

@@ -111,22 +111,23 @@ Default sessions (run with `uv run nox`):
 
 ### Core Components
 
-**Authenticator (`auth.py`)**: Manages authentication lifecycle including login, device registration, token refresh, and credential storage. Supports encrypted file-based credential storage with AES encryption.
+**Authenticator (`auth.py`)**: Holds the credentials of a registered device: request signing, token refresh, deregistration, and credential storage. Supports encrypted file-based credential storage with AES encryption.
 
 **Client (`client.py`)**: HTTP client wrapper providing both sync (`Client`) and async (`AsyncClient`) interfaces. Handles request/response lifecycle, error mapping, and automatic authentication. Uses httpx as the underlying HTTP library.
 
-**Login (`login.py`)**: Implements OAuth2 authentication flow with Amazon/Audible. Handles CAPTCHA challenges, 2FA/OTP, and CVF (credential verification flows). Returns authorization codes used for device registration.
+**Login (`login.py`)**: Registers a new device. `DeviceCodeLogin` handles Amazon accounts (device code confirmed at `amazon.<tld>/code`, then polling `/auth/register`); `ExternalLogin` handles pre-Amazon accounts (browser sign-in with PKCE, DE/US/UK only). `create_login()` picks one by account type. Both expose `status`, `poll`/`wait` or `complete`, `async_` variants and `result()`, which returns an `Authenticator`. The library performs no console or browser I/O.
 
-**Register (`register.py`)**: Performs device registration with Audible servers using authorization codes. Generates device credentials (access/refresh tokens, device info) needed for API access.
+**Registration protocol (`_registration.py`)**: Private, I/O-free request builders and response parsers for code pairs, registration and deregistration. Every builder takes the device profile as its first argument.
+
+**Device profile (`_device.py`)**: Private. `DeviceProfile` holds every value that identifies the app or its platform (device type, registration domain, model, name, app/OS/software versions, user agent, the assoc handle and page id of the pre-Amazon browser sign-in, the activation-bytes player values), since an app for another platform sends different ones. `IPHONE` is the only profile; registration, the pre-Amazon sign-in, token and cookie refreshes and activation bytes all read it.
 
 **Localization (`localization.py`)**: Defines region-specific configurations including country codes, domains, and marketplace IDs for supported Audible regions (US, UK, DE, FR, CA, IT, AU, IN, JP, ES).
 
 ### Authentication Flow
 
-1. **Login**: User credentials → OAuth2 authorization → Authorization code
-2. **Register**: Authorization code → Device registration → Tokens (access + refresh)
-3. **API Access**: Access token → API requests (auto-refreshed when expired)
-4. **Storage**: Credentials encrypted with AES and stored to file
+1. **Login + register**: Device code confirmed by the user (Amazon) or browser authorization code (pre-Amazon) → `/auth/register` → Tokens (access + refresh) → `Authenticator`
+2. **API Access**: Access token → API requests (auto-refreshed when expired)
+3. **Storage**: Credentials encrypted with AES and stored to file
 
 ### Client Architecture
 
@@ -318,8 +319,6 @@ Requires Python 3.11-3.14 (per pyproject.toml: `>=3.11,<3.15`)
 ## Key Dependencies
 
 - **httpx**: HTTP client library (sync/async)
-- **Pillow**: Image processing (CAPTCHA handling)
-- **beautifulsoup4**: HTML parsing (login flows)
 - **rsa**: RSA encryption (legacy fallback)
 - **pyaes**: AES encryption (legacy fallback)
 - **pbkdf2**: Key derivation (legacy fallback)

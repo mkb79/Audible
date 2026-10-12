@@ -24,8 +24,6 @@ homepage = "https://github.com/mkb79/Audible"
 repository = "https://github.com/mkb79/Audible"
 documentation = "https://audible.readthedocs.io"
 dependencies = [
-    "Pillow (>=12.3.0)",
-    "beautifulsoup4 (>=4.14.3)",
     "httpx (>=0.27.2,<0.29)",
     "pbkdf2 (>=1.3)",
     "pyaes (>=1.6.1)",
@@ -78,9 +76,7 @@ docs = [
 
 mypy = [
     "mypy>=1.19.1",
-    "types-beautifulsoup4>=4.12.0.20250516",
     "types-docutils>=0.22.3.20251115",
-    "types-html5lib>=1.1.11.20251117",
     "types-pyasn1>=0.6.0.20260724",
     "types-pygments>=2.19.0.20251121",
 ]

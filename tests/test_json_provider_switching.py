@@ -120,25 +120,6 @@ class TestProviderSwitching:
             if temp_path.exists():
                 temp_path.unlink()
 
-    def test_login_build_init_cookies_uses_switched_provider(self) -> None:
-        """Test that login.py uses switched provider."""
-        from audible.login import build_init_cookies
-
-        # Set stdlib as default
-        set_default_json_provider(StdlibProvider)
-
-        # Call build_init_cookies (uses dumps internally)
-        cookies = build_init_cookies()
-
-        # Verify result structure
-        assert "frc" in cookies
-        assert "map-md" in cookies
-        assert "amzn-app-id" in cookies
-
-        # Verify provider is stdlib
-        current_provider = get_json_provider()
-        assert current_provider.provider_name == "stdlib"
-
     def test_provider_switch_affects_all_modules(self) -> None:
         """Test that switching provider affects all modules simultaneously."""
         # Set stdlib as default
@@ -146,7 +127,6 @@ class TestProviderSwitching:
 
         # Verify all modules see the same provider
         from audible.client import convert_response_content  # noqa: F401
-        from audible.login import build_init_cookies  # noqa: F401
 
         provider1 = get_json_provider()
         provider2 = get_json_provider()

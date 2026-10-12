@@ -25,9 +25,8 @@ Sign request method
 With the sign request method you gain unrestricted access to the Audible API.
 To use this method, you need the RSA private key and the adp_token from a
 *device registration*. This method is used by the Audible apps for iOS and
-Android too. A device registration is done automatically with
-:meth:`audible.Authenticator.from_login` or
-:meth:`audible.Authenticator.from_login_external`
+Android too. A device registration is done by the login returned from
+:func:`audible.create_login`.
 
 Request signing is fairly straight-forward and uses a signed SHA256 digest.
 Headers look like::

@@ -1,661 +1,846 @@
-import base64
-import hashlib
-import io
+"""Register a new Audible device for an Amazon or a pre-Amazon account.
+
+Amazon accounts register with a device code. :class:`DeviceCodeLogin`
+creates a code pair, the user confirms the public code on
+``https://www.amazon.<tld>/code``, and polling ``/auth/register`` returns the
+device credentials once the code is confirmed. Pre-Amazon accounts, which
+sign in with an Audible username and exist on the DE, US and UK
+marketplaces only, use :class:`ExternalLogin`: the user signs in through a
+browser and hands the URL the browser ended on back to the library.
+:func:`create_login` picks the class from the account type.
+
+Both classes end with a registered device, so ``FINISHED`` always means that
+:meth:`~DeviceCodeLogin.result` returns a ready
+:class:`~audible.auth.Authenticator`. The library never prints, reads input
+or opens a browser; showing the code or the URL is the caller's job.
+
+The methods follow :class:`subprocess.Popen` and :class:`asyncio.Future`:
+``status`` is read without I/O, ``poll()`` sends at most one request and
+never sleeps, ``wait()`` returns once the login has ended, and ``result()``
+never blocks. Every method that talks to the network has an ``async_``
+counterpart. One caller at a time may drive a login; any number of callers
+may read its status. Nothing is persisted: a login lives as long as its
+object.
+"""
+
+from __future__ import annotations
+
+import asyncio
+import contextlib
+import enum
 import logging
-import re
-import secrets
-import string
-from collections.abc import Callable
-from textwrap import dedent
-from typing import Any
-from urllib.parse import parse_qs, urlencode
+import threading
+import time
+from dataclasses import dataclass
+from typing import TYPE_CHECKING, Literal, NoReturn, overload
 
 import httpx
-from bs4 import BeautifulSoup, NavigableString, Tag
-from PIL import Image
 
-from ._device import APP_VERSION, SOFTWARE_VERSION
-from .exceptions import AudibleError
-from .json_provider import get_json_provider
-from .metadata import encrypt_metadata, meta_audible_app
+from ._device import IPHONE
+from ._registration import (
+    PRE_AMAZON_DOMAINS,
+    CodePair,
+    PollOutcome,
+    RequestSpec,
+    authorization_code_registration_request,
+    build_device_serial,
+    classify_poll,
+    code_pair_registration_request,
+    code_pair_request,
+    create_code_verifier,
+    error_code,
+    extract_authorization_code,
+    parse_code_pair,
+    pre_amazon_login_url,
+    registration_credentials,
+    retry_delay,
+    verification_url,
+)
+from .auth import Authenticator
+from .exceptions import (
+    LoginAbortedError,
+    LoginError,
+    LoginExpiredError,
+    LoginFailedError,
+    LoginStateError,
+)
+from .utils import test_convert
+
+
+if TYPE_CHECKING:
+    from collections.abc import Iterator
+
+    from .crypto_provider.protocols import CryptoProvider
+    from .localization import Locale
 
 
 logger = logging.getLogger("audible.login")
 
-# WebKit freezes the OS token since iOS 26: the app's web view reports 18_7
-# while the device registers as iOS 26.x.
-USER_AGENT = (
-    "Mozilla/5.0 (iPhone; CPU iPhone OS 18_7 like Mac OS X) "
-    "AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148"
-)
+_TIMEOUT = httpx.Timeout(25.0)
 
 
-def default_captcha_callback(captcha_url: str) -> str:
-    """Helper function for handling captcha."""
-    captcha = httpx.get(captcha_url).content
-    f = io.BytesIO(captcha)
-    img = Image.open(f)
-    img.show()
-    guess = input("Answer for CAPTCHA: ")
-    return str(guess).strip().lower()
+class _Clock:
+    """Time source of the login classes; the tests replace :data:`_clock`."""
+
+    def monotonic(self) -> float:
+        return time.monotonic()
+
+    def sleep(self, seconds: float, wakeup: threading.Event) -> None:
+        wakeup.wait(seconds)
+
+    async def async_sleep(self, seconds: float) -> None:
+        await asyncio.sleep(seconds)
 
 
-def default_otp_callback() -> str:
-    """Helper function for handling 2-factor authentication."""
-    guess = input("OTP Code: ")
-    return str(guess).strip().lower()
+_clock = _Clock()
 
 
-def default_cvf_callback() -> str:
-    """Helper function for handling cvf verifys.
+def _reraise(error: LoginError) -> NoReturn:
+    """Raise a stored error.
 
-    Amazon sends a verify code via Mail or SMS.
+    pydoclint matches a Raises section against literal ``raise`` statements,
+    so a public method re-raising a stored error does it through here.
     """
-    guess = input("CVF Code: ")
-    return str(guess).strip().lower()
+    raise error
 
 
-def default_approval_alert_callback() -> None:
-    """Helper function for handling approval alerts."""
-    print("Approval alert detected! Amazon sends you a mail.")
-    input("Please press ENTER when you approve the notification.")
+class LoginStatus(enum.Enum):
+    """The state of a login."""
+
+    PENDING = "pending"
+    """Waiting for the user, or for the next polling attempt."""
+    FINISHED = "finished"
+    """The device is registered; ``result()`` returns its authenticator."""
+    FAILED = "failed"
+    """Amazon or Audible rejected the login, or the network failed."""
+    EXPIRED = "expired"
+    """The device code expired before the user confirmed it."""
+    ABORTED = "aborted"
+    """The login was cancelled."""
 
 
-def playwright_external_login_url_callback(url: str) -> str:
-    """Helper function for login using playwright.
+@dataclass(frozen=True)
+class DeviceCodePrompt:
+    """What the user needs to confirm a device code.
 
-    Install playwright with `pip install playwright` into the same environment
-    Run command: `playwright install chromium`
+    Attributes:
+        public_code: The code the user enters.
+        verification_url: The page on which the user enters the code.
+        expires_in: Seconds the code stays valid after
+            :meth:`DeviceCodeLogin.start` returned.
     """
-    from playwright.sync_api import (  # type: ignore[import-not-found]  # noqa: I001, PLC0415
-        sync_playwright,
-        Error,
-        TimeoutError as PlaywrightTimeoutError,
-    )
 
-    timeout_seconds = 300
-
-    # choose between chromium, webkit and firefox
-    playwright_browser = "chromium"
-
-    with sync_playwright() as p:
-        iphone = p.devices["iPhone 15 Pro"]
-        browser = p.__getitem__(playwright_browser).launch(headless=False)
-        context = browser.new_context(**iphone)
-
-        try:
-            cookies = []
-            for name, value in build_init_cookies().items():
-                cookies.append({"name": name, "value": value, "url": url})
-            context.add_cookies(cookies)
-
-            page = browser.new_page()
-            page.goto(url)
-
-            with page.expect_request(
-                "**/ap/maplanding*", timeout=timeout_seconds * 1000
-            ) as request_info:
-                request = request_info.value
-                if "openid.oa2.authorization_code" in request.url:
-                    request_url: str = request.url
-        except PlaywrightTimeoutError:
-            logger.error("Timeout during login.")
-            raise AudibleError("Timeout during login using playwright.") from None
-        except Error as error:
-            logger.error(error.message)
-            raise AudibleError(error.message) from None
-        finally:
-            context.close()
-            browser.close()
-
-    return request_url
+    public_code: str
+    verification_url: str
+    expires_in: float
 
 
-def default_login_url_callback(url: str) -> str:
-    """Helper function for login with external browsers."""
-    try:
-        return playwright_external_login_url_callback(url)
-    except ImportError:
-        pass
+@dataclass(frozen=True)
+class ExternalLoginPrompt:
+    """What the user needs to sign in with a browser.
 
-    message = f"""\
-        Please copy the following url and insert it into a web browser of your choice:
-
-        {url}
-
-        Now you have to login with your Amazon credentials. After submit your username
-        and password you have to do this a second time and solving a captcha before
-        sending the login form.
-
-        After login, your browser will show you an error page (Page not found). Do not
-        worry about this. It has to be like this. Please copy the url from the address
-        bar in your browser now.
-
-        IMPORTANT:
-        If you are using MacOS and have trouble insert the login result url, simply
-        import the readline module in your script.
-
-        Please insert the copied url (after login):
+    Attributes:
+        login_url: The page on which the user signs in. Afterwards the
+            browser shows a "page not found" error; the URL in its address
+            bar is what :meth:`ExternalLogin.complete` expects.
     """
-    print(dedent(message))
-    return input()
+
+    login_url: str
 
 
-def _extract_message_from_box(box: Tag) -> str:
-    message = ""
+class _Login:
+    """Status and result handling shared by both login classes."""
 
-    header = box.find("h4")
-    if isinstance(header, Tag) and header.string:
-        message += header.string.strip()
+    def __init__(
+        self,
+        locale: str | Locale,
+        *,
+        serial: str | None,
+        crypto_provider: CryptoProvider | type[CryptoProvider] | None,
+        client: httpx.Client | None,
+        async_client: httpx.AsyncClient | None,
+        with_username: bool,
+    ) -> None:
+        self._locale: Locale = test_convert("locale", locale)
+        self._device = IPHONE
+        self._serial = serial or build_device_serial()
+        self._crypto_provider = crypto_provider
+        self._client = client
+        self._async_client = async_client
+        self._with_username = with_username
+        self._status = LoginStatus.PENDING
+        self._started = False
+        self._authenticator: Authenticator | None = None
+        self._error: LoginError | None = None
+        self._lock = threading.Lock()
 
-    for list_item in box.find_all("li"):
-        if isinstance(list_item, Tag) and isinstance(list_item.find("span"), Tag):
-            list_entry = list_item.find("span")
-            if isinstance(list_entry, Tag) and list_entry.string:
-                message += " " + list_entry.string.strip()
-    return message
-
-
-def _get_messages_in_soup(soup: BeautifulSoup) -> dict[str, str]:
-    messages = {}
-
-    error_box = soup.find(id="auth-error-message-box")
-    if isinstance(error_box, Tag):
-        error_message = _extract_message_from_box(error_box)
-        if error_message:
-            messages["error"] = error_message
-
-    warning_box = soup.find(id="auth-warning-message-box")
-    if isinstance(warning_box, Tag):
-        warning_message = _extract_message_from_box(warning_box)
-        if warning_message:
-            messages["warning"] = warning_message
-
-    ap_error = soup.find(id="ap_error_page_message")
-    if isinstance(ap_error, Tag):
-        ap_error_message = ap_error.find(recursive=False, text=True)
-        if isinstance(ap_error_message, NavigableString):
-            messages["aperror"] = ap_error_message.strip()
-
-    return messages
-
-
-def get_soup(resp: httpx.Response, log_errors: bool = True) -> BeautifulSoup:
-    soup = BeautifulSoup(resp.text, "html.parser")
-
-    if log_errors:
-        soup_messages = _get_messages_in_soup(soup)
-        if "error" in soup_messages:
-            logger.error("Error message: %s", soup_messages["error"])
-        if "warning" in soup_messages:
-            logger.warning("Warning message: %s", soup_messages["warning"])
-        if "aperror" in soup_messages:
-            logger.error("Error message: %s", soup_messages["aperror"])
-    return soup
-
-
-def get_inputs_from_soup(
-    soup: BeautifulSoup, search_field: dict[str, str] | None = None
-) -> dict[str, str]:
-    """Extracts hidden form input fields from a Amazon login page."""
-    search_field = search_field or {"name": "signIn"}
-    form = soup.find("form", search_field) or soup.find("form")
-
-    if not isinstance(form, Tag):
-        raise Exception("No form found in page or something other is going wrong.")
-
-    inputs = {}
-    for field in form.find_all("input"):
-        try:
-            inputs[field["name"]] = ""
-            if field["type"] and field["type"] == "hidden":
-                inputs[field["name"]] = field["value"]
-        except BaseException:  # noqa: S110
-            pass
-    return inputs
-
-
-def get_next_action_from_soup(
-    soup: BeautifulSoup, search_field: dict[str, str] | None = None
-) -> tuple[str, str]:
-    search_field = search_field or {"name": "signIn"}
-    form = soup.find("form", search_field) or soup.find("form")
-
-    if not isinstance(form, Tag):
-        raise Exception("No form found in page or something other is going wrong.")
-
-    method = form.get("method", "GET")
-    url = form["action"]
-
-    if not isinstance(method, str) or not isinstance(url, str):
-        raise Exception("Error during extraction of next action in page.")
-
-    return method, url
-
-
-def create_code_verifier(length: int = 32) -> bytes:
-    verifier = secrets.token_bytes(length)
-    return base64.urlsafe_b64encode(verifier).rstrip(b"=")
-
-
-def create_s256_code_challenge(verifier: bytes) -> bytes:
-    m = hashlib.sha256(verifier)
-    return base64.urlsafe_b64encode(m.digest()).rstrip(b"=")
-
-
-def build_device_serial() -> str:
-    """Generate a fresh 40-character alphanumeric device serial.
-
-    Returns:
-        A random serial containing only ASCII letters and digits.
-    """
-    alphabet = string.ascii_letters + string.digits
-    return "".join(secrets.choice(alphabet) for _ in range(40))
-
-
-def build_client_id(serial: str) -> str:
-    client_id = serial.encode() + b"#A2CZJZGLK2JJVM"
-    return client_id.hex()
-
-
-def build_oauth_url(  # noqa: PLR0917
-    country_code: str,
-    domain: str,
-    market_place_id: str,
-    code_verifier: bytes,
-    serial: str | None = None,
-    with_username: bool = False,
-) -> tuple[str, str]:
-    """Builds the url to login to Amazon as an Audible device."""
-    if with_username and domain.lower() not in ("de", "com", "co.uk"):
-        raise ValueError(
-            "Login with username is only supported for DE, US and UK marketplaces!"
+    def __repr__(self) -> str:
+        return (
+            f"{type(self).__name__}(locale={self._locale.country_code!r}, "
+            f"status={self._status.name})"
         )
 
-    serial = serial or build_device_serial()
-    client_id = build_client_id(serial)
-    code_challenge = create_s256_code_challenge(code_verifier)
+    @property
+    def status(self) -> LoginStatus:
+        """The current state of the login. Reading it sends no request."""
+        return self._status
 
-    base_url = f"https://www.amazon.{domain}/ap/signin"
-    return_to = f"https://www.amazon.{domain}/ap/maplanding"
-    assoc_handle = f"amzn_audible_ios_{country_code}"
-    page_id = "amzn_audible_ios"
+    @property
+    def locale(self) -> Locale:
+        """The marketplace the device is registered with."""
+        return self._locale
 
-    if with_username:
-        base_url = f"https://www.audible.{domain}/ap/signin"
-        return_to = f"https://www.audible.{domain}/ap/maplanding"
-        assoc_handle = f"amzn_audible_ios_lap_{country_code}"
-        page_id = "amzn_audible_ios_privatepool"
+    @property
+    def serial(self) -> str:
+        """The serial of the device to register."""
+        return self._serial
 
-    oauth_params = {
-        "openid.oa2.response_type": "code",
-        "openid.oa2.code_challenge_method": "S256",
-        "openid.oa2.code_challenge": code_challenge,
-        "openid.return_to": return_to,
-        "openid.assoc_handle": assoc_handle,
-        "openid.identity": "http://specs.openid.net/auth/2.0/identifier_select",
-        "pageId": page_id,
-        "accountStatusPolicy": "P1",
-        "openid.claimed_id": "http://specs.openid.net/auth/2.0/identifier_select",
-        "openid.mode": "checkid_setup",
-        "openid.ns.oa2": "http://www.amazon.com/ap/ext/oauth/2",
-        "openid.oa2.client_id": f"device:{client_id}",
-        "openid.ns.pape": "http://specs.openid.net/extensions/pape/1.0",
-        "marketPlaceId": market_place_id,
-        "openid.oa2.scope": "device_auth_access",
-        "forceMobileLayout": "true",
-        "openid.ns": "http://specs.openid.net/auth/2.0",
-        "openid.pape.max_auth_age": "0",
-    }
+    def result(self) -> Authenticator:
+        """Return the authenticator of the registered device.
 
-    return f"{base_url}?{urlencode(oauth_params)}", serial
+        Never blocks and never sends a request. If the login has ended
+        without a device, the error that ended it is raised again:
+        :exc:`~audible.exceptions.LoginFailedError`,
+        :exc:`~audible.exceptions.LoginExpiredError` or
+        :exc:`~audible.exceptions.LoginAbortedError`.
 
+        Returns:
+            The authenticator, once the status is ``FINISHED``.
 
-def build_init_cookies() -> dict[str, str]:
-    """Build initial cookies to prevent captcha in most cases."""
-    token_bytes = secrets.token_bytes(313)
-    frc = base64.b64encode(token_bytes).decode("ascii").rstrip("=")
+        Raises:
+            LoginStateError: If the login is still pending.
+        """
+        with self._lock:
+            authenticator, error = self._authenticator, self._error
+        if authenticator is not None:
+            return authenticator
+        if error is None:
+            raise LoginStateError("The login is still pending.")
+        _reraise(error)
 
-    map_md_dict = {
-        "device_user_dictionary": [],
-        "device_registration_data": {"software_version": SOFTWARE_VERSION},
-        "app_identifier": {
-            "app_version": APP_VERSION,
-            "bundle_id": "com.audible.iphone",
-        },
-    }
-    map_md_str = get_json_provider().dumps(map_md_dict)
-    map_md = base64.b64encode(map_md_str.encode()).decode().rstrip("=")
+    def cancel(self) -> bool:
+        """Cancel the login if it is still pending.
 
-    amzn_app_id = "MAPiOSLib/6.0/ToHideRetailLink"
+        The status changes to ``ABORTED`` at once. A ``wait()`` sleeping in
+        another thread wakes up immediately, an ``async_wait()`` at its next
+        wake-up; either finishes a request in progress first. Cancelling
+        the task that runs ``async_wait()`` stops it at once instead. A
+        registration request already sent cannot be taken back: should
+        Amazon register the device anyway, it appears in the device list of
+        the account without credentials and has to be removed there.
 
-    return {"frc": frc, "map-md": map_md, "amzn-app-id": amzn_app_id}
+        Returns:
+            ``True`` if the login was cancelled, ``False`` if it had already
+            ended.
+        """
+        return self._end(
+            LoginStatus.ABORTED, error=LoginAbortedError("The login was cancelled.")
+        )
 
-
-def check_for_captcha(soup: BeautifulSoup) -> bool:
-    """Checks a Amazon login page for a captcha form."""
-    captcha = soup.find("img", alt=lambda x: x and "CAPTCHA" in x)
-    return True if captcha else False
-
-
-def extract_captcha_url(soup: BeautifulSoup) -> str:
-    """Returns the captcha url from a Amazon login page."""
-    captcha = soup.find("img", alt=lambda x: x and "CAPTCHA" in x)
-    if not isinstance(captcha, Tag) or not isinstance(captcha["src"], str):
-        raise Exception("Error during extracting the captcha url.")
-    return captcha["src"]
-
-
-def check_for_mfa(soup: BeautifulSoup) -> bool:
-    """Checks a Amazon login page for a multi-factor authentication form."""
-    mfa = soup.find(
-        "form",
-        id=lambda x: x and ("verification-code-form" in x or "auth-mfa-form" in x),
-    )
-    return True if mfa else False
-
-
-def check_for_choice_mfa(soup: BeautifulSoup) -> bool:
-    """Checks a Amazon login page for a MFA selection form."""
-    mfa_choice = soup.find("form", id="auth-select-device-form")
-    return True if mfa_choice else False
-
-
-def check_for_cvf(soup: BeautifulSoup) -> bool:
-    cvf = soup.find("div", id="cvf-page-content")
-    return True if cvf else False
-
-
-def check_for_approval_alert(soup: BeautifulSoup) -> bool:
-    """Checks a Amazon login page for an approval alert."""
-    approval_alert = soup.find(id="resend-approval-alert") or soup.find(
-        id="resend-approval-form"
-    )
-    return True if approval_alert else False
-
-
-def extract_code_from_url(url: httpx.URL) -> str:
-    """Extracts the access token from url query after login."""
-    parsed_url = parse_qs(url.query.decode())
-    return parsed_url["openid.oa2.authorization_code"][0]
-
-
-def is_valid_email(obj: str) -> bool:
-    valid_mail = r"^[a-z0-9]+[\._-]?[a-z0-9]+[@]\w+[.]\w+$"
-    if re.match(valid_mail, obj):
+    def _end(
+        self,
+        status: LoginStatus,
+        *,
+        error: LoginError | None = None,
+        authenticator: Authenticator | None = None,
+    ) -> bool:
+        """Move to a final status. The first one wins; later calls are ignored."""
+        with self._lock:
+            if self._status is not LoginStatus.PENDING:
+                return False
+            self._error = error
+            self._authenticator = authenticator
+            # Last, so that a reader seeing the final status sees its result.
+            self._status = status
+        logger.info("Login ended with status %s: %s", status.name, error or "")
         return True
-    return False
+
+    def _fail(self, error: LoginFailedError) -> None:
+        self._end(LoginStatus.FAILED, error=error)
+
+    @contextlib.contextmanager
+    def _ending_on_failure(self) -> Iterator[None]:
+        """Let a :exc:`LoginFailedError` raised inside end the login.
+
+        If the login had already ended, typically by :meth:`cancel` while a
+        request was in flight, the error that ended it is raised instead.
+        """
+        try:
+            yield
+        except LoginFailedError as error:
+            if not self._end(LoginStatus.FAILED, error=error) and (
+                self._error is not None
+            ):
+                raise self._error from error
+            raise
+
+    def _raise_if_ended(self) -> None:
+        """Raise the error that ended the login, if it ended without a device."""
+        if self._status is not LoginStatus.PENDING and self._error is not None:
+            _reraise(self._error)
+
+    def _require_unstarted(self) -> None:
+        if self._started or self._status is not LoginStatus.PENDING:
+            raise LoginStateError("The login was already started or has ended.")
+
+    def _require_started(self) -> None:
+        if not self._started and self._status is LoginStatus.PENDING:
+            raise LoginStateError("Call start() first.")
+
+    def _finish(self, response: httpx.Response) -> None:
+        """Turn a registration response into the authenticator."""
+        try:
+            credentials = registration_credentials(response, self._serial)
+            authenticator = Authenticator.from_dict(
+                {**credentials, "with_username": self._with_username},
+                locale=self._locale,
+                crypto_provider=self._crypto_provider,
+            )
+        except LoginFailedError as error:
+            self._fail(error)
+            return
+        except (TypeError, ValueError) as exc:
+            self._fail(LoginFailedError(f"Invalid registration credentials: {exc}"))
+            return
+        if not self._end(LoginStatus.FINISHED, authenticator=authenticator):
+            logger.warning(
+                "Amazon registered the device after the login had ended with "
+                "status %s. Remove it from the device list of the account.",
+                self._status.name,
+            )
+
+    def _send(self, request: RequestSpec) -> httpx.Response:
+        if self._client is not None:
+            return self._client.post(
+                request.url, json=request.body, headers=request.headers
+            )
+        with httpx.Client(timeout=_TIMEOUT) as client:
+            return client.post(request.url, json=request.body, headers=request.headers)
+
+    async def _async_send(self, request: RequestSpec) -> httpx.Response:
+        if self._async_client is not None:
+            return await self._async_client.post(
+                request.url, json=request.body, headers=request.headers
+            )
+        async with httpx.AsyncClient(timeout=_TIMEOUT) as client:
+            return await client.post(
+                request.url, json=request.body, headers=request.headers
+            )
 
 
-def login(  # noqa: PLR0917
-    username: str,
-    password: str,
-    country_code: str,
-    domain: str,
-    market_place_id: str,
-    serial: str | None = None,
-    with_username: bool = False,
-    captcha_callback: Callable[[str], str] | None = None,
-    otp_callback: Callable[[], str] | None = None,
-    cvf_callback: Callable[[], str] | None = None,
-    approval_callback: Callable[[], Any] | None = None,
-) -> dict[str, Any]:
-    """Login to Audible by simulating an Audible App for iOS.
+class DeviceCodeLogin(_Login):
+    """Register a new device for an Amazon account with a device code.
+
+    Construction sends no request. :meth:`start` creates the code pair and
+    returns the code to show; the user then confirms it on the verification
+    page while :meth:`poll` or :meth:`wait` ask Amazon whether that has
+    happened. Amazon answers with the device credentials as soon as it has,
+    which also registers the device.
 
     Args:
-        username: The Amazon email address.
-        password: The Amazon password.
-        country_code: The country code for the Audible marketplace to login.
-        domain: domain: The top level domain for the Audible marketplace to
-            login.
-        market_place_id: The id for the Audible marketplace to login.
-        serial: The device serial. If ``None`` a custom one will be created.
-        with_username: If ``True`` login with Audible username instead
-            of Amazon account.
-        captcha_callback: A custom Callable for handling captcha requests.
-            If ``None`` :func:`default_captcha_callback` is used.
-        otp_callback: A custom Callable for providing one-time passwords.
-            If ``None`` :func:`default_otp_callback` is used.
-        cvf_callback: A custom Callable for providing the answer for a CVF
-            code. If ``None`` :func:`default_cvf_callback` is used.
-        approval_callback: A custom Callable for handling approval alerts.
-            If ``None`` :func:`default_approval_alert_callback` is used.
+        locale: The ``country_code`` or :class:`~audible.localization.Locale`
+            of the marketplace to register with.
+        serial: The device serial. If ``None``, a random one is created.
+        crypto_provider: Optional crypto provider for the resulting
+            authenticator (class or instance).
+        client: HTTP client for the sync methods. If ``None``, each request
+            uses a short-lived client.
+        async_client: HTTP client for the async methods. If ``None``, each
+            request uses a short-lived client.
+    """
 
-    Returns:
-        An ``authorization_code``, a ``code_verifier`` and the
-        ``device serial`` from the authorized Client.
+    def __init__(
+        self,
+        locale: str | Locale,
+        *,
+        serial: str | None = None,
+        crypto_provider: CryptoProvider | type[CryptoProvider] | None = None,
+        client: httpx.Client | None = None,
+        async_client: httpx.AsyncClient | None = None,
+    ) -> None:
+        super().__init__(
+            locale,
+            serial=serial,
+            crypto_provider=crypto_provider,
+            client=client,
+            async_client=async_client,
+            with_username=False,
+        )
+        self._code_pair: CodePair | None = None
+        self._expires_at = 0.0
+        self._next_poll_at = 0.0
+        self._in_flight = False
+        self._failures = 0
+        self._wakeup = threading.Event()
+
+    @property
+    def next_poll_delay(self) -> float:
+        """Seconds until :meth:`poll` sends its next request.
+
+        ``0.0`` if a request is due now or the login is not pending.
+        """
+        if self._status is not LoginStatus.PENDING or self._code_pair is None:
+            return 0.0
+        return max(0.0, self._next_poll_at - _clock.monotonic())
+
+    def start(self) -> DeviceCodePrompt:
+        """Create the code pair the user has to confirm.
+
+        A login can be started once; a second call raises
+        :exc:`~audible.exceptions.LoginStateError`.
+
+        Returns:
+            The code to show and where to enter it.
+
+        Raises:
+            LoginFailedError: If the network failed or Amazon refused to
+                create a code pair. The status is ``FAILED`` then.
+        """
+        self._require_unstarted()
+        started_at = _clock.monotonic()
+        request = code_pair_request(self._device, self._locale.domain, self._serial)
+        with self._ending_on_failure():
+            try:
+                response = self._send(request)
+            except httpx.RequestError as exc:
+                raise LoginFailedError(f"Network error: {exc}") from exc
+            return self._accept_code_pair(response, started_at)
+
+    async def async_start(self) -> DeviceCodePrompt:
+        """Create the code pair the user has to confirm.
+
+        Async counterpart of :meth:`start`.
+
+        A login can be started once; a second call raises
+        :exc:`~audible.exceptions.LoginStateError`.
+
+        Returns:
+            The code to show and where to enter it.
+
+        Raises:
+            LoginFailedError: If the network failed or Amazon refused to
+                create a code pair. The status is ``FAILED`` then.
+        """
+        self._require_unstarted()
+        started_at = _clock.monotonic()
+        request = code_pair_request(self._device, self._locale.domain, self._serial)
+        with self._ending_on_failure():
+            try:
+                response = await self._async_send(request)
+            except httpx.RequestError as exc:
+                raise LoginFailedError(f"Network error: {exc}") from exc
+            return self._accept_code_pair(response, started_at)
+
+    def _accept_code_pair(
+        self, response: httpx.Response, started_at: float
+    ) -> DeviceCodePrompt:
+        code_pair = parse_code_pair(response)
+        self._raise_if_ended()
+        now = _clock.monotonic()
+        self._code_pair = code_pair
+        # Counted from before the request, so the code never outlives Amazon's.
+        self._expires_at = started_at + code_pair.expires_in
+        self._next_poll_at = now + code_pair.interval
+        self._started = True
+        logger.info("Created a device code for %s.", self._locale.country_code)
+        return DeviceCodePrompt(
+            code_pair.public_code,
+            verification_url(self._locale.domain),
+            self._expires_at - now,
+        )
+
+    def poll(self) -> LoginStatus:
+        """Ask Amazon once whether the code was confirmed, if that is due.
+
+        Sends at most one request and never sleeps. Before the next attempt
+        is due, it returns the current status without a request, so it may
+        be called as often as convenient. :meth:`start` must have been
+        called before.
+
+        Returns:
+            The status after the attempt.
+        """
+        request = self._due_request()
+        if request is None:
+            return self._status
+        response: httpx.Response | None
+        try:
+            response = self._send(request)
+        except httpx.RequestError as exc:
+            logger.warning("Network error while polling: %s", exc)
+            response = None
+        finally:
+            self._in_flight = False
+        return self._handle_poll(response)
+
+    async def async_poll(self) -> LoginStatus:
+        """Ask Amazon once whether the code was confirmed, if that is due.
+
+        Async counterpart of :meth:`poll`.
+
+        Returns:
+            The status after the attempt.
+        """
+        request = self._due_request()
+        if request is None:
+            return self._status
+        response: httpx.Response | None
+        try:
+            response = await self._async_send(request)
+        except httpx.RequestError as exc:
+            logger.warning("Network error while polling: %s", exc)
+            response = None
+        finally:
+            self._in_flight = False
+        return self._handle_poll(response)
+
+    def _due_request(self) -> RequestSpec | None:
+        if self._status is not LoginStatus.PENDING:
+            return None
+        if self._code_pair is None:
+            raise LoginStateError("Call start() first.")
+        now = _clock.monotonic()
+        if now >= self._expires_at:
+            self._end(
+                LoginStatus.EXPIRED,
+                error=LoginExpiredError(
+                    "The device code expired before it was confirmed."
+                ),
+            )
+            return None
+        # A second poll() while a request is in flight must not send another.
+        if now < self._next_poll_at or self._in_flight:
+            return None
+        self._in_flight = True
+        return code_pair_registration_request(
+            self._device, self._locale.domain, self._serial, self._code_pair
+        )
+
+    def _handle_poll(self, response: httpx.Response | None) -> LoginStatus:
+        if response is None:
+            return self._retry(None)
+        outcome = classify_poll(response)
+        if outcome is PollOutcome.REGISTERED:
+            self._finish(response)
+            return self._status
+        if self._status is not LoginStatus.PENDING:
+            return self._status
+        if outcome is PollOutcome.RETRY:
+            return self._retry(response)
+        if outcome is PollOutcome.PENDING:
+            self._failures = 0
+            self._schedule(self._interval)
+        else:
+            self._fail(
+                LoginFailedError(
+                    f"Amazon rejected the device code (HTTP {response.status_code}).",
+                    status_code=response.status_code,
+                    error_code=error_code(response),
+                )
+            )
+        return self._status
+
+    def _retry(self, response: httpx.Response | None) -> LoginStatus:
+        if self._status is LoginStatus.PENDING:
+            self._failures += 1
+            self._schedule(retry_delay(response, self._interval, self._failures))
+        return self._status
+
+    @property
+    def _interval(self) -> float:
+        return self._code_pair.interval if self._code_pair else 0.0
+
+    def _schedule(self, delay: float) -> None:
+        self._next_poll_at = _clock.monotonic() + delay
+
+    def _sleep_time(self, deadline: float | None) -> float | None:
+        """Return how long to sleep before polling, or None past the deadline."""
+        now = _clock.monotonic()
+        delay = min(self._next_poll_at, self._expires_at) - now
+        if deadline is not None:
+            if now >= deadline:
+                return None
+            delay = min(delay, deadline - now)
+        return max(0.0, delay)
+
+    def wait(self, timeout: float | None = None) -> Authenticator:
+        """Poll until the login ends and return the authenticator.
+
+        :meth:`start` must have been called before. If the login ends
+        without a device, the error :meth:`result` raises propagates. The
+        timeout is checked between attempts; a request in progress is
+        finished first.
+
+        Args:
+            timeout: Seconds to wait at most. ``None`` waits until the device
+                code expires.
+
+        Returns:
+            The authenticator of the registered device.
+
+        Raises:
+            TimeoutError: If ``timeout`` passed first. The login stays
+                pending and can be waited for again.
+        """
+        deadline = None if timeout is None else _clock.monotonic() + timeout
+        while self.poll() is LoginStatus.PENDING:
+            delay = self._sleep_time(deadline)
+            if delay is None:
+                raise TimeoutError("The login is still pending.")
+            _clock.sleep(delay, self._wakeup)
+        return self.result()
+
+    async def async_wait(
+        self,
+        timeout: float | None = None,  # noqa: ASYNC109 - unlike asyncio.timeout, keeps the login pending
+    ) -> Authenticator:
+        """Poll until the login ends and return the authenticator.
+
+        Async counterpart of :meth:`wait`. Cancelling the awaiting task
+        cancels the login, while ``timeout`` leaves it pending. The timeout
+        is checked between attempts; a request in progress is finished
+        first.
+
+        Args:
+            timeout: Seconds to wait at most. ``None`` waits until the device
+                code expires.
+
+        Returns:
+            The authenticator of the registered device.
+
+        Raises:
+            TimeoutError: If ``timeout`` passed first. The login stays
+                pending and can be waited for again.
+            asyncio.CancelledError: If the awaiting task was cancelled.
+        """
+        deadline = None if timeout is None else _clock.monotonic() + timeout
+        try:
+            while await self.async_poll() is LoginStatus.PENDING:
+                delay = self._sleep_time(deadline)
+                if delay is None:
+                    raise TimeoutError("The login is still pending.")
+                await _clock.async_sleep(delay)
+        except asyncio.CancelledError:
+            self.cancel()
+            raise
+        return self.result()
+
+    def _end(
+        self,
+        status: LoginStatus,
+        *,
+        error: LoginError | None = None,
+        authenticator: Authenticator | None = None,
+    ) -> bool:
+        ended = super()._end(status, error=error, authenticator=authenticator)
+        self._wakeup.set()
+        return ended
+
+
+class ExternalLogin(_Login):
+    """Register a new device for a pre-Amazon account through a browser.
+
+    Pre-Amazon accounts sign in with an Audible username and exist on the
+    DE, US and UK marketplaces only. Construction sends no request.
+    :meth:`start` returns the URL to open in a browser. After signing in,
+    the browser lands on a "page not found" error; its address is handed to
+    :meth:`complete`, which registers the device.
+
+    Args:
+        locale: The ``country_code`` or :class:`~audible.localization.Locale`
+            of the marketplace to register with.
+        serial: The device serial. If ``None``, a random one is created.
+        crypto_provider: Optional crypto provider for the resulting
+            authenticator (class or instance).
+        client: HTTP client for :meth:`complete`. If ``None``, a short-lived
+            client is used.
+        async_client: HTTP client for :meth:`async_complete`. If ``None``, a
+            short-lived client is used.
 
     Raises:
-        Exception: If authorization_code is not in response url.
+        ValueError: If the marketplace has no pre-Amazon accounts.
     """
-    if with_username:
-        base_url = f"https://www.audible.{domain}"
-        logger.info("Login with Audible username.")
-    else:
-        if not is_valid_email(username):
-            logger.warning("Username %s is not a valid mail address.", username)
-        base_url = f"https://www.amazon.{domain}"
-        logger.info("Login with Amazon Account.")
 
-    default_headers = {
-        "User-Agent": USER_AGENT,
-        "Accept-Language": "en-US",
-        "Accept-Encoding": "gzip",
-    }
-    init_cookies = build_init_cookies()
+    def __init__(
+        self,
+        locale: str | Locale,
+        *,
+        serial: str | None = None,
+        crypto_provider: CryptoProvider | type[CryptoProvider] | None = None,
+        client: httpx.Client | None = None,
+        async_client: httpx.AsyncClient | None = None,
+    ) -> None:
+        super().__init__(
+            locale,
+            serial=serial,
+            crypto_provider=crypto_provider,
+            client=client,
+            async_client=async_client,
+            with_username=True,
+        )
+        if self._locale.domain not in PRE_AMAZON_DOMAINS:
+            raise ValueError(
+                "Pre-Amazon accounts exist on the DE, US and UK marketplaces only."
+            )
+        self._code_verifier = ""
+        self._submitted = False
 
-    session = httpx.Client(
-        base_url=base_url,
-        headers=default_headers,
-        cookies=init_cookies,
-        follow_redirects=True,
-    )
-    code_verifier = create_code_verifier()
+    def start(self) -> ExternalLoginPrompt:
+        """Prepare the browser sign-in. Sends no request.
 
-    oauth_url, serial = build_oauth_url(
-        country_code=country_code,
-        domain=domain,
-        market_place_id=market_place_id,
-        code_verifier=code_verifier,
-        serial=serial,
-        with_username=with_username,
-    )
+        Returns:
+            The URL to open in a browser.
+        """
+        self._require_unstarted()
+        self._code_verifier = create_code_verifier()
+        self._started = True
+        return ExternalLoginPrompt(
+            pre_amazon_login_url(
+                self._device, self._locale, self._serial, self._code_verifier
+            )
+        )
 
-    oauth_resp = session.get(oauth_url)
-    oauth_soup = get_soup(oauth_resp)
+    def complete(self, redirect_url: str) -> Authenticator:
+        """Register the device with the URL the browser ended on.
 
-    login_inputs = get_inputs_from_soup(oauth_soup)
-    login_inputs["email"] = username
-    login_inputs["password"] = password
+        A URL that is not the expected page raises :exc:`ValueError` and
+        leaves the login pending, so the call can be repeated with the right
+        URL. Without :meth:`start`, or once the login has ended, it raises
+        :exc:`~audible.exceptions.LoginStateError`.
 
-    metadata = meta_audible_app(USER_AGENT, base_url)
-    login_inputs["metadata1"] = encrypt_metadata(metadata)
+        Args:
+            redirect_url: The full URL from the browser's address bar after
+                signing in.
 
-    method, url = get_next_action_from_soup(oauth_soup, {"name": "signIn"})
+        Returns:
+            The authenticator of the registered device.
 
-    login_resp = session.request(method, url, data=login_inputs)
-    login_soup = get_soup(login_resp)
+        Raises:
+            LoginFailedError: If the network failed or Audible refused the
+                registration. The status is ``FAILED`` then.
+        """
+        request = self._registration_request(redirect_url)
+        with self._ending_on_failure():
+            try:
+                response = self._send(request)
+            except httpx.RequestError as exc:
+                raise LoginFailedError(f"Network error: {exc}") from exc
+        self._finish(response)
+        return self.result()
 
-    # check for captcha
-    while check_for_captcha(login_soup):
-        captcha_url = extract_captcha_url(login_soup)
-        if captcha_callback:
-            guess = captcha_callback(captcha_url)
-        else:
-            guess = default_captcha_callback(captcha_url)
+    async def async_complete(self, redirect_url: str) -> Authenticator:
+        """Register the device with the URL the browser ended on.
 
-        inputs = get_inputs_from_soup(login_soup)
-        inputs["guess"] = guess
-        inputs["use_image_captcha"] = "true"
-        inputs["use_audio_captcha"] = "false"
-        inputs["showPasswordChecked"] = "false"
-        inputs["email"] = username
-        inputs["password"] = password
+        Async counterpart of :meth:`complete`.
 
-        method, url = get_next_action_from_soup(login_soup, {"name": "signIn"})
+        A URL that is not the expected page raises :exc:`ValueError` and
+        leaves the login pending, so the call can be repeated with the right
+        URL. Without :meth:`start`, or once the login has ended, it raises
+        :exc:`~audible.exceptions.LoginStateError`.
 
-        login_resp = session.request(method, url, data=inputs)
-        login_soup = get_soup(login_resp)
+        Args:
+            redirect_url: The full URL from the browser's address bar after
+                signing in.
 
-    # check for choice mfa
-    # https://www.amazon.de/ap/mfa/new-otp
-    while check_for_choice_mfa(login_soup):
-        inputs = get_inputs_from_soup(login_soup)
-        for node in login_soup.select("div[data-a-input-name=otpDeviceContext]"):
-            # auth-TOTP, auth-SMS, auth-VOICE
-            if "auth-TOTP" in node["class"]:
-                inp_node = node.find("input")
-                if (
-                    isinstance(inp_node, Tag)
-                    and isinstance(inp_node["name"], str)
-                    and isinstance(inp_node["value"], str)
-                ):
-                    inputs[inp_node["name"]] = inp_node["value"]
+        Returns:
+            The authenticator of the registered device.
 
-        method, url = get_next_action_from_soup(login_soup)
+        Raises:
+            LoginFailedError: If the network failed or Audible refused the
+                registration. The status is ``FAILED`` then.
+        """
+        request = self._registration_request(redirect_url)
+        with self._ending_on_failure():
+            try:
+                response = await self._async_send(request)
+            except httpx.RequestError as exc:
+                raise LoginFailedError(f"Network error: {exc}") from exc
+        self._finish(response)
+        return self.result()
 
-        login_resp = session.request(method, url, data=inputs)
-        login_soup = get_soup(login_resp)
-
-    # check for mfa (otp_code)
-    while check_for_mfa(login_soup):
-        if otp_callback:
-            otp_code = otp_callback()
-        else:
-            otp_code = default_otp_callback()
-
-        inputs = get_inputs_from_soup(login_soup)
-        inputs["otpCode"] = otp_code
-        inputs["mfaSubmit"] = "Submit"
-        inputs["rememberDevice"] = "false"
-
-        method, url = get_next_action_from_soup(login_soup)
-
-        login_resp = session.request(method, url, data=inputs)
-        login_soup = get_soup(login_resp)
-
-    # check for cvf
-    while check_for_cvf(login_soup):
-        if cvf_callback:
-            cvf_code = cvf_callback()
-        else:
-            cvf_code = default_cvf_callback()
-
-        inputs = get_inputs_from_soup(login_soup)
-
-        method, url = get_next_action_from_soup(login_soup)
-
-        login_resp = session.request(method, url, data=inputs)
-        login_soup = get_soup(login_resp)
-
-        inputs = get_inputs_from_soup(login_soup)
-        inputs["action"] = "code"
-        inputs["code"] = cvf_code
-
-        method, url = get_next_action_from_soup(login_soup)
-
-        login_resp = session.request(method, url, data=inputs)
-        login_soup = get_soup(login_resp)
-
-    # check for approval alert
-    while check_for_approval_alert(login_soup):
-        if approval_callback:
-            approval_callback()
-        else:
-            default_approval_alert_callback()
-
-        # url = login_soup.find(id="resend-approval-link")["href"]
-        url = str(login_resp.url)
-
-        login_resp = session.get(url)
-        login_soup = get_soup(login_resp)
-
-        while login_soup.find(
-            "span", {"class": "transaction-approval-word-break"}
-        ):  # a-size-base-plus transaction-approval-word-break a-text-bold
-            login_resp = session.get(url)
-            login_soup = get_soup(login_resp)
-            logger.info("still waiting for redirect")
-
-    session.close()
-
-    authcode_url = None
-    if b"openid.oa2.authorization_code" in login_resp.url.query:
-        authcode_url = login_resp.url
-    elif len(login_resp.history) > 0:
-        for history in login_resp.history:
-            if b"openid.oa2.authorization_code" in history.url.query:
-                authcode_url = history.url
-                break
-
-    if authcode_url is None:
-        raise Exception("Login failed. Please check the log.")
-
-    logger.debug("Login confirmed for %s", username)
-
-    authorization_code = extract_code_from_url(authcode_url)
-
-    return {
-        "authorization_code": authorization_code,
-        "code_verifier": code_verifier,
-        "domain": domain,
-        "serial": serial,
-    }
+    def _registration_request(self, redirect_url: str) -> RequestSpec:
+        self._require_started()
+        if self._status is not LoginStatus.PENDING or self._submitted:
+            raise LoginStateError("The login is no longer waiting for a URL.")
+        authorization_code = extract_authorization_code(
+            redirect_url, self._locale.domain
+        )
+        # The code is single-use; a second complete() must not send it again.
+        self._submitted = True
+        return authorization_code_registration_request(
+            self._device,
+            self._locale.domain,
+            self._serial,
+            authorization_code,
+            self._code_verifier,
+        )
 
 
-def external_login(  # noqa: PLR0917
-    country_code: str,
-    domain: str,
-    market_place_id: str,
+@overload
+def create_login(
+    locale: str | Locale,
+    *,
+    with_username: Literal[False] = False,
     serial: str | None = None,
-    with_username: bool = False,
-    login_url_callback: Callable[[str], str] | None = None,
-) -> dict[str, Any]:
-    """Gives the url to login with external browser and prompt for result.
+    crypto_provider: CryptoProvider | type[CryptoProvider] | None = None,
+) -> DeviceCodeLogin: ...
 
-    Note:
-        If you are using MacOS and have trouble insert the login result url
-        simply import the readline module in your script. See
-        `#34 <https://github.com/mkb79/Audible/issues/34#issuecomment-766408640>`_.
+
+@overload
+def create_login(
+    locale: str | Locale,
+    *,
+    with_username: Literal[True],
+    serial: str | None = None,
+    crypto_provider: CryptoProvider | type[CryptoProvider] | None = None,
+) -> ExternalLogin: ...
+
+
+@overload
+def create_login(
+    locale: str | Locale,
+    *,
+    with_username: bool,
+    serial: str | None = None,
+    crypto_provider: CryptoProvider | type[CryptoProvider] | None = None,
+) -> DeviceCodeLogin | ExternalLogin: ...
+
+
+def create_login(
+    locale: str | Locale,
+    *,
+    with_username: bool = False,
+    serial: str | None = None,
+    crypto_provider: CryptoProvider | type[CryptoProvider] | None = None,
+) -> DeviceCodeLogin | ExternalLogin:
+    """Create the login that registers a new device for the account type.
+
+    Sends no request; the returned login is started by the caller.
 
     Args:
-        country_code: The country code for the Audible marketplace to login.
-        domain: The top level domain for the Audible marketplace to
-            login.
-        market_place_id: The id for the Audible marketplace to login.
-        serial: The device serial. If ``None`` a custom one will be created.
-        with_username: If ``True`` login with Audible username instead
-            of Amazon account.
-        login_url_callback: A custom Callable for handling login with external
-            browsers. If ``None`` :func:`default_login_url_callback` is used.
+        locale: The ``country_code`` or :class:`~audible.localization.Locale`
+            of the marketplace to register with.
+        with_username: ``True`` for a pre-Amazon account, which signs in with
+            an Audible username (DE, US and UK only); ``False`` for an Amazon
+            account.
+        serial: The device serial. If ``None``, a random one is created.
+        crypto_provider: Optional crypto provider for the resulting
+            authenticator (class or instance).
 
     Returns:
-        An ``authorization_code``, a ``code_verifier`` and the
-        ``device serial`` from the authorized Client.
+        A :class:`DeviceCodeLogin` for an Amazon account, an
+        :class:`ExternalLogin` for a pre-Amazon account.
     """
-    code_verifier = create_code_verifier()
-    oauth_url, serial = build_oauth_url(
-        country_code=country_code,
-        domain=domain,
-        market_place_id=market_place_id,
-        code_verifier=code_verifier,
-        serial=serial,
-        with_username=with_username,
-    )
+    if with_username:
+        return ExternalLogin(locale, serial=serial, crypto_provider=crypto_provider)
+    return DeviceCodeLogin(locale, serial=serial, crypto_provider=crypto_provider)
 
-    if login_url_callback:
-        _response_url = login_url_callback(oauth_url)
-    else:
-        _response_url = default_login_url_callback(oauth_url)
 
-    response_url = httpx.URL(_response_url)
-    parsed_url = parse_qs(response_url.query.decode())
-
-    authorization_code = parsed_url["openid.oa2.authorization_code"][0]
-
-    return {
-        "authorization_code": authorization_code,
-        "code_verifier": code_verifier,
-        "domain": domain,
-        "serial": serial,
-    }
+__all__ = [
+    "DeviceCodeLogin",
+    "DeviceCodePrompt",
+    "ExternalLogin",
+    "ExternalLoginPrompt",
+    "LoginStatus",
+    "create_login",
+]

@@ -8,8 +8,8 @@ from typing import Any
 import httpx
 import pytest
 
+import audible._registration as registration_mod
 import audible.auth as auth_mod
-import audible.register as register_mod
 from audible import AsyncClient
 from audible.auth import Authenticator
 from audible.exceptions import AuthFlowError
@@ -254,7 +254,7 @@ def test_asyncclient_concurrent_requests_single_refresh(
 def test_deregister_sends_x_amz_access_token(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """register.deregister authenticates with x-amz-access-token, not Bearer."""
+    """Deregistration authenticates with x-amz-access-token, not Bearer."""
     captured: dict[str, Any] = {}
 
     def fake_post(
@@ -265,7 +265,7 @@ def test_deregister_sends_x_amz_access_token(
 
     monkeypatch.setattr(httpx, "post", fake_post)
 
-    result = register_mod.deregister("Atna|TOKEN", "de")
+    result = registration_mod.deregister("Atna|TOKEN", "de")
 
     assert result == {"ok": True}
     assert captured["headers"] == {"x-amz-access-token": "Atna|TOKEN"}
