@@ -59,6 +59,16 @@ def auth_fixture_encrypted_bytes_path() -> Path:
 
 
 @pytest.fixture
+def crypto_fixture_path() -> Path:
+    """Path to crypto fixture.
+
+    Returns:
+        Path to the crypto fixture JSON file.
+    """
+    return Path(__file__).parent / "fixtures" / "crypto_fixture.json"
+
+
+@pytest.fixture
 def auth_fixture_data(auth_fixture_path: Path) -> dict[str, Any]:
     """Load unencrypted auth fixture data.
 
@@ -102,6 +112,19 @@ def auth_fixture_encrypted_bytes_data(auth_fixture_encrypted_bytes_path: Path) -
 
 
 @pytest.fixture
+def crypto_fixture_data(crypto_fixture_path: Path) -> dict[str, Any]:
+    """Load crypto fixture data.
+
+    Args:
+        crypto_fixture_path: Path to the fixture file.
+
+    Returns:
+        Dictionary containing the crypto fixture data.
+    """
+    return cast(dict[str, Any], json.loads(crypto_fixture_path.read_text()))
+
+
+@pytest.fixture
 def auth_fixture_password() -> str:
     """Password for encrypted auth fixtures.
 
@@ -115,6 +138,18 @@ def auth_fixture_password() -> str:
 def rsa_private_key(auth_fixture_data: dict[str, Any]) -> str:
     """RSA private key from auth fixture data."""
     return cast(str, auth_fixture_data["device_private_key"])
+
+
+@pytest.fixture
+def rsa_private_key_pkcs8(crypto_fixture_data: dict[str, Any]) -> str:
+    """RSA PKCS#8 PEM private key from crypto fixture data."""
+    return cast(str, crypto_fixture_data["rsa_512_pkcs8_pem"])
+
+
+@pytest.fixture
+def dsa_private_key_pkcs8(crypto_fixture_data: dict[str, Any]) -> str:
+    """DSA PKCS#8 PEM private key from crypto fixture data."""
+    return cast(str, crypto_fixture_data["dsa_512_pkcs8_pem"])
 
 
 @pytest.fixture(autouse=True)

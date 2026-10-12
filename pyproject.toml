@@ -80,6 +80,7 @@ mypy = [
     "types-beautifulsoup4>=4.12.0.20250516",
     "types-docutils>=0.22.3.20251115",
     "types-html5lib>=1.1.11.20251117",
+    "types-pyasn1>=0.6.0.20260724",
     "types-pygments>=2.19.0.20251121",
 ]
 

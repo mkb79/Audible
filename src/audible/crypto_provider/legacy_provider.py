@@ -10,9 +10,14 @@ and work in all environments without compilation.
 import hmac
 import logging
 import warnings
+from base64 import b64decode
 from collections.abc import Callable
 from hashlib import sha1, sha256
+from re import DOTALL, match
 from typing import TYPE_CHECKING, Any
+
+from pyasn1.codec.der import decoder
+from pyasn1.type import namedtype, univ
 
 
 if TYPE_CHECKING:
@@ -30,6 +35,42 @@ from pyaes import (  # type: ignore[import-untyped]
 logger = logging.getLogger("audible.crypto_provider.legacy")
 
 
+def _convert_pkcs8_der_rsa_to_pkcs1_der(pkcs8_der: bytes) -> bytes:
+    """Converts a PKCS#8 DER RSA key to a PKCS#1 DER key.
+
+    Args:
+        pkcs8_der: An RSA key in PKCS#8 DER format.
+
+    Returns:
+        An RSA key in PKCS#1 DER format.
+
+    Raises:
+        ValueError: If PKCS#8 algorithm OID is not RSA
+            (1.2.840.113549.1.1.1).
+    """
+
+    class PrivateKeyAlgorithm(univ.Sequence):
+        componentType = namedtype.NamedTypes(  # noqa: N815
+            namedtype.NamedType("algorithm", univ.ObjectIdentifier()),
+            namedtype.NamedType("parameters", univ.Any()),
+        )
+
+    class PrivateKeyInfo(univ.Sequence):
+        componentType = namedtype.NamedTypes(  # noqa: N815
+            namedtype.NamedType("version", univ.Integer()),
+            namedtype.NamedType("pkalgo", PrivateKeyAlgorithm()),
+            namedtype.NamedType("key", univ.OctetString()),
+        )
+
+    logger.debug("Converting PKCS#8 RSA key to PKCS#1 (legacy provider)")
+    (key_info, _) = decoder.decode(pkcs8_der, asn1Spec=PrivateKeyInfo())
+    rsa_oid = univ.ObjectIdentifier((1, 2, 840, 113549, 1, 1, 1))
+    if key_info["pkalgo"]["algorithm"] != rsa_oid:
+        raise ValueError("key_info.pkalgo.algorithm: Algorithm is not RSA.")
+
+    return bytes(key_info["key"])
+
+
 def _load_rsa_private_key_legacy(pem_data: str) -> rsa.PrivateKey:
     """Load an RSA private key from PEM.
 
@@ -42,9 +83,26 @@ def _load_rsa_private_key_legacy(pem_data: str) -> rsa.PrivateKey:
 
     Returns:
         A parsed rsa.PrivateKey object.
+
+    Raises:
+        ValueError: If the PEM data is in an incorrect format or if key type is not
+            'PRIVATE KEY' or 'RSA PRIVATE KEY'.
     """
+    pem_fmt = (
+        r"^-----BEGIN (?P<private_key_type>(?:RSA )?PRIVATE KEY)-----"
+        r"(?P<der_b64_str>.*)-----END \1-----\n$"
+    )
+    key_match = match(pem_fmt, pem_data, DOTALL)
+    if not key_match:
+        raise ValueError("pem_data: Invalid token.")
+
+    private_key_type = key_match.group("private_key_type")
+    private_key_der = b64decode(key_match.group("der_b64_str"))
+    if private_key_type == "PRIVATE KEY":
+        private_key_der = _convert_pkcs8_der_rsa_to_pkcs1_der(private_key_der)
+
     logger.debug("Loading RSA private key (legacy provider)")
-    return rsa.PrivateKey.load_pkcs1(pem_data.encode("utf-8"))
+    return rsa.PrivateKey.load_pkcs1(private_key_der, "DER")
 
 
 class LegacyAESProvider:
