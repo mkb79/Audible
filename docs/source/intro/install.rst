@@ -14,6 +14,7 @@ It depends on the following packages:
 * pbkdf2
 * Pillow
 * pyaes
+* pyasn1
 * rsa
 
 Optional Dependencies
