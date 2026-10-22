@@ -1,6 +1,6 @@
 import json
 import os
-from datetime import date
+from datetime import date, datetime
 
 import pandas as pd
 
@@ -82,8 +82,26 @@ def get_reading_time_since_signup(client):
 
 
 def get_signup_year(client):
-    # TODO
-    return 2013
+    """Estimate the signup year from the oldest library purchase date.
+
+    The API does not expose account creation, so the earliest purchase
+    date is the closest available signal.
+    """
+    library = client.get(
+        "1.0/library",
+        sort_by="-PurchaseDate",
+        num_results=1000,
+        response_groups="product_attrs",
+    )
+    dates = [
+        item.get("purchase_date")
+        for item in library.get("items", [])
+        if item.get("purchase_date")
+    ]
+    if not dates:
+        return date.today().year
+    oldest = min(datetime.strptime(d[:10], "%Y-%m-%d") for d in dates)
+    return oldest.year
 
 
 def convert_miliseconds_to_hours_minutes_seconds(milliseconds):
