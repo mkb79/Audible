@@ -89,8 +89,8 @@ def get_signup_year(client):
     """
     library = client.get(
         "1.0/library",
-        sort_by="-PurchaseDate",
-        num_results=1000,
+        sort_by="PurchaseDate",
+        num_results=50,
         response_groups="product_attrs",
     )
     dates = [
