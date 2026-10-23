@@ -14,7 +14,7 @@ import httpx
 from bs4 import BeautifulSoup, NavigableString, Tag
 from PIL import Image
 
-from ._device import APP_VERSION, OS_VERSION, SOFTWARE_VERSION
+from ._device import APP_VERSION, SOFTWARE_VERSION
 from .exceptions import AudibleError
 from .json_provider import get_json_provider
 from .metadata import encrypt_metadata, meta_audible_app
@@ -22,8 +22,10 @@ from .metadata import encrypt_metadata, meta_audible_app
 
 logger = logging.getLogger("audible.login")
 
+# WebKit freezes the OS token since iOS 26: the app's web view reports 18_7
+# while the device registers as iOS 26.x.
 USER_AGENT = (
-    f"Mozilla/5.0 (iPhone; CPU iPhone OS {OS_VERSION.replace('.', '_')} like Mac OS X) "
+    "Mozilla/5.0 (iPhone; CPU iPhone OS 18_7 like Mac OS X) "
     "AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148"
 )
 

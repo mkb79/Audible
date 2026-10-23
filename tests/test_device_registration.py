@@ -121,13 +121,20 @@ def test_registration_sends_updated_profile(
 
 
 def test_login_versions_match_registration() -> None:
-    """The initial MAP cookie and browser identity use the same profile."""
+    """The initial MAP cookie uses the same versions as registration."""
     encoded = build_init_cookies()["map-md"]
     metadata = json.loads(base64.b64decode(encoded + "=" * (-len(encoded) % 4)))
 
     assert metadata["device_registration_data"]["software_version"] == "46000856"
     assert metadata["app_identifier"]["app_version"] == "4.60"
-    assert "iPhone OS 26_2 like Mac OS X" in USER_AGENT
+
+
+def test_user_agent_matches_the_app_web_view() -> None:
+    """The sign-in pages see the frozen OS token the app's web view sends."""
+    assert USER_AGENT == (
+        "Mozilla/5.0 (iPhone; CPU iPhone OS 18_7 like Mac OS X) "
+        "AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148"
+    )
 
 
 @pytest.mark.parametrize("with_username", [False, True])
