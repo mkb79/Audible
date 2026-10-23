@@ -715,6 +715,17 @@ def test_wait_starts_no_attempt_once_its_timeout_has_passed(
     assert login.status is LoginStatus.PENDING
 
 
+def test_no_attempt_is_claimed_from_the_deadline_on(clock: FakeClock) -> None:
+    amazon = FakeAmazon(code_pair())
+    login = started_device_login(amazon)
+    clock.now += INTERVAL
+
+    # wait() checks its deadline before polling; this is the claim itself
+    # reached only at the deadline, after a delay in between.
+    assert login._poll(deadline=clock.now) is LoginStatus.PENDING
+    assert amazon.paths == ["/auth/create/codepair"]
+
+
 def test_a_crypto_provider_is_resolved_before_any_request(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:

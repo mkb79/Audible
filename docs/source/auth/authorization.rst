@@ -68,9 +68,7 @@ drive the login yourself or use the ``async_`` methods.
 ``EXPIRED`` or ``ABORTED``. Reading it never sends a request.
 :meth:`~audible.login.DeviceCodeLogin.poll` sends at most one request, and
 only when the next attempt is due; it never sleeps. That makes it suitable
-for a worker thread or a status endpoint of a web application. The request
-itself still blocks while it runs, so an event loop, such as that of a GUI,
-should use :meth:`~audible.login.DeviceCodeLogin.async_poll` instead:
+for a worker thread or a status endpoint of a web application:
 
 .. code-block:: python
 
@@ -87,6 +85,10 @@ should use :meth:`~audible.login.DeviceCodeLogin.async_poll` instead:
        login.poll()
 
    auth = login.result()
+
+The request ``poll()`` sends still blocks while it runs. In an event loop,
+such as that of a GUI, use :meth:`~audible.login.DeviceCodeLogin.async_poll`
+instead.
 
 :meth:`~audible.login.DeviceCodeLogin.result` never blocks either. Before
 the login has ended, it raises :exc:`~audible.exceptions.LoginStateError`;

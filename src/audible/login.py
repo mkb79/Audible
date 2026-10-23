@@ -90,8 +90,11 @@ class _Clock:
         wakeup.wait(seconds)
 
     async def async_sleep(self, seconds: float, wakeup: asyncio.Event) -> None:
+        # Not asyncio.wait_for: on Python 3.11 it can swallow the cancellation
+        # of the task when the event is set at the same moment.
         with contextlib.suppress(TimeoutError):
-            await asyncio.wait_for(wakeup.wait(), seconds)
+            async with asyncio.timeout(seconds):
+                await wakeup.wait()
 
 
 _clock = _Clock()
@@ -420,9 +423,9 @@ class DeviceCodeLogin(_Login):
                 create a code pair. The status is ``FAILED`` then.
         """
         self._claim_start()
-        started_at = _clock.monotonic()
-        request = code_pair_request(self._device, self._locale.domain, self._serial)
         with self._ending_on_failure():
+            started_at = _clock.monotonic()
+            request = code_pair_request(self._device, self._locale.domain, self._serial)
             try:
                 response = self._send(request)
             except httpx.RequestError as exc:
@@ -445,9 +448,9 @@ class DeviceCodeLogin(_Login):
                 create a code pair. The status is ``FAILED`` then.
         """
         self._claim_start()
-        started_at = _clock.monotonic()
-        request = code_pair_request(self._device, self._locale.domain, self._serial)
         with self._ending_on_failure():
+            started_at = _clock.monotonic()
+            request = code_pair_request(self._device, self._locale.domain, self._serial)
             try:
                 response = await self._async_send(request)
             except httpx.RequestError as exc:
@@ -482,7 +485,10 @@ class DeviceCodeLogin(_Login):
         Returns:
             The status after the attempt.
         """
-        request = self._due_request()
+        return self._poll(None)
+
+    def _poll(self, deadline: float | None) -> LoginStatus:
+        request = self._due_request(deadline)
         if request is None:
             return self._status
         response: httpx.Response | None
@@ -507,7 +513,10 @@ class DeviceCodeLogin(_Login):
         Returns:
             The status after the attempt.
         """
-        request = self._due_request()
+        return await self._async_poll(None)
+
+    async def _async_poll(self, deadline: float | None) -> LoginStatus:
+        request = self._due_request(deadline)
         if request is None:
             return self._status
         response: httpx.Response | None
@@ -524,7 +533,14 @@ class DeviceCodeLogin(_Login):
             # attempt already scheduled instead of repeating this one.
             self._in_flight = False
 
-    def _due_request(self) -> RequestSpec | None:
+    def _due_request(self, deadline: float | None) -> RequestSpec | None:
+        """Claim the next attempt and return its request, if one is due.
+
+        Nothing is due before the polling interval has passed, while another
+        request is in flight, once the login has ended, or from ``deadline``
+        on. The checks and the claim happen under the lock, so a concurrent
+        ``cancel()`` or a passing deadline cannot slip in between.
+        """
         if self._status is not LoginStatus.PENDING:
             return None
         if self._code_pair is None:
@@ -538,19 +554,19 @@ class DeviceCodeLogin(_Login):
                 ),
             )
             return None
-        # A second poll() while a request is in flight must not send another,
-        # and neither may a poll() that a concurrent cancel() overtook.
         with self._lock:
             if (
                 self._status is not LoginStatus.PENDING
                 or now < self._next_poll_at
                 or self._in_flight
+                or self._past(deadline)
             ):
                 return None
+            request = code_pair_registration_request(
+                self._device, self._locale.domain, self._serial, self._code_pair
+            )
             self._in_flight = True
-        return code_pair_registration_request(
-            self._device, self._locale.domain, self._serial, self._code_pair
-        )
+        return request
 
     def _handle_poll(self, response: httpx.Response | None) -> LoginStatus:
         if response is None:
@@ -621,7 +637,7 @@ class DeviceCodeLogin(_Login):
         """
         self._require_started()
         deadline = None if timeout is None else _clock.monotonic() + timeout
-        while not self._past(deadline) and self.poll() is LoginStatus.PENDING:
+        while not self._past(deadline) and self._poll(deadline) is LoginStatus.PENDING:
             _clock.sleep(self._sleep_time(deadline), self._wakeup)
         if self._status is LoginStatus.PENDING:
             raise TimeoutError("The login is still pending.")
@@ -658,7 +674,7 @@ class DeviceCodeLogin(_Login):
         try:
             while (
                 not self._past(deadline)
-                and await self.async_poll() is LoginStatus.PENDING
+                and await self._async_poll(deadline) is LoginStatus.PENDING
             ):
                 await _clock.async_sleep(self._sleep_time(deadline), wakeup[1])
         except asyncio.CancelledError:
@@ -819,15 +835,16 @@ class ExternalLogin(_Login):
             authorization_code = extract_authorization_code(
                 redirect_url, self._locale.domain
             )
+            request = authorization_code_registration_request(
+                self._device,
+                self._locale.domain,
+                self._serial,
+                authorization_code,
+                self._code_verifier,
+            )
             # The code is single-use; a second complete() must not send it again.
             self._submitted = True
-        return authorization_code_registration_request(
-            self._device,
-            self._locale.domain,
-            self._serial,
-            authorization_code,
-            self._code_verifier,
-        )
+        return request
 
 
 @overload
