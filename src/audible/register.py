@@ -3,6 +3,7 @@ from typing import Any
 
 import httpx
 
+from ._device import APP_VERSION, OS_VERSION, SOFTWARE_VERSION
 from .login import build_client_id
 from .utils import build_access_token_header
 
@@ -42,15 +43,15 @@ def register(
         "cookies": {"website_cookies": [], "domain": f".amazon.{domain}"},
         "registration_data": {
             "domain": "Device",
-            "app_version": "3.56.2",
+            "app_version": APP_VERSION,
             "device_serial": serial,
             "device_type": "A2CZJZGLK2JJVM",
             "device_name": (
                 "%FIRST_NAME%%FIRST_NAME_POSSESSIVE_STRING%%DUPE_"
                 "STRATEGY_1ST%Audible for iPhone"
             ),
-            "os_version": "15.0.0",
-            "software_version": "35602678",
+            "os_version": OS_VERSION,
+            "software_version": SOFTWARE_VERSION,
             "device_model": "iPhone",
             "app_name": "Audible",
         },

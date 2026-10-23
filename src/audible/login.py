@@ -4,7 +4,7 @@ import io
 import logging
 import re
 import secrets
-import uuid
+import string
 from collections.abc import Callable
 from textwrap import dedent
 from typing import Any
@@ -14,6 +14,7 @@ import httpx
 from bs4 import BeautifulSoup, NavigableString, Tag
 from PIL import Image
 
+from ._device import APP_VERSION, SOFTWARE_VERSION
 from .exceptions import AudibleError
 from .json_provider import get_json_provider
 from .metadata import encrypt_metadata, meta_audible_app
@@ -21,8 +22,10 @@ from .metadata import encrypt_metadata, meta_audible_app
 
 logger = logging.getLogger("audible.login")
 
+# WebKit freezes the OS token since iOS 26: the app's web view reports 18_7
+# while the device registers as iOS 26.x.
 USER_AGENT = (
-    "Mozilla/5.0 (iPhone; CPU iPhone OS 15_0 like Mac OS X) "
+    "Mozilla/5.0 (iPhone; CPU iPhone OS 18_7 like Mac OS X) "
     "AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148"
 )
 
@@ -241,7 +244,13 @@ def create_s256_code_challenge(verifier: bytes) -> bytes:
 
 
 def build_device_serial() -> str:
-    return uuid.uuid4().hex.upper()
+    """Generate a fresh 40-character alphanumeric device serial.
+
+    Returns:
+        A random serial containing only ASCII letters and digits.
+    """
+    alphabet = string.ascii_letters + string.digits
+    return "".join(secrets.choice(alphabet) for _ in range(40))
 
 
 def build_client_id(serial: str) -> str:
@@ -309,8 +318,11 @@ def build_init_cookies() -> dict[str, str]:
 
     map_md_dict = {
         "device_user_dictionary": [],
-        "device_registration_data": {"software_version": "35602678"},
-        "app_identifier": {"app_version": "3.56.2", "bundle_id": "com.audible.iphone"},
+        "device_registration_data": {"software_version": SOFTWARE_VERSION},
+        "app_identifier": {
+            "app_version": APP_VERSION,
+            "bundle_id": "com.audible.iphone",
+        },
     }
     map_md_str = get_json_provider().dumps(map_md_dict)
     map_md = base64.b64encode(map_md_str.encode()).decode().rstrip("=")
