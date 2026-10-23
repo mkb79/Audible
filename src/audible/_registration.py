@@ -18,8 +18,8 @@ import hashlib
 import json
 import math
 import secrets
+import string
 import time
-import uuid
 from typing import TYPE_CHECKING, Any, NamedTuple
 from urllib.parse import parse_qs, urlencode, urlsplit
 
@@ -72,8 +72,9 @@ class PollOutcome(enum.Enum):
 
 
 def build_device_serial() -> str:
-    """Return a new random device serial."""
-    return uuid.uuid4().hex.upper()
+    """Return a new random serial of 40 ASCII letters and digits."""
+    alphabet = string.ascii_letters + string.digits
+    return "".join(secrets.choice(alphabet) for _ in range(40))
 
 
 def build_client_id(device: DeviceProfile, serial: str) -> str:
@@ -442,44 +443,48 @@ def registration_credentials(response: httpx.Response, serial: str) -> dict[str,
     }
 
 
-def deregister(
+def deregistration_request(
     access_token: str,
     domain: str,
-    deregister_all: bool = False,
-    with_username: bool = False,
-) -> Any:
-    """Deregister a previously registered Audible device.
-
-    Note:
-        Except of the ``access_token``, all authentication data will lose
-        validation immediately.
+    *,
+    deregister_all: bool,
+    with_username: bool,
+) -> RequestSpec:
+    """Build the request that deregisters a device.
 
     Args:
-        access_token: The access token from the previous registered device
-            which you want to deregister.
-        domain: The top level domain of the requested Amazon server (e.g. com).
-        deregister_all: If ``True``, deregister all Audible devices on Amazon.
-        with_username: If ``True`` uses `audible` domain instead of `amazon`.
+        access_token: An access token of the device to deregister.
+        domain: The top level domain of the marketplace (e.g. com).
+        deregister_all: If ``True``, deregister all Audible devices of the
+            account.
+        with_username: If ``True``, the device belongs to a pre-Amazon
+            account and is deregistered at Audible instead of Amazon.
 
     Returns:
-        The response for the deregister request. Contains errors, if some occurs.
-
-    Raises:
-        Exception: If response status code is not 200.
+        The request to send.
     """
-    body = {"deregister_all_existing_accounts": deregister_all}
-    headers = build_access_token_header(access_token)
-
     target_domain = "audible" if with_username else "amazon"
-
-    resp = httpx.post(
+    return RequestSpec(
         f"https://api.{target_domain}.{domain}/auth/deregister",
-        json=body,
-        headers=headers,
+        {"deregister_all_existing_accounts": deregister_all},
+        build_access_token_header(access_token),
     )
 
-    resp_json = resp.json()
-    if resp.status_code != 200:
-        raise Exception(resp_json)
 
+def deregistration_result(response: httpx.Response) -> Any:
+    """Return the body of a ``/auth/deregister`` response.
+
+    Args:
+        response: The response to the deregistration request.
+
+    Returns:
+        The decoded response body.
+
+    Raises:
+        Exception: If the response status code is not 200. The decoded body
+            is its argument.
+    """
+    resp_json = response.json()
+    if response.status_code != 200:
+        raise Exception(resp_json)
     return resp_json

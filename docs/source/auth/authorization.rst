@@ -53,8 +53,9 @@ in time, ``wait()`` raises :exc:`~audible.exceptions.LoginExpiredError`.
 
 .. note::
 
-   The device-code login has been confirmed on the German marketplace.
-   Other marketplaces use the same requests but have not been tested yet.
+   The device-code login has been confirmed on the German and French
+   marketplaces. Other marketplaces use the same requests but have not been
+   tested yet.
 
 Status and non-blocking use
 ---------------------------
@@ -127,6 +128,32 @@ before the code is confirmed, start a new login.
    register the device after the login was cancelled, the device appears in
    the device list of the account without credentials. Remove it there.
 
+Several devices at once
+-----------------------
+
+Every login is an object of its own, without shared state. Several logins
+can run at the same time, as asyncio tasks or in threads:
+
+.. code-block:: python
+
+   logins = [audible.create_login(code) for code in ("de", "fr", "uk")]
+   prompts = await asyncio.gather(*(login.async_start() for login in logins))
+   show(prompts)
+
+   auths = await asyncio.gather(*(login.async_wait() for login in logins))
+
+A waiting login always ends: every request has a timeout of 25 seconds, and
+``wait()`` returns once the code has expired, at the latest after the request
+in progress. ``cancel()`` wakes a sleeping ``wait()`` or ``async_wait()`` at
+once, also from another thread. An httpx client passed as ``client`` or
+``async_client`` is used as it is; give it a timeout as well, or a stalled
+connection blocks the login.
+
+While polling, the login retries overload answers (HTTP 429 and 5xx) and
+network errors with a growing delay. Creating the code is not retried: if
+Amazon refuses it, ``start()`` raises
+:exc:`~audible.exceptions.LoginFailedError`.
+
 Pre-Amazon accounts
 ===================
 
@@ -156,9 +183,17 @@ final URL to ``complete()``.
 
 .. note::
 
-   If you are using macOS and have trouble pasting the URL into ``input()``,
-   import the ``readline`` module in your script. See
+   The URL is long, often more than 1,000 characters. On macOS, ``input()``
+   cuts a pasted line off at 1,024 characters unless the ``readline`` module
+   has been imported (``import readline``). See
    `#34 <https://github.com/mkb79/Audible/issues/34#issuecomment-766408640>`_.
+   An application can also take the URL from a text field or a file.
+
+The authorization code in the URL is valid once. If ``complete()`` has sent
+it and the registration failed, start a new login.
+
+The browser sign-in exists for pre-Amazon accounts only. Amazon accounts
+register with the device code; a URL from ``www.amazon.<tld>`` is refused.
 
 Errors
 ======
@@ -196,5 +231,8 @@ Amazon now asks for password, OTP or CAPTCHA on its own sign-in page.
 - ``audible.register.deregister(...)``:
   :meth:`~audible.auth.Authenticator.deregister_device`.
 
-Authentication files saved by earlier versions load unchanged with
+An :class:`~audible.auth.Authenticator` now comes from a finished login,
+from :meth:`~audible.auth.Authenticator.from_file` or from
+:meth:`~audible.auth.Authenticator.from_dict`. Authentication files saved by
+earlier versions load unchanged with
 :meth:`~audible.auth.Authenticator.from_file`.

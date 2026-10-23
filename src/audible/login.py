@@ -88,8 +88,9 @@ class _Clock:
     def sleep(self, seconds: float, wakeup: threading.Event) -> None:
         wakeup.wait(seconds)
 
-    async def async_sleep(self, seconds: float) -> None:
-        await asyncio.sleep(seconds)
+    async def async_sleep(self, seconds: float, wakeup: asyncio.Event) -> None:
+        with contextlib.suppress(TimeoutError):
+            await asyncio.wait_for(wakeup.wait(), seconds)
 
 
 _clock = _Clock()
@@ -221,10 +222,10 @@ class _Login:
     def cancel(self) -> bool:
         """Cancel the login if it is still pending.
 
-        The status changes to ``ABORTED`` at once. A ``wait()`` sleeping in
-        another thread wakes up immediately, an ``async_wait()`` at its next
-        wake-up; either finishes a request in progress first. Cancelling
-        the task that runs ``async_wait()`` stops it at once instead. A
+        The status changes to ``ABORTED`` at once. A sleeping ``wait()`` or
+        ``async_wait()`` wakes up immediately, also when called from another
+        thread; either finishes a request in progress first. Cancelling the
+        task that runs ``async_wait()`` stops it at once instead. A
         registration request already sent cannot be taken back: should
         Amazon register the device anyway, it appears in the device list of
         the account without credentials and has to be removed there.
@@ -279,9 +280,12 @@ class _Login:
         if self._status is not LoginStatus.PENDING and self._error is not None:
             _reraise(self._error)
 
-    def _require_unstarted(self) -> None:
-        if self._started or self._status is not LoginStatus.PENDING:
-            raise LoginStateError("The login was already started or has ended.")
+    def _claim_start(self) -> None:
+        """Mark the login as started, so that a second ``start()`` fails."""
+        with self._lock:
+            if self._started or self._status is not LoginStatus.PENDING:
+                raise LoginStateError("The login was already started or has ended.")
+            self._started = True
 
     def _require_started(self) -> None:
         if not self._started and self._status is LoginStatus.PENDING:
@@ -344,9 +348,11 @@ class DeviceCodeLogin(_Login):
         crypto_provider: Optional crypto provider for the resulting
             authenticator (class or instance).
         client: HTTP client for the sync methods. If ``None``, each request
-            uses a short-lived client.
+            uses a short-lived client with a 25-second timeout. A client of
+            your own needs a timeout too, or a stalled connection blocks the
+            login.
         async_client: HTTP client for the async methods. If ``None``, each
-            request uses a short-lived client.
+            request uses a short-lived client with a 25-second timeout.
     """
 
     def __init__(
@@ -372,6 +378,7 @@ class DeviceCodeLogin(_Login):
         self._in_flight = False
         self._failures = 0
         self._wakeup = threading.Event()
+        self._async_wakeups: list[tuple[asyncio.AbstractEventLoop, asyncio.Event]] = []
 
     @property
     def next_poll_delay(self) -> float:
@@ -396,7 +403,7 @@ class DeviceCodeLogin(_Login):
             LoginFailedError: If the network failed or Amazon refused to
                 create a code pair. The status is ``FAILED`` then.
         """
-        self._require_unstarted()
+        self._claim_start()
         started_at = _clock.monotonic()
         request = code_pair_request(self._device, self._locale.domain, self._serial)
         with self._ending_on_failure():
@@ -421,7 +428,7 @@ class DeviceCodeLogin(_Login):
             LoginFailedError: If the network failed or Amazon refused to
                 create a code pair. The status is ``FAILED`` then.
         """
-        self._require_unstarted()
+        self._claim_start()
         started_at = _clock.monotonic()
         request = code_pair_request(self._device, self._locale.domain, self._serial)
         with self._ending_on_failure():
@@ -441,7 +448,6 @@ class DeviceCodeLogin(_Login):
         # Counted from before the request, so the code never outlives Amazon's.
         self._expires_at = started_at + code_pair.expires_in
         self._next_poll_at = now + code_pair.interval
-        self._started = True
         logger.info("Created a device code for %s.", self._locale.country_code)
         return DeviceCodePrompt(
             code_pair.public_code,
@@ -509,9 +515,10 @@ class DeviceCodeLogin(_Login):
             )
             return None
         # A second poll() while a request is in flight must not send another.
-        if now < self._next_poll_at or self._in_flight:
-            return None
-        self._in_flight = True
+        with self._lock:
+            if now < self._next_poll_at or self._in_flight:
+                return None
+            self._in_flight = True
         return code_pair_registration_request(
             self._device, self._locale.domain, self._serial, self._code_pair
         )
@@ -614,15 +621,21 @@ class DeviceCodeLogin(_Login):
             asyncio.CancelledError: If the awaiting task was cancelled.
         """
         deadline = None if timeout is None else _clock.monotonic() + timeout
+        wakeup = (asyncio.get_running_loop(), asyncio.Event())
+        with self._lock:
+            self._async_wakeups.append(wakeup)
         try:
             while await self.async_poll() is LoginStatus.PENDING:
                 delay = self._sleep_time(deadline)
                 if delay is None:
                     raise TimeoutError("The login is still pending.")
-                await _clock.async_sleep(delay)
+                await _clock.async_sleep(delay, wakeup[1])
         except asyncio.CancelledError:
             self.cancel()
             raise
+        finally:
+            with self._lock:
+                self._async_wakeups.remove(wakeup)
         return self.result()
 
     def _end(
@@ -634,6 +647,12 @@ class DeviceCodeLogin(_Login):
     ) -> bool:
         ended = super()._end(status, error=error, authenticator=authenticator)
         self._wakeup.set()
+        with self._lock:
+            wakeups = list(self._async_wakeups)
+        for loop, event in wakeups:
+            # The loop may already be closed if its async_wait() was abandoned.
+            with contextlib.suppress(RuntimeError):
+                loop.call_soon_threadsafe(event.set)
         return ended
 
 
@@ -653,9 +672,10 @@ class ExternalLogin(_Login):
         crypto_provider: Optional crypto provider for the resulting
             authenticator (class or instance).
         client: HTTP client for :meth:`complete`. If ``None``, a short-lived
-            client is used.
+            client with a 25-second timeout is used. A client of your own
+            needs a timeout too, or a stalled connection blocks the login.
         async_client: HTTP client for :meth:`async_complete`. If ``None``, a
-            short-lived client is used.
+            short-lived client with a 25-second timeout is used.
 
     Raises:
         ValueError: If the marketplace has no pre-Amazon accounts.
@@ -691,9 +711,8 @@ class ExternalLogin(_Login):
         Returns:
             The URL to open in a browser.
         """
-        self._require_unstarted()
+        self._claim_start()
         self._code_verifier = create_code_verifier()
-        self._started = True
         return ExternalLoginPrompt(
             pre_amazon_login_url(
                 self._device, self._locale, self._serial, self._code_verifier
@@ -760,13 +779,14 @@ class ExternalLogin(_Login):
 
     def _registration_request(self, redirect_url: str) -> RequestSpec:
         self._require_started()
-        if self._status is not LoginStatus.PENDING or self._submitted:
-            raise LoginStateError("The login is no longer waiting for a URL.")
-        authorization_code = extract_authorization_code(
-            redirect_url, self._locale.domain
-        )
-        # The code is single-use; a second complete() must not send it again.
-        self._submitted = True
+        with self._lock:
+            if self._status is not LoginStatus.PENDING or self._submitted:
+                raise LoginStateError("The login is no longer waiting for a URL.")
+            authorization_code = extract_authorization_code(
+                redirect_url, self._locale.domain
+            )
+            # The code is single-use; a second complete() must not send it again.
+            self._submitted = True
         return authorization_code_registration_request(
             self._device,
             self._locale.domain,

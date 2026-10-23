@@ -5,9 +5,11 @@ app for another platform sends different ones: at registration, in token and
 cookie refreshes, in the browser sign-in of pre-Amazon accounts and in the
 activation-bytes request. A new app version is changed in this one place.
 
-:data:`IPHONE` reports the app and software version the device-code
-registration was confirmed with on Audible.de. The software version is the
-build number of exactly that app version, so the two change together.
+:data:`IPHONE` reports Audible for iPhone 4.60 on iOS 26.2. Devices registered
+with the older 3.56.2 profile and a 32-character serial can be refused ADRM
+licenses with ``AYCL / CustomerThrottled``; this profile is granted them. The
+software version is the build number of exactly that app version, so the two
+change together.
 """
 
 from __future__ import annotations
@@ -54,8 +56,6 @@ class DeviceProfile:
     player_model: str
 
 
-_IOS_VERSION = "27.0.1"
-
 IPHONE = DeviceProfile(
     device_type="A2CZJZGLK2JJVM",
     registration_domain="Device",
@@ -64,13 +64,15 @@ IPHONE = DeviceProfile(
         "%FIRST_NAME%%FIRST_NAME_POSSESSIVE_STRING%%DUPE_STRATEGY_1ST%"
         "Audible for iPhone"
     ),
-    os_version=_IOS_VERSION,
-    software_version="45602826",
+    os_version="26.2",
+    software_version="46000856",
     app_name="Audible",
-    app_version="4.56.2",
+    app_version="4.60",
+    # WebKit freezes the OS token since iOS 26: the app's web view reports 18_7
+    # while the device registers as iOS 26.x.
     user_agent=(
-        f"Mozilla/5.0 (iPhone; CPU iPhone OS {_IOS_VERSION.replace('.', '_')} like "
-        "Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148"
+        "Mozilla/5.0 (iPhone; CPU iPhone OS 18_7 like Mac OS X) "
+        "AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148"
     ),
     sign_in_assoc_handle="amzn_audible_ios_lap",
     sign_in_page_id="amzn_audible_ios_privatepool",

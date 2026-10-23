@@ -111,7 +111,7 @@ Default sessions (run with `uv run nox`):
 
 ### Core Components
 
-**Authenticator (`auth.py`)**: Holds the credentials of a registered device: request signing, token refresh, deregistration, and credential storage. Supports encrypted file-based credential storage with AES encryption.
+**Authenticator (`auth.py`)**: Holds the credentials of a registered device: request signing, token refresh, deregistration, and credential storage. Supports encrypted file-based credential storage with AES encryption. An instance comes from a finished login, `from_file` or `from_dict`; there is no login classmethod. `deregister_device()` sends the request `_registration.py` builds.
 
 **Client (`client.py`)**: HTTP client wrapper providing both sync (`Client`) and async (`AsyncClient`) interfaces. Handles request/response lifecycle, error mapping, and automatic authentication. Uses httpx as the underlying HTTP library.
 

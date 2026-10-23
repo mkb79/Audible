@@ -156,6 +156,12 @@ Audible package.
    The :class:`Authenticator` with the  classmethods ``from_file`` and
    ``from_login``
 
+.. versionchanged:: v0.14.0
+
+   ``from_login`` and ``from_login_external`` are removed. An
+   :class:`Authenticator` comes from :func:`audible.create_login`,
+   ``from_file`` or ``from_dict``.
+
 A new device is registered with :func:`audible.create_login`, whose
 ``result()`` is an :class:`Authenticator` that authenticates requests with the
 received data. The :meth:`Authenticator.from_file` classmethod is used to load

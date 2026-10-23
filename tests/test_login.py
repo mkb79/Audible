@@ -4,8 +4,10 @@ from __future__ import annotations
 
 import asyncio
 import base64
+import concurrent.futures
 import hashlib
 import json
+import re
 import time
 from collections.abc import Callable
 from typing import Any
@@ -18,7 +20,11 @@ import audible
 import audible.login as login_mod
 from audible._device import IPHONE
 from audible._registration import build_client_id
-from audible.auth import Authenticator, _refresh_token_request_body
+from audible.auth import (
+    Authenticator,
+    _refresh_token_request_body,
+    refresh_website_cookies,
+)
 from audible.exceptions import (
     LoginAbortedError,
     LoginExpiredError,
@@ -53,7 +59,7 @@ class FakeClock:
         self.slept.append(seconds)
         self.now += seconds
 
-    async def async_sleep(self, seconds: float) -> None:
+    async def async_sleep(self, seconds: float, wakeup: Any) -> None:
         self.slept.append(seconds)
         self.now += seconds
         await asyncio.sleep(0)
@@ -160,6 +166,24 @@ def test_pre_amazon_login_is_refused_outside_de_us_uk() -> None:
         create_login("fr", with_username=True)
 
 
+def test_generated_serials_are_40_ascii_letters_and_digits() -> None:
+    serials = {DeviceCodeLogin("de").serial for _ in range(32)}
+
+    assert len(serials) == 32
+    assert all(re.fullmatch(r"[A-Za-z0-9]{40}", serial) for serial in serials)
+
+
+@pytest.mark.parametrize("serial", ["A" * 32, "aB3" * 13 + "Z"])
+def test_a_supplied_serial_is_kept_whole_in_the_client_id(serial: str) -> None:
+    login = ExternalLogin("de", serial=serial)
+
+    params = parse_qs(urlsplit(login.start().login_url).query)
+    client_id = params["openid.oa2.client_id"][0].removeprefix("device:")
+
+    assert login.serial == serial
+    assert bytes.fromhex(client_id) == f"{serial}#A2CZJZGLK2JJVM".encode()
+
+
 # DeviceCodeLogin
 
 
@@ -197,7 +221,10 @@ def test_device_code_requests_carry_the_confirmed_wire_format(
     create, register = amazon.requests
     assert str(create.url) == "https://api.amazon.de/auth/create/codepair"
     assert create.headers["x-amzn-identity-auth-domain"] == "api.amazon.de"
-    assert "iPhone OS 27_0_1 like Mac OS X" in create.headers["user-agent"]
+    assert create.headers["user-agent"] == (
+        "Mozilla/5.0 (iPhone; CPU iPhone OS 18_7 like Mac OS X) "
+        "AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148"
+    )
     assert amazon.body(0)["code_data"] == {
         "device_serial": SERIAL,
         "device_type": "A2CZJZGLK2JJVM",
@@ -213,9 +240,9 @@ def test_device_code_requests_carry_the_confirmed_wire_format(
     assert body["requested_token_type"] == ["bearer", "mac_dms", "website_cookies"]
     assert body["registration_data"]["device_serial"] == SERIAL
     assert body["registration_data"]["domain"] == "Device"
-    assert body["registration_data"]["app_version"] == "4.56.2"
-    assert body["registration_data"]["software_version"] == "45602826"
-    assert body["registration_data"]["os_version"] == "27.0.1"
+    assert body["registration_data"]["app_version"] == "4.60"
+    assert body["registration_data"]["software_version"] == "46000856"
+    assert body["registration_data"]["os_version"] == "26.2"
 
 
 def test_async_device_code_login_registers_once_the_code_is_confirmed(
@@ -506,6 +533,93 @@ def test_the_repr_shows_no_codes(clock: FakeClock) -> None:
     assert repr(login) == "DeviceCodeLogin(locale='de', status=PENDING)"
 
 
+# Several logins at once
+
+
+def parallel_logins(
+    auth_fixture_data: dict[str, Any], count: int = 5, *, use_async: bool = False
+) -> list[DeviceCodeLogin]:
+    logins = []
+    for index in range(count):
+        serial = f"SERIAL{index}".ljust(40, "0")
+        amazon = FakeAmazon(
+            code_pair(), pending(), registered(auth_fixture_data, serial)
+        )
+        if use_async:
+            login = DeviceCodeLogin(
+                "de", serial=serial, async_client=amazon.async_client()
+            )
+        else:
+            login = DeviceCodeLogin("de", serial=serial, client=amazon.client())
+        logins.append(login)
+    return logins
+
+
+def test_device_code_logins_in_parallel_threads_all_finish(
+    clock: FakeClock, auth_fixture_data: dict[str, Any]
+) -> None:
+    logins = parallel_logins(auth_fixture_data)
+    for login in logins:
+        login.start()
+
+    with concurrent.futures.ThreadPoolExecutor(max_workers=len(logins)) as pool:
+        results = list(pool.map(DeviceCodeLogin.wait, logins, timeout=10))
+
+    assert [auth.device_info for auth in results] == [
+        {"device_serial_number": login.serial} for login in logins
+    ]
+    assert {login.status for login in logins} == {LoginStatus.FINISHED}
+
+
+def test_device_code_logins_in_one_event_loop_all_finish(
+    clock: FakeClock, auth_fixture_data: dict[str, Any]
+) -> None:
+    logins = parallel_logins(auth_fixture_data, use_async=True)
+
+    async def run() -> list[Authenticator]:
+        await asyncio.gather(*(login.async_start() for login in logins))
+        waits = asyncio.gather(*(login.async_wait() for login in logins))
+        return await asyncio.wait_for(waits, 10)
+
+    results = asyncio.run(run())
+
+    assert [auth.device_info for auth in results] == [
+        {"device_serial_number": login.serial} for login in logins
+    ]
+
+
+def test_cancel_from_another_thread_wakes_a_sleeping_wait() -> None:
+    amazon = FakeAmazon(code_pair(interval=60))
+    login = DeviceCodeLogin("de", serial=SERIAL, client=amazon.client())
+    login.start()
+
+    with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
+        waiting = pool.submit(login.wait)
+        time.sleep(0.1)
+        login.cancel()
+        with pytest.raises(LoginAbortedError):
+            waiting.result(timeout=5)
+
+    assert amazon.paths == ["/auth/create/codepair"]
+
+
+def test_cancel_from_another_thread_wakes_a_sleeping_async_wait() -> None:
+    amazon = FakeAmazon(code_pair(interval=60))
+
+    async def run() -> None:
+        login = DeviceCodeLogin("de", serial=SERIAL, async_client=amazon.async_client())
+        await login.async_start()
+        waiting = asyncio.create_task(login.async_wait())
+        await asyncio.sleep(0.1)
+        await asyncio.to_thread(login.cancel)
+        with pytest.raises(LoginAbortedError):
+            await asyncio.wait_for(waiting, 5)
+
+    asyncio.run(run())
+
+    assert amazon.paths == ["/auth/create/codepair"]
+
+
 # ExternalLogin
 
 
@@ -548,6 +662,9 @@ def test_external_login_registers_with_the_returned_code(
     assert body["auth_data"]["client_id"] == build_client_id(IPHONE, SERIAL)
     assert challenge.rstrip(b"=").decode() == params["openid.oa2.code_challenge"][0]
     assert "store_authentication_cookie" in body["requested_token_type"]
+    assert body["registration_data"]["app_version"] == "4.60"
+    assert body["registration_data"]["software_version"] == "46000856"
+    assert body["registration_data"]["os_version"] == "26.2"
     assert login.status is LoginStatus.FINISHED
     assert auth.with_username is True
     assert auth.store_authentication_cookie == {"cookie": "STORE"}
@@ -659,4 +776,24 @@ def test_a_registered_device_round_trips_through_to_dict(
 def test_token_refresh_reports_the_registered_app_version() -> None:
     body = _refresh_token_request_body("Atnr|TOKEN")
 
-    assert body["app_version"] == "4.56.2"
+    assert body["app_version"] == "4.60"
+
+
+@pytest.mark.parametrize("with_username", [False, True])
+def test_cookie_refresh_reports_the_registered_app_version(
+    monkeypatch: pytest.MonkeyPatch, with_username: bool
+) -> None:
+    target = "audible" if with_username else "amazon"
+
+    def fake_post(url: str, *, data: dict[str, str]) -> httpx.Response:
+        assert url == f"https://www.{target}.de/ap/exchangetoken/cookies"
+        assert data["app_version"] == "4.60"
+        return httpx.Response(
+            200,
+            request=httpx.Request("POST", url),
+            json={"response": {"tokens": {"cookies": {}}}},
+        )
+
+    monkeypatch.setattr(httpx, "post", fake_post)
+
+    assert refresh_website_cookies("Atnr|TOKEN", "de", "de", with_username) == {}

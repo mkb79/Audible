@@ -18,7 +18,7 @@ import httpx
 from httpx import Cookies
 
 from ._device import IPHONE
-from ._registration import deregister as deregister_
+from ._registration import deregistration_request, deregistration_result
 from .activation_bytes import get_activation_bytes as get_ab
 from .aescipher import AESCipher, detect_file_encryption
 from .crypto_provider import get_crypto_providers
@@ -740,12 +740,14 @@ class Authenticator(httpx.Auth):
         if self.locale is None:
             raise Exception("No locale found.")
 
-        return deregister_(
-            access_token=self.access_token,
+        request = deregistration_request(
+            self.access_token,
+            self.locale.domain,
             deregister_all=deregister_all,
-            domain=self.locale.domain,
             with_username=self.with_username or False,
         )
+        response = httpx.post(request.url, json=request.body, headers=request.headers)
+        return deregistration_result(response)
 
     def _get_async_refresh_lock(self) -> asyncio.Lock:
         """Return an asyncio lock bound to the current running event loop.
