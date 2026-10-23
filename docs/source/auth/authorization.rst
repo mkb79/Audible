@@ -68,7 +68,9 @@ drive the login yourself or use the ``async_`` methods.
 ``EXPIRED`` or ``ABORTED``. Reading it never sends a request.
 :meth:`~audible.login.DeviceCodeLogin.poll` sends at most one request, and
 only when the next attempt is due; it never sleeps. That makes it suitable
-for a GUI timer or a status endpoint of a web application:
+for a worker thread or a status endpoint of a web application. The request
+itself still blocks while it runs, so an event loop, such as that of a GUI,
+should use :meth:`~audible.login.DeviceCodeLogin.async_poll` instead:
 
 .. code-block:: python
 
@@ -144,10 +146,11 @@ can run at the same time, as asyncio tasks or in threads:
 
    auths = await asyncio.gather(*(login.async_wait() for login in logins))
 
-A waiting login always ends: every request has a timeout of 25 seconds, and
-``wait()`` returns once the code has expired, at the latest after the request
-in progress. ``cancel()`` wakes a sleeping ``wait()`` or ``async_wait()`` at
-once, also from another thread. To use an httpx client of your own, create
+A waiting login does not hang on a dead connection: connecting, sending and
+every read of a request time out after 25 seconds, and ``wait()`` returns
+once the code has expired, at the latest after the request in progress.
+``cancel()`` wakes a sleeping ``wait()`` or ``async_wait()`` at once, also
+from another thread. To use an httpx client of your own, create
 :class:`~audible.login.DeviceCodeLogin` or
 :class:`~audible.login.ExternalLogin` directly and pass it as ``client`` or
 ``async_client``. It is used as it is; give it a timeout as well, or a

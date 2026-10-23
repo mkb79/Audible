@@ -4,10 +4,11 @@ from __future__ import annotations
 
 import asyncio
 import base64
-import concurrent.futures
+import functools
 import hashlib
 import json
 import re
+import threading
 import time
 from collections.abc import Callable
 from typing import Any
@@ -25,6 +26,7 @@ from audible.auth import (
     _refresh_token_request_body,
     refresh_website_cookies,
 )
+from audible.crypto_provider import PycryptodomeProvider
 from audible.exceptions import (
     LoginAbortedError,
     LoginExpiredError,
@@ -51,8 +53,12 @@ class FakeClock:
     def __init__(self) -> None:
         self.now = 1000.0
         self.slept: list[float] = []
+        self.on_read: Callable[[], object] | None = None
 
     def monotonic(self) -> float:
+        if self.on_read is not None:
+            hook, self.on_read = self.on_read, None
+            hook()
         return self.now
 
     def sleep(self, seconds: float, wakeup: Any) -> None:
@@ -571,6 +577,37 @@ def test_the_repr_shows_no_codes(clock: FakeClock) -> None:
 # Several logins at once
 
 
+def in_daemon_threads(*functions: Callable[[], Any], timeout: float = 10) -> list[Any]:
+    """Run each function in a thread of its own and return the results in order.
+
+    The threads are daemons, so a deadlocked login fails the test after
+    ``timeout`` instead of keeping the test run from ever finishing.
+    """
+    results: list[Any] = [None] * len(functions)
+    errors: list[BaseException] = []
+
+    def run(index: int, function: Callable[[], Any]) -> None:
+        try:
+            results[index] = function()
+        except BaseException as exc:
+            errors.append(exc)
+
+    threads = [
+        threading.Thread(target=run, args=(index, function), daemon=True)
+        for index, function in enumerate(functions)
+    ]
+    for thread in threads:
+        thread.start()
+    deadline = time.monotonic() + timeout
+    for thread in threads:
+        thread.join(max(0.0, deadline - time.monotonic()))
+    if any(thread.is_alive() for thread in threads):
+        pytest.fail(f"A login did not finish within {timeout} seconds.")
+    if errors:
+        raise errors[0]
+    return results
+
+
 def parallel_logins(
     auth_fixture_data: dict[str, Any], count: int = 5, *, use_async: bool = False
 ) -> list[DeviceCodeLogin]:
@@ -597,8 +634,7 @@ def test_device_code_logins_in_parallel_threads_all_finish(
     for login in logins:
         login.start()
 
-    with concurrent.futures.ThreadPoolExecutor(max_workers=len(logins)) as pool:
-        results = list(pool.map(DeviceCodeLogin.wait, logins, timeout=10))
+    results = in_daemon_threads(*(login.wait for login in logins))
 
     assert [auth.device_info for auth in results] == [
         {"device_serial_number": login.serial} for login in logins
@@ -613,10 +649,9 @@ def test_device_code_logins_in_one_event_loop_all_finish(
 
     async def run() -> list[Authenticator]:
         await asyncio.gather(*(login.async_start() for login in logins))
-        waits = asyncio.gather(*(login.async_wait() for login in logins))
-        return await asyncio.wait_for(waits, 10)
+        return await asyncio.gather(*(login.async_wait() for login in logins))
 
-    results = asyncio.run(run())
+    [results] = in_daemon_threads(functools.partial(asyncio.run, run()))
 
     assert [auth.device_info for auth in results] == [
         {"device_serial_number": login.serial} for login in logins
@@ -628,12 +663,12 @@ def test_cancel_from_another_thread_wakes_a_sleeping_wait() -> None:
     login = DeviceCodeLogin("de", serial=SERIAL, client=amazon.client())
     login.start()
 
-    with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
-        waiting = pool.submit(login.wait)
+    def cancel_soon() -> None:
         time.sleep(0.1)
         login.cancel()
-        with pytest.raises(LoginAbortedError):
-            waiting.result(timeout=5)
+
+    with pytest.raises(LoginAbortedError):
+        in_daemon_threads(login.wait, cancel_soon, timeout=5)
 
     assert amazon.paths == ["/auth/create/codepair"]
 
@@ -646,13 +681,68 @@ def test_cancel_from_another_thread_wakes_a_sleeping_async_wait() -> None:
         await login.async_start()
         waiting = asyncio.create_task(login.async_wait())
         await asyncio.sleep(0.1)
-        await asyncio.to_thread(login.cancel)
+        threading.Thread(target=login.cancel).start()
         with pytest.raises(LoginAbortedError):
-            await asyncio.wait_for(waiting, 5)
+            await waiting
 
-    asyncio.run(run())
+    in_daemon_threads(functools.partial(asyncio.run, run()), timeout=5)
 
     assert amazon.paths == ["/auth/create/codepair"]
+
+
+def test_a_poll_overtaken_by_cancel_sends_nothing(clock: FakeClock) -> None:
+    amazon = FakeAmazon(code_pair())
+    login = started_device_login(amazon)
+    clock.now += INTERVAL
+    # cancel() lands after poll() checked the status, before it claims the
+    # request: the moment poll() reads the clock.
+    clock.on_read = login.cancel
+
+    assert login.poll() is LoginStatus.ABORTED
+    assert amazon.paths == ["/auth/create/codepair"]
+
+
+def test_wait_starts_no_attempt_once_its_timeout_has_passed(
+    clock: FakeClock,
+) -> None:
+    amazon = FakeAmazon(code_pair())
+    login = started_device_login(amazon)
+
+    with pytest.raises(TimeoutError):
+        login.wait(timeout=INTERVAL)
+
+    assert amazon.paths == ["/auth/create/codepair"]
+    assert login.status is LoginStatus.PENDING
+
+
+def test_a_crypto_provider_is_resolved_before_any_request(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    def unavailable(provider: object) -> object:
+        raise ImportError("not installed")
+
+    monkeypatch.setattr(login_mod, "get_crypto_providers", unavailable)
+
+    with pytest.raises(ImportError):
+        DeviceCodeLogin("de", crypto_provider=PycryptodomeProvider)
+
+
+def test_a_failure_while_building_the_authenticator_ends_the_login(
+    clock: FakeClock,
+    auth_fixture_data: dict[str, Any],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    def broken(*args: object, **kwargs: object) -> Authenticator:
+        raise RuntimeError("broken")
+
+    amazon = FakeAmazon(code_pair(), registered(auth_fixture_data))
+    login = started_device_login(amazon)
+    monkeypatch.setattr(Authenticator, "from_dict", broken)
+
+    with pytest.raises(RuntimeError):
+        login.wait()
+
+    assert login.status is LoginStatus.ABORTED
 
 
 # ExternalLogin

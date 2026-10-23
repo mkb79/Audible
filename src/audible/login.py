@@ -57,6 +57,7 @@ from ._registration import (
     verification_url,
 )
 from .auth import Authenticator
+from .crypto_provider import get_crypto_providers
 from .exceptions import (
     LoginAbortedError,
     LoginError,
@@ -165,7 +166,11 @@ class _Login:
         self._locale: Locale = test_convert("locale", locale)
         self._device = IPHONE
         self._serial = serial or build_device_serial()
-        self._crypto_provider = crypto_provider
+        # Resolved here, so that a library that is not installed fails before
+        # a device is registered rather than after.
+        self._crypto_provider = (
+            None if crypto_provider is None else get_crypto_providers(crypto_provider)
+        )
         self._client = client
         self._async_client = async_client
         self._with_username = with_username
@@ -356,7 +361,8 @@ class DeviceCodeLogin(_Login):
             of the marketplace to register with.
         serial: The device serial. If ``None``, a random one is created.
         crypto_provider: Optional crypto provider for the resulting
-            authenticator (class or instance).
+            authenticator (class or instance). If its library is not
+            installed, :exc:`ImportError` is raised here, before any request.
         client: HTTP client for the sync methods. If ``None``, each request
             uses a short-lived client with a 25-second timeout. A client of
             your own needs a timeout too, or a stalled connection blocks the
@@ -481,13 +487,17 @@ class DeviceCodeLogin(_Login):
             return self._status
         response: httpx.Response | None
         try:
-            response = self._send(request)
-        except httpx.RequestError as exc:
-            logger.warning("Network error while polling: %s", exc)
-            response = None
+            try:
+                response = self._send(request)
+            except httpx.RequestError as exc:
+                logger.warning("Network error while polling: %s", exc)
+                response = None
+            with self._ending_on_failure():
+                return self._handle_poll(response)
         finally:
+            # Released only now, so that a second caller finds the next
+            # attempt already scheduled instead of repeating this one.
             self._in_flight = False
-        return self._handle_poll(response)
 
     async def async_poll(self) -> LoginStatus:
         """Ask Amazon once whether the code was confirmed, if that is due.
@@ -502,13 +512,17 @@ class DeviceCodeLogin(_Login):
             return self._status
         response: httpx.Response | None
         try:
-            response = await self._async_send(request)
-        except httpx.RequestError as exc:
-            logger.warning("Network error while polling: %s", exc)
-            response = None
+            try:
+                response = await self._async_send(request)
+            except httpx.RequestError as exc:
+                logger.warning("Network error while polling: %s", exc)
+                response = None
+            with self._ending_on_failure():
+                return self._handle_poll(response)
         finally:
+            # Released only now, so that a second caller finds the next
+            # attempt already scheduled instead of repeating this one.
             self._in_flight = False
-        return self._handle_poll(response)
 
     def _due_request(self) -> RequestSpec | None:
         if self._status is not LoginStatus.PENDING:
@@ -524,9 +538,14 @@ class DeviceCodeLogin(_Login):
                 ),
             )
             return None
-        # A second poll() while a request is in flight must not send another.
+        # A second poll() while a request is in flight must not send another,
+        # and neither may a poll() that a concurrent cancel() overtook.
         with self._lock:
-            if now < self._next_poll_at or self._in_flight:
+            if (
+                self._status is not LoginStatus.PENDING
+                or now < self._next_poll_at
+                or self._in_flight
+            ):
                 return None
             self._in_flight = True
         return code_pair_registration_request(
@@ -570,22 +589,23 @@ class DeviceCodeLogin(_Login):
     def _schedule(self, delay: float) -> None:
         self._next_poll_at = _clock.monotonic() + delay
 
-    def _sleep_time(self, deadline: float | None) -> float | None:
-        """Return how long to sleep before polling, or None past the deadline."""
-        now = _clock.monotonic()
-        delay = min(self._next_poll_at, self._expires_at) - now
+    def _sleep_time(self, deadline: float | None) -> float:
+        """Return how long to sleep before the next attempt or the deadline."""
+        wake_at = min(self._next_poll_at, self._expires_at)
         if deadline is not None:
-            if now >= deadline:
-                return None
-            delay = min(delay, deadline - now)
-        return max(0.0, delay)
+            wake_at = min(wake_at, deadline)
+        return max(0.0, wake_at - _clock.monotonic())
+
+    @staticmethod
+    def _past(deadline: float | None) -> bool:
+        return deadline is not None and _clock.monotonic() >= deadline
 
     def wait(self, timeout: float | None = None) -> Authenticator:
         """Poll until the login ends and return the authenticator.
 
         :meth:`start` must have been called before. If the login ends
-        without a device, the error :meth:`result` raises propagates. The
-        timeout is checked between attempts; a request in progress is
+        without a device, the error :meth:`result` raises propagates. No
+        attempt starts once the timeout has passed; a request in progress is
         finished first.
 
         Args:
@@ -599,12 +619,12 @@ class DeviceCodeLogin(_Login):
             TimeoutError: If ``timeout`` passed first. The login stays
                 pending and can be waited for again.
         """
+        self._require_started()
         deadline = None if timeout is None else _clock.monotonic() + timeout
-        while self.poll() is LoginStatus.PENDING:
-            delay = self._sleep_time(deadline)
-            if delay is None:
-                raise TimeoutError("The login is still pending.")
-            _clock.sleep(delay, self._wakeup)
+        while not self._past(deadline) and self.poll() is LoginStatus.PENDING:
+            _clock.sleep(self._sleep_time(deadline), self._wakeup)
+        if self._status is LoginStatus.PENDING:
+            raise TimeoutError("The login is still pending.")
         return self.result()
 
     async def async_wait(
@@ -614,9 +634,9 @@ class DeviceCodeLogin(_Login):
         """Poll until the login ends and return the authenticator.
 
         Async counterpart of :meth:`wait`. Cancelling the awaiting task
-        cancels the login, while ``timeout`` leaves it pending. The timeout
-        is checked between attempts; a request in progress is finished
-        first.
+        cancels the login, while ``timeout`` leaves it pending. No attempt
+        starts once the timeout has passed; a request in progress is
+        finished first.
 
         Args:
             timeout: Seconds to wait at most. ``None`` waits until the device
@@ -630,22 +650,25 @@ class DeviceCodeLogin(_Login):
                 pending and can be waited for again.
             asyncio.CancelledError: If the awaiting task was cancelled.
         """
+        self._require_started()
         deadline = None if timeout is None else _clock.monotonic() + timeout
         wakeup = (asyncio.get_running_loop(), asyncio.Event())
         with self._lock:
             self._async_wakeups.append(wakeup)
         try:
-            while await self.async_poll() is LoginStatus.PENDING:
-                delay = self._sleep_time(deadline)
-                if delay is None:
-                    raise TimeoutError("The login is still pending.")
-                await _clock.async_sleep(delay, wakeup[1])
+            while (
+                not self._past(deadline)
+                and await self.async_poll() is LoginStatus.PENDING
+            ):
+                await _clock.async_sleep(self._sleep_time(deadline), wakeup[1])
         except asyncio.CancelledError:
             self.cancel()
             raise
         finally:
             with self._lock:
                 self._async_wakeups.remove(wakeup)
+        if self._status is LoginStatus.PENDING:
+            raise TimeoutError("The login is still pending.")
         return self.result()
 
     def _end(
@@ -680,7 +703,8 @@ class ExternalLogin(_Login):
             of the marketplace to register with.
         serial: The device serial. If ``None``, a random one is created.
         crypto_provider: Optional crypto provider for the resulting
-            authenticator (class or instance).
+            authenticator (class or instance). If its library is not
+            installed, :exc:`ImportError` is raised here, before any request.
         client: HTTP client for :meth:`complete`. If ``None``, a short-lived
             client with a 25-second timeout is used. A client of your own
             needs a timeout too, or a stalled connection blocks the login.
@@ -754,7 +778,7 @@ class ExternalLogin(_Login):
                 response = self._send(request)
             except httpx.RequestError as exc:
                 raise LoginFailedError(f"Network error: {exc}") from exc
-        self._finish(response)
+            self._finish(response)
         return self.result()
 
     async def async_complete(self, redirect_url: str) -> Authenticator:
@@ -784,7 +808,7 @@ class ExternalLogin(_Login):
                 response = await self._async_send(request)
             except httpx.RequestError as exc:
                 raise LoginFailedError(f"Network error: {exc}") from exc
-        self._finish(response)
+            self._finish(response)
         return self.result()
 
     def _registration_request(self, redirect_url: str) -> RequestSpec:
@@ -855,7 +879,8 @@ def create_login(
             account.
         serial: The device serial. If ``None``, a random one is created.
         crypto_provider: Optional crypto provider for the resulting
-            authenticator (class or instance).
+            authenticator (class or instance). If its library is not
+            installed, :exc:`ImportError` is raised here, before any request.
 
     Returns:
         A :class:`DeviceCodeLogin` for an Amazon account, an
