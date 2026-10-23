@@ -17,6 +17,7 @@ on lines that merely look like commit subjects.
 
 from __future__ import annotations
 
+import os
 import shutil
 import subprocess
 from pathlib import Path
@@ -50,6 +51,10 @@ def _git_cliff() -> str:
 def _run(args: list[str], cwd: Path) -> str:
     """Run a command and return its stdout.
 
+    The global git configuration is left out: with ``tag.gpgSign`` a plain
+    ``git tag`` demands a message and fails, and with ``commit.gpgSign`` every
+    commit waits for a signing key.
+
     Args:
         args: Command and arguments.
         cwd: Working directory.
@@ -58,7 +63,12 @@ def _run(args: list[str], cwd: Path) -> str:
         Captured standard output.
     """
     result = subprocess.run(  # noqa: S603
-        args, cwd=cwd, capture_output=True, text=True, check=True
+        args,
+        cwd=cwd,
+        capture_output=True,
+        text=True,
+        check=True,
+        env={**os.environ, "GIT_CONFIG_GLOBAL": os.devnull},
     )
     return result.stdout
 

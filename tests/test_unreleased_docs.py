@@ -122,6 +122,10 @@ class TestLastReleaseTag:
     def _repo(tmp_path: Path, tags: list[str]) -> Path:
         """Create a git repository carrying the given tags.
 
+        The global git configuration is left out: with ``tag.gpgSign`` a plain
+        ``git tag`` demands a message and fails, and with ``commit.gpgSign``
+        every commit waits for a signing key.
+
         Args:
             tmp_path: Temporary directory supplied by pytest.
             tags: Tags to create, each on its own commit.
@@ -129,6 +133,7 @@ class TestLastReleaseTag:
         Returns:
             The repository path.
         """
+        import os
         import subprocess
 
         def git(*args: str) -> None:
@@ -137,6 +142,7 @@ class TestLastReleaseTag:
                 cwd=tmp_path,
                 check=True,
                 capture_output=True,
+                env={**os.environ, "GIT_CONFIG_GLOBAL": os.devnull},
             )
 
         git("init", "-q")
