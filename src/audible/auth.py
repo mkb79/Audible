@@ -17,6 +17,7 @@ from typing import (
 import httpx
 from httpx import Cookies
 
+from ._device import APP_VERSION
 from .activation_bytes import get_activation_bytes as get_ab
 from .aescipher import AESCipher, detect_file_encryption
 from .crypto_provider import get_crypto_providers
@@ -43,7 +44,7 @@ def _refresh_token_request_body(refresh_token: str) -> dict[str, str]:
     """Build the request body for an access token refresh."""
     return {
         "app_name": "Audible",
-        "app_version": "3.56.2",
+        "app_version": APP_VERSION,
         "source_token": refresh_token,
         "requested_token_type": "access_token",
         "source_token_type": "refresh_token",
@@ -148,7 +149,7 @@ def refresh_website_cookies(
 
     body = {
         "app_name": "Audible",
-        "app_version": "3.56.2",
+        "app_version": APP_VERSION,
         "source_token": refresh_token,
         "requested_token_type": "auth_cookies",
         "source_token_type": "refresh_token",

@@ -19,6 +19,14 @@ To authorize and register a new device you can do::
 
 This will authorize you to your account and register an Audible device.
 
+New registrations use a random 40-character serial containing ASCII letters and
+digits, together with the default Audible for iPhone profile (app ``4.60``,
+iOS ``26.2``, software version ``46000856``). An explicitly supplied serial is
+preserved, including serials from older registrations.
+
+Updating the package does not change an existing device registration. To use
+the updated profile, register a new device and save its credentials.
+
 .. important::
 
    Every device registration will be shown on the Amazon devices list. So only
