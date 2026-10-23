@@ -116,7 +116,9 @@ task and read ``login.status`` in the meantime:
 :exc:`TimeoutError` when the timeout passes first. The login stays pending
 and can be waited for again. :meth:`~audible.login.DeviceCodeLogin.cancel`
 ends a pending login with the status ``ABORTED``; cancelling the task that
-runs ``async_wait()`` does the same.
+runs ``async_wait()`` does the same. So does interrupting ``start()`` or
+``complete()``, for example with Ctrl+C or by cancelling the awaiting task,
+because the request may already have reached Amazon.
 
 Only one caller at a time should drive a login, while any number of callers
 may read its status. A login lives in memory only: if the program exits
@@ -145,9 +147,11 @@ can run at the same time, as asyncio tasks or in threads:
 A waiting login always ends: every request has a timeout of 25 seconds, and
 ``wait()`` returns once the code has expired, at the latest after the request
 in progress. ``cancel()`` wakes a sleeping ``wait()`` or ``async_wait()`` at
-once, also from another thread. An httpx client passed as ``client`` or
-``async_client`` is used as it is; give it a timeout as well, or a stalled
-connection blocks the login.
+once, also from another thread. To use an httpx client of your own, create
+:class:`~audible.login.DeviceCodeLogin` or
+:class:`~audible.login.ExternalLogin` directly and pass it as ``client`` or
+``async_client``. It is used as it is; give it a timeout as well, or a
+stalled connection blocks the login.
 
 While polling, the login retries overload answers (HTTP 429 and 5xx) and
 network errors with a growing delay. Creating the code is not retried: if

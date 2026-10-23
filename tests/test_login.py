@@ -504,6 +504,41 @@ def test_a_network_error_fails_start(clock: FakeClock) -> None:
     assert login.status is LoginStatus.FAILED
 
 
+def interrupt(request: httpx.Request) -> httpx.Response:
+    raise KeyboardInterrupt
+
+
+def test_an_interrupted_start_aborts_the_login(clock: FakeClock) -> None:
+    login = DeviceCodeLogin("de", client=FakeAmazon(interrupt).client())
+
+    with pytest.raises(KeyboardInterrupt):
+        login.start()
+
+    assert login.status is LoginStatus.ABORTED
+    with pytest.raises(LoginAbortedError, match="interrupted"):
+        login.result()
+
+
+def test_cancelling_the_async_start_task_aborts_the_login(clock: FakeClock) -> None:
+    async def never_answer(request: httpx.Request) -> httpx.Response:
+        await asyncio.Event().wait()
+        raise AssertionError("unreachable")
+
+    async def run() -> DeviceCodeLogin:
+        client = httpx.AsyncClient(transport=httpx.MockTransport(never_answer))
+        login = DeviceCodeLogin("de", async_client=client)
+        starting = asyncio.create_task(login.async_start())
+        await asyncio.sleep(0)
+        starting.cancel()
+        with pytest.raises(asyncio.CancelledError):
+            await starting
+        return login
+
+    login = asyncio.run(run())
+
+    assert login.status is LoginStatus.ABORTED
+
+
 def test_methods_called_out_of_order_raise_state_errors(clock: FakeClock) -> None:
     amazon = FakeAmazon(code_pair())
     login = DeviceCodeLogin("de", client=amazon.client())
@@ -726,6 +761,18 @@ def test_a_refused_registration_fails_the_external_login() -> None:
 
     assert login.status is LoginStatus.FAILED
     assert excinfo.value.error_code == "invalidvalue"
+
+
+def test_an_interrupted_complete_aborts_the_external_login() -> None:
+    login = ExternalLogin("uk", client=FakeAmazon(interrupt).client())
+    login.start()
+
+    with pytest.raises(KeyboardInterrupt):
+        login.complete(f"{MAPLANDING}?openid.oa2.authorization_code=CODE")
+
+    assert login.status is LoginStatus.ABORTED
+    with pytest.raises(LoginStateError):
+        login.complete(f"{MAPLANDING}?openid.oa2.authorization_code=CODE")
 
 
 def test_a_network_error_after_cancel_reports_the_cancellation() -> None:

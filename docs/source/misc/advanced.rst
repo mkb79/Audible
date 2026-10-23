@@ -159,8 +159,8 @@ Audible package.
 .. versionchanged:: v0.14.0
 
    ``from_login`` and ``from_login_external`` are removed. An
-   :class:`Authenticator` comes from :func:`audible.create_login`,
-   ``from_file`` or ``from_dict``.
+   :class:`Authenticator` comes from a finished login (see
+   :func:`audible.create_login`), ``from_file`` or ``from_dict``.
 
 A new device is registered with :func:`audible.create_login`, whose
 ``result()`` is an :class:`Authenticator` that authenticates requests with the

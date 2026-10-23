@@ -261,10 +261,14 @@ class _Login:
 
     @contextlib.contextmanager
     def _ending_on_failure(self) -> Iterator[None]:
-        """Let a :exc:`LoginFailedError` raised inside end the login.
+        """End the login if the step inside does not complete.
 
-        If the login had already ended, typically by :meth:`cancel` while a
-        request was in flight, the error that ended it is raised instead.
+        A :exc:`LoginFailedError` ends it as ``FAILED``; if the login had
+        already ended, typically by :meth:`cancel` while a request was in
+        flight, the error that ended it is raised instead. Anything else, such
+        as ``KeyboardInterrupt`` or the cancellation of the awaiting task,
+        ends it as ``ABORTED``: the request may have reached Amazon, so the
+        step cannot simply be repeated.
         """
         try:
             yield
@@ -273,6 +277,12 @@ class _Login:
                 self._error is not None
             ):
                 raise self._error from error
+            raise
+        except BaseException:
+            self._end(
+                LoginStatus.ABORTED,
+                error=LoginAbortedError("The login was interrupted."),
+            )
             raise
 
     def _raise_if_ended(self) -> None:
