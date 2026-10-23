@@ -1,6 +1,6 @@
 [project]
 name = "audible"
-version = "0.13.0"
+version = "0.13.1"
 description = "A(Sync) Interface for internal Audible API written in pure Python."
 authors = [{ name = "mkb79", email = "mkb79@hackitall.de" }]
 requires-python = ">=3.11,<3.15"
