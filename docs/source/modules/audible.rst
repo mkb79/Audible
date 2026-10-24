@@ -179,30 +179,8 @@ audible.localization module
 audible.login module
 --------------------
 
-.. ``:undoc-members:`` pulls in the bs4 classes imported by this module and then
-   documents them as ``audible.login.*``. Excluding them keeps third-party types
-   out of our API reference and avoids resolving bs4's own forward references.
-
 .. automodule:: audible.login
    :members:
-   :undoc-members:
-   :show-inheritance:
-   :exclude-members: BeautifulSoup, NavigableString, Tag
-
-audible.metadata module
------------------------
-
-.. automodule:: audible.metadata
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
-audible.register module
------------------------
-
-.. automodule:: audible.register
-   :members:
-   :undoc-members:
    :show-inheritance:
 
 audible.utils module

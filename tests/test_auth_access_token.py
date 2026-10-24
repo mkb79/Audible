@@ -8,8 +8,8 @@ from typing import Any
 import httpx
 import pytest
 
+import audible._registration as registration_mod
 import audible.auth as auth_mod
-import audible.register as register_mod
 from audible import AsyncClient
 from audible.auth import Authenticator
 from audible.exceptions import AuthFlowError
@@ -252,21 +252,41 @@ def test_asyncclient_concurrent_requests_single_refresh(
 
 
 def test_deregister_sends_x_amz_access_token(
-    monkeypatch: pytest.MonkeyPatch,
+    monkeypatch: pytest.MonkeyPatch, auth_fixture_data: dict[str, Any]
 ) -> None:
-    """register.deregister authenticates with x-amz-access-token, not Bearer."""
+    """Deregistration authenticates with x-amz-access-token, not Bearer."""
     captured: dict[str, Any] = {}
 
     def fake_post(
         url: str, json: Any = None, headers: Any = None, **kwargs: Any
     ) -> httpx.Response:
-        captured["headers"] = headers
+        captured.update(url=url, json=json, headers=headers)
         return httpx.Response(200, json={"ok": True})
 
     monkeypatch.setattr(httpx, "post", fake_post)
+    auth = _bearer_auth(auth_fixture_data, expires=TOKEN_VALID)
+    assert auth.locale is not None
 
-    result = register_mod.deregister("Atna|TOKEN", "de")
+    result = auth.deregister_device()
 
     assert result == {"ok": True}
-    assert captured["headers"] == {"x-amz-access-token": "Atna|TOKEN"}
+    assert captured["url"] == f"https://api.amazon.{auth.locale.domain}/auth/deregister"
+    assert captured["json"] == {"deregister_all_existing_accounts": False}
+    assert captured["headers"] == {"x-amz-access-token": auth.access_token}
     assert "Authorization" not in captured["headers"]
+
+
+def test_deregistration_of_a_pre_amazon_device_goes_to_audible() -> None:
+    request = registration_mod.deregistration_request(
+        "Atna|TOKEN", "co.uk", deregister_all=True, with_username=True
+    )
+
+    assert request.url == "https://api.audible.co.uk/auth/deregister"
+    assert request.body == {"deregister_all_existing_accounts": True}
+
+
+def test_a_refused_deregistration_raises_with_the_response_body() -> None:
+    response = httpx.Response(400, json={"error": "invalid_token"})
+
+    with pytest.raises(Exception, match="invalid_token"):
+        registration_mod.deregistration_result(response)

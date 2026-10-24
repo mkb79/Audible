@@ -86,3 +86,43 @@ class NoRefreshToken(AudibleError):
 
 class FileEncryptionError(AudibleError):
     """Raised if something is wrong with file encryption."""
+
+
+class LoginError(AudibleError):
+    """Base class for errors while registering a new device."""
+
+
+class LoginStateError(LoginError):
+    """Raised if a login method is called in a state that does not allow it."""
+
+
+class LoginFailedError(LoginError):
+    """Raised if Amazon or Audible rejects the login or answers unexpectedly.
+
+    The arguments ``status_code`` and ``error_code`` are kept as attributes
+    of the same name.
+
+    Args:
+        message: What went wrong.
+        status_code: The HTTP status code of the rejecting response, if any.
+        error_code: The error code Amazon sent with the response, if any.
+    """
+
+    def __init__(
+        self,
+        message: str,
+        *,
+        status_code: int | None = None,
+        error_code: str | None = None,
+    ) -> None:
+        super().__init__(message)
+        self.status_code = status_code
+        self.error_code = error_code
+
+
+class LoginExpiredError(LoginError):
+    """Raised if the device code expired before the user confirmed it."""
+
+
+class LoginAbortedError(LoginError):
+    """Raised if the login was cancelled."""

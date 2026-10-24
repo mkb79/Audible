@@ -23,15 +23,16 @@ be found at :ref:`country_codes`.
    import audible
 
    # Authorize and register in one step
-   auth = audible.Authenticator.from_login(
-       USERNAME,
-       PASSWORD,
-       locale=COUNTRY_CODE,
-       with_username=False
-   )
+   login = audible.create_login(COUNTRY_CODE)
+   prompt = login.start()
+   print(f"Open {prompt.verification_url} and enter the code {prompt.public_code}")
+   auth = login.wait()
 
    # Save credentials to file
    auth.to_file(FILENAME)
+
+Open the shown page on any device, sign in to Amazon and enter the code.
+``login.wait()`` returns as soon as the code is confirmed.
 
 .. important::
 
@@ -41,20 +42,10 @@ be found at :ref:`country_codes`.
 
 .. note::
 
-   If you have activated 2-factor-authentication for your Amazon account, you
-   can append the current OTP to your password. This eliminates the need for a
-   new OTP prompt.
-
-.. note::
-
-   Set `with_username=True` to login with your pre-Amazon account (for US, UK or
-   DE marketplace only).
-
-.. note::
-
-   For security reasons in some cases you have to solve a Captcha and complete
-   some extra steps. Please take a look at the :ref:`authorization` section for
-   more information.
+   Pre-Amazon accounts (US, UK or DE marketplace only) sign in through a
+   browser with ``audible.create_login(COUNTRY_CODE, with_username=True)``.
+   Please take a look at the :ref:`authorization` section for this and for
+   driving a login without blocking.
 
 .. _hello_library:
 

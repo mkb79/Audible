@@ -1,4 +1,4 @@
-from audible import Authenticator
+from audible import Authenticator, create_login
 
 
 # needs at least audible v0.4.0
@@ -8,12 +8,11 @@ password = input("Password for file: ")
 auth = Authenticator.from_file(filename="FILENAME", password=password)
 
 
-# or use LoginAuthenticator (without register)
-auth = Authenticator.from_login(
-    username="USERNAME",
-    password="PASSWORD",  # noqa: S106
-    locale="YOUR_COUNTRY_CODE",
-)
+# or register a new device
+login = create_login("YOUR_COUNTRY_CODE")
+prompt = login.start()
+print(f"Open {prompt.verification_url} and enter the code {prompt.public_code}")
+auth = login.wait()
 
 
 ab = auth.get_activation_bytes()

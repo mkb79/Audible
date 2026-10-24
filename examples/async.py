@@ -4,6 +4,13 @@ import audible
 
 
 # ASYNC FUNCTIONALITY
+async def register(country_code):
+    login = audible.create_login(country_code)
+    prompt = await login.async_start()
+    print(f"Open {prompt.verification_url} and enter the code {prompt.public_code}")
+    return await login.async_wait()
+
+
 async def get_book_infos(client, asin):
     try:
         book = await client.get(
@@ -44,13 +51,12 @@ async def main(auth):
 
 
 if __name__ == "__main__":
-    # authenticate with login
-    # don't stores any credentials on your system
-    username = ""
+    # register a new device
+    # password encrypts the credentials file
     password = ""
     filename = ""
 
-    auth = audible.Authenticator.from_login(username, password, locale="us")
+    auth = asyncio.run(register("us"))
 
     # store credentials to file
     auth.to_file(filename=filename, encryption="json", password=password)

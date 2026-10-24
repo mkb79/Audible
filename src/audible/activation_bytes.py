@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING, Literal, overload
 
 import httpx
 
+from ._device import IPHONE
 from .exceptions import AuthFlowError
 
 
@@ -147,9 +148,9 @@ def fetch_activation_sign_auth(auth: "audible.Authenticator") -> bytes:
 
     url = "https://www.audible.com/license/token"
     params = {
-        "player_manuf": "Audible,iPhone",
+        "player_manuf": IPHONE.player_manufacturer,
         "action": "register",
-        "player_model": "iPhone",
+        "player_model": IPHONE.player_model,
     }
     with httpx.Client(auth=auth) as client:
         resp = client.get(url, params=params)

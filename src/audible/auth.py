@@ -4,7 +4,7 @@ import asyncio
 import base64
 import logging
 import threading
-from collections.abc import AsyncGenerator, Callable, Generator, Iterator
+from collections.abc import AsyncGenerator, Generator, Iterator
 from datetime import UTC, datetime, timedelta
 from typing import (
     TYPE_CHECKING,
@@ -17,15 +17,13 @@ from typing import (
 import httpx
 from httpx import Cookies
 
-from ._device import APP_VERSION
+from ._device import IPHONE
+from ._registration import deregistration_request, deregistration_result
 from .activation_bytes import get_activation_bytes as get_ab
 from .aescipher import AESCipher, detect_file_encryption
 from .crypto_provider import get_crypto_providers
 from .exceptions import AuthFlowError, FileEncryptionError, NoRefreshToken
 from .json_provider import get_json_provider
-from .login import external_login, login
-from .register import deregister as deregister_
-from .register import register as register_
 from .utils import build_access_token_header, test_convert
 
 
@@ -43,8 +41,8 @@ logger = logging.getLogger("audible.auth")
 def _refresh_token_request_body(refresh_token: str) -> dict[str, str]:
     """Build the request body for an access token refresh."""
     return {
-        "app_name": "Audible",
-        "app_version": APP_VERSION,
+        "app_name": IPHONE.app_name,
+        "app_version": IPHONE.app_version,
         "source_token": refresh_token,
         "requested_token_type": "access_token",
         "source_token_type": "refresh_token",
@@ -148,8 +146,8 @@ def refresh_website_cookies(
     url = f"https://www.{target_domain}.{domain}/ap/exchangetoken/cookies"
 
     body = {
-        "app_name": "Audible",
-        "app_version": APP_VERSION,
+        "app_name": IPHONE.app_name,
+        "app_version": IPHONE.app_version,
         "source_token": refresh_token,
         "requested_token_type": "auth_cookies",
         "source_token_type": "refresh_token",
@@ -274,8 +272,10 @@ class Authenticator(httpx.Auth):
     """Audible Authenticator class.
 
     Note:
-        A new class instance have to be instantiated with
-        :meth:`Authenticator.from_login` or :meth:`Authenticator.from_file`.
+        Existing credentials are loaded with :meth:`Authenticator.from_file`
+        or :meth:`Authenticator.from_dict`. A new device is registered with
+        :func:`audible.create_login`, whose ``result()`` returns the
+        authenticator.
 
     .. versionadded:: v0.8
         The with_username attribute.
@@ -494,122 +494,6 @@ class Authenticator(httpx.Auth):
             auth.filename,
             auth.locale.country_code,
         )
-        return auth
-
-    @classmethod
-    def from_login(  # noqa: PLR0917
-        cls,
-        username: str,
-        password: str,
-        locale: str | Locale,
-        serial: str | None = None,
-        with_username: bool = False,
-        captcha_callback: Callable[[str], str] | None = None,
-        otp_callback: Callable[[], str] | None = None,
-        cvf_callback: Callable[[], str] | None = None,
-        approval_callback: Callable[[], Any] | None = None,
-        crypto_provider: CryptoProvider | type[CryptoProvider] | None = None,
-    ) -> Authenticator:
-        """Instantiate a new Authenticator with authentication data from login.
-
-        .. versionadded:: v0.5.0
-
-        .. versionadded:: v0.5.4
-           The serial argument
-           The with_username argument
-
-        Args:
-            username: The Amazon email address.
-            password: The Amazon password.
-            locale: The ``country_code`` or :class:`audible.localization.Locale`
-                instance for the marketplace to login.
-            serial: The device serial. If ``None`` a custom one will be created.
-            with_username: If ``True`` login with Audible username instead
-                of Amazon account.
-            captcha_callback: A custom callback to handle captcha requests
-                during login.
-            otp_callback: A custom callback to handle one-time password
-                requests during login.
-            cvf_callback: A custom callback to handle verify code requests
-                during login.
-            approval_callback: A custom Callable for handling approval alerts.
-            crypto_provider: Optional provider override (class or instance).
-
-        Returns:
-            Authenticator: New authenticator populated with registration data.
-        """
-        auth = cls(crypto_provider=crypto_provider)
-        auth.locale = cast("Locale", locale)
-
-        login_device = login(
-            username=username,
-            password=password,
-            country_code=auth.locale.country_code,
-            domain=auth.locale.domain,
-            market_place_id=auth.locale.market_place_id,
-            serial=serial,
-            with_username=with_username,
-            captcha_callback=captcha_callback,
-            otp_callback=otp_callback,
-            cvf_callback=cvf_callback,
-            approval_callback=approval_callback,
-        )
-        logger.info("logged in to Audible as %s", username)
-        register_device = register_(with_username=with_username, **login_device)
-
-        auth._update_attrs(with_username=with_username, **register_device)
-        logger.info("registered Audible device")
-
-        return auth
-
-    @classmethod
-    def from_login_external(
-        cls,
-        locale: str | Locale,
-        serial: str | None = None,
-        with_username: bool = False,
-        login_url_callback: Callable[[str], str] | None = None,
-        crypto_provider: CryptoProvider | type[CryptoProvider] | None = None,
-    ) -> Authenticator:
-        """Instantiate a new Authenticator from login with external browser.
-
-        .. versionadded:: v0.5.1
-
-        .. versionadded:: v0.5.4
-           The serial argument
-           The with_username argument
-
-        Args:
-            locale: The ``country_code`` or :class:`audible.localization.Locale`
-                instance for the marketplace to login.
-            serial: The device serial. If ``None`` a custom one will be created.
-            with_username: If ``True`` login with Audible username instead
-                of Amazon account.
-            login_url_callback: A custom Callable for handling login with
-                external browsers.
-            crypto_provider: Optional provider override (class or instance).
-
-        Returns:
-            Authenticator: New authenticator populated with registration data.
-        """
-        auth = cls(crypto_provider=crypto_provider)
-        auth.locale = cast("Locale", locale)
-
-        login_device = external_login(
-            country_code=auth.locale.country_code,
-            domain=auth.locale.domain,
-            market_place_id=auth.locale.market_place_id,
-            serial=serial,
-            with_username=with_username,
-            login_url_callback=login_url_callback,
-        )
-        logger.info("logged in to Audible.")
-
-        register_device = register_(with_username=with_username, **login_device)
-
-        auth._update_attrs(with_username=with_username, **register_device)
-        logger.info("registered Audible device")
-
         return auth
 
     def _select_auth_mode(self) -> str:
@@ -856,12 +740,14 @@ class Authenticator(httpx.Auth):
         if self.locale is None:
             raise Exception("No locale found.")
 
-        return deregister_(
-            access_token=self.access_token,
+        request = deregistration_request(
+            self.access_token,
+            self.locale.domain,
             deregister_all=deregister_all,
-            domain=self.locale.domain,
             with_username=self.with_username or False,
         )
+        response = httpx.post(request.url, json=request.body, headers=request.headers)
+        return deregistration_result(response)
 
     def _get_async_refresh_lock(self) -> asyncio.Lock:
         """Return an asyncio lock bound to the current running event loop.

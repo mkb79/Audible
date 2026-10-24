@@ -14,7 +14,7 @@ def main():
     if os.path.exists(filename):
         auth = audible.Authenticator.from_file(filename)
     else:
-        auth = audible.Authenticator.from_login_external(locale=country_code)
+        auth = authenticate(country_code)
         auth.to_file(filename, encryption=False)
         if encryption == "json":
             password = "sample_pass"  # noqa: S105
@@ -52,11 +52,11 @@ def main():
         json.dump(year_aggregate, write_file, indent=4)
 
 
-def authenticate(username, password, country_code):
-    auth = audible.Authenticator.from_login(
-        username, password, locale=country_code, with_username=False
-    )
-    return auth
+def authenticate(country_code):
+    login = audible.create_login(country_code)
+    prompt = login.start()
+    print(f"Open {prompt.verification_url} and enter the code {prompt.public_code}")
+    return login.wait()
 
 
 def get_reading_time_since_signup(client):
