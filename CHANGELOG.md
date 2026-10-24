@@ -6,6 +6,12 @@ New entries are generated from Conventional Commit messages and are
 grouped by commit type. Sections below that predate this are kept as they
 were written; the wording of a published entry never changes.
 
+## [0.13.1] - 2026-10-23
+
+### Fixed
+
+- **auth**: Register new iPhone devices with the Audible 4.60 profile (#910)
+
 ## [0.13.0] - 2026-10-12
 
 ### Added
