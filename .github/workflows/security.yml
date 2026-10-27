@@ -30,7 +30,7 @@ concurrency:
 
 env:
   FORCE_COLOR: "1"
-  UV_VERSION: "0.13.0"
+  UV_VERSION: "0.13.6"
 
 jobs:
   dependency-review:
